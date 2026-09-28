@@ -219,6 +219,14 @@ Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
    client's real parse, as `apps/api/tests/api.test.ts` does for /v1/curves/zero.
 5. OAuth for the MCP server (claude.ai / Desktop connectors), targeting CIMD.
 
+## Known: client readers that swallow failure
+
+The vendored client's getX functions were written for web pages and several
+turn an outage into empty data. REST and MCP index reads avoid them through
+`packages/mcp-tools/src/reads/indices.ts`. Still used, and still swallowing:
+**getFundComparison** (503 -> []), behind get_treasury_index's
+`fund_comparison` include. Move it onto a strict reader before relying on it.
+
 ## Rich/cheap — how to build it, from the treasury-integration session (2026-09-28)
 
 Not a TreasuryService method, deliberately: compute it from `analyticsOn(date)`
