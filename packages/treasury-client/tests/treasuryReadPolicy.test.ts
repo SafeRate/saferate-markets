@@ -278,3 +278,28 @@ describe("treasuryRead", () => {
       expect(attempts).toBe(2);
    });
 });
+
+describe("treasuryRead and a method the deployed worker lacks", () => {
+   // How a REAL binding reports it (measured 2026-09-28): the call throws this.
+   const missing = () =>
+      new TypeError(
+         'The RPC receiver does not implement the method "indexReturns".',
+      );
+
+   test("is rethrown at once, not retried and not turned into a 503", async () => {
+      let calls = 0;
+      const read = treasuryRead(async () => {
+         calls += 1;
+         throw missing();
+      }, "probe");
+      await expect(read).rejects.toBeInstanceOf(TypeError);
+      expect(calls).toBe(1);
+   });
+
+   test("an ordinary TypeError is still an outage", async () => {
+      const read = treasuryRead(async () => {
+         throw new TypeError("Cannot read properties of undefined");
+      }, "probe");
+      await expect(read).rejects.toBeInstanceOf(Response);
+   });
+});

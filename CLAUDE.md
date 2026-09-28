@@ -78,7 +78,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 203 tests at 2026-09-28
+bun test                               # 229 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 ```
@@ -165,7 +165,7 @@ pinned commit, recorded in `packages/treasury-client/VENDORED`. saferate-treasur
 so the copy at commit X matches treasury-api at X. It says nothing about what is
 DEPLOYED; that is what the client's optional methods are for.
 
-Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
+Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
 **Re-sync from `main` once that PR merges.**
 
 ## Billing — built 2026-09-28, staging only
@@ -206,6 +206,28 @@ Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
 4. More REST routes. Each needs its response schema pinned by a test against the
    client's real parse, as `apps/api/tests/api.test.ts` does for /v1/curves/zero.
 5. OAuth for the MCP server (claude.ai / Desktop connectors), targeting CIMD.
+
+## Rich/cheap — how to build it, from the treasury-integration session (2026-09-28)
+
+Not a TreasuryService method, deliberately: compute it from `analyticsOn(date)`
+joined to `pricesOn(date)` (type, maturity), both already bound. A method would
+bake still-moving banding and ranking into the contract. Ask again once the
+bands settle. The traps, as that session measured them on production (not yet
+re-measured here):
+
+- **The two residuals have OPPOSITE signs.** `price_residual_cents` is observed
+  less fitted, positive = RICH. `residual_basis_points` is the same divided by
+  duration with the sign flipped, positive = CHEAP. `residual_z_score` follows
+  the bp sign: positive z = unusually CHEAP.
+- **Rank on the z-score, not the cents.** z is against the security's OWN
+  history; cents surfaces persistent structure (age, coupon), z surfaces change.
+  The richest bond by cents on 2026-09-25 (+91.8c) had z -0.24.
+- **Null z is not zero, and every bill has one** (by construction). Sorting nulls
+  as 0 ranks all bills as ordinary: a claim, not an absence.
+- **`residual_basis_points` is nullable** near maturity (duration -> 0 blew a 41c
+  gap up to 14,784 bp). Quote cents there.
+- Measured against the fitted zero curve for the date; no fit means no rows. TIPS
+  and FRN live in other tables with z null, so they cannot rank on the same footing.
 
 ## Markets staging reads PRODUCTION treasury
 

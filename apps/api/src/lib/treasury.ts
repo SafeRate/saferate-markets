@@ -1,4 +1,5 @@
 import {
+	isTreasuryMethodMissing,
 	isTreasuryRefusal,
 	treasuryRefusalCode,
 	treasuryRefusalMessage,
@@ -38,8 +39,8 @@ export const treasuryUnbound = (c: Context<AppEnv>) =>
 export const treasuryErrorResponse = (c: Context<AppEnv>, error: unknown) => {
 	// The deployed treasury-api lacks a method this route calls: deploy skew
 	// between repos. Logged, because it is always our fault and always fixable.
-	if (error instanceof TreasuryAbsent) {
-		console.error("[treasury]", error.message);
+	if (error instanceof TreasuryAbsent || isTreasuryMethodMissing(error)) {
+		console.error("[treasury]", (error as Error).message);
 		return c.json(
 			{
 				error: "unavailable" as const,

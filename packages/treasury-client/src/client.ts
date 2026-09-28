@@ -412,11 +412,29 @@ export const isTreasuryRefusal = (error: unknown) =>
  */
 const TREASURY_RETRY_DELAY_MS = 50;
 
+/**
+ * A method the DEPLOYED treasury-api lacks, as a real Workers RPC stub reports
+ * it. Measured 2026-09-28 (saferate-markets): a stub answers every property with
+ * a callable, so `service.method === undefined` is never true against a real
+ * binding, and the failure only arrives on the call as
+ *   TypeError: The RPC receiver does not implement the method "<name>".
+ * Matched on the message because only name and message cross the RPC boundary;
+ * narrowed to TypeError and the exact phrase so an ordinary TypeError from our
+ * own code is not mistaken for an absent method. (treasury-integration fixed the
+ * same thing in saferate-ai's copy the same day.)
+ */
+export const isTreasuryMethodMissing = (error: unknown) =>
+   error instanceof TypeError &&
+   /does not implement the method/.test(error.message);
+
 export async function treasuryRead<T>(run: () => Promise<T>, label: string) {
    try {
       return await run();
    } catch (firstError) {
       if (isTreasuryRefusal(firstError)) throw firstError;
+      // Not retried and not a 503: retrying cannot make an older deploy grow a
+      // method, and a 503 would report deploy skew as an outage.
+      if (isTreasuryMethodMissing(firstError)) throw firstError;
 
       // biome-ignore lint/suspicious/noConsole: the Workers log is the only record of a failed read
       console.error(

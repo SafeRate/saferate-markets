@@ -119,6 +119,24 @@ describe("GET /v1/curves/zero", () => {
 		expect((await response.json()).message).toContain("not an absence of data");
 	});
 
+	// Deploy skew on a route that goes through the client's treasuryRead: the
+	// real stub's TypeError is rethrown by the client and must become a named
+	// 503, not a 500 or an "outage".
+	test("a method the deployed treasury lacks is a 503 naming the fault", async () => {
+		const { call, key } = await setup({
+			treasury: {
+				latestCurve: async () => {
+					throw new TypeError(
+						'The RPC receiver does not implement the method "latestCurve".',
+					);
+				},
+			},
+		});
+		const response = await call("/v1/curves/zero", { headers: bearer(key) });
+		expect(response.status).toBe(503);
+		expect((await response.json()).message).toContain("not an absence of data");
+	});
+
 	test("an upstream outage is a 503, never a 404", async () => {
 		const { call, key } = await setup({
 			treasury: {

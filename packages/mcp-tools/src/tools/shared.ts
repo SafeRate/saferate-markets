@@ -1,4 +1,5 @@
 import {
+	isTreasuryMethodMissing,
 	isTreasuryRefusal,
 	treasuryRefusalCode,
 	treasuryRefusalMessage,
@@ -116,6 +117,15 @@ export const runTreasury = async <T>(
  * better than "unknown".
  */
 export const readableOutage = (error: unknown) => {
+	// Deploy skew: the treasury service is older than this server. Still a
+	// failure, never "no data", but one that says what it is.
+	if (isTreasuryMethodMissing(error)) {
+		const readable = new Error(
+			"This Treasury data is not available from the service yet (it is older than this server). This is a fault on Safe Rate's side, NOT an absence of data.",
+		);
+		readable.name = "TreasuryMethodMissing";
+		return readable;
+	}
 	if (!(error instanceof Response)) return error;
 	const readable = new Error(
 		`The Treasury data service is unavailable (HTTP ${error.status}). This is an outage, NOT an absence of data — do not tell the user Safe Rate has no Treasury data for what they asked. Retrying in a moment is reasonable.`,
