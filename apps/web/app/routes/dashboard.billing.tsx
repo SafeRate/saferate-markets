@@ -8,7 +8,7 @@ import {
 import { Form, redirect, useNavigation } from "react-router";
 import { requireOrganization } from "@/lib/session.server";
 import { getAuth } from "@/services/auth.server";
-import { canCharge } from "@/services/billing.server";
+import { cancelNow, switchPathFor } from "@/services/billing.server";
 import type { Route } from "./+types/dashboard.billing";
 
 export const meta: Route.MetaFunction = () => [
@@ -42,13 +42,13 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 			priceUsdMonthly: p.sale.priceUsdMonthly,
 			permits: p.permits,
 		})),
-		betaPlan: BETA_PROMOTION.appliesToPlan,
+		betaPlans: BETA_PROMOTION.appliesToPlans as readonly string[],
 		subscription: entitled ? subscription : null,
 		currentPlan: current ? { id: current.id, name: current.name } : null,
 		// Only asked when it matters: an Individual subscriber who could move up.
-		canSwitchToTeam:
+		switchPath:
 			current?.id === "public"
-				? await canCharge({
+				? await switchPathFor({
 						env,
 						idStripeSubscription: subscription?.idStripeSubscription ?? null,
 					})
@@ -110,14 +110,43 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 					message: "Only an Individual plan can switch to Team here.",
 				};
 			}
-			// Checked again at submit, not only when the page rendered: the card
-			// could have been removed in between, and the in-place upgrade invoices
-			// the proration at once.
-			const chargeable = await canCharge({
+			// Decided again at submit, not only when the page rendered: a card or a
+			// discount can change in between, and the in-place path invoices at once.
+			const path = await switchPathFor({
 				env,
 				idStripeSubscription: current.idStripeSubscription,
 			});
-			if (chargeable !== true) {
+			if (path === "beta-checkout" && current.idStripeSubscription) {
+				// End Individual now and open a Team checkout, where the beta code is
+				// entered again. In place would bill $100 prorated to a subscription
+				// that, by design, has no card. Between the two there is a gap in
+				// access of about one checkout; acceptable for a beta, and said on
+				// the page before the click.
+				await cancelNow({
+					env,
+					idStripeSubscription: current.idStripeSubscription,
+				});
+				const result = await auth.api.upgradeSubscription({
+					body: {
+						plan: "team",
+						referenceId: org.idOrganization,
+						successUrl: "/dashboard/billing?checkout=done",
+						cancelUrl: "/dashboard/billing?checkout=cancelled",
+						disableRedirect: true,
+					},
+					headers: request.headers,
+				});
+				const url = (result as { url?: string } | null)?.url;
+				if (!url) {
+					return {
+						status: "error" as const,
+						message:
+							"Your Individual plan ended but Stripe did not return a Team checkout. Choose Team below to finish.",
+					};
+				}
+				return redirect(url);
+			}
+			if (path !== "in-place") {
 				return {
 					status: "error" as const,
 					message:
@@ -242,22 +271,35 @@ export default function Billing({
 								Manage billing
 							</button>
 						</Form>
-						{d.currentPlan.id === "public" && d.canSwitchToTeam === true ? (
+						{d.currentPlan.id === "public" &&
+						(d.switchPath === "in-place" || d.switchPath === "beta-checkout") ? (
 							<Form method="post">
 								<input name="intent" type="hidden" value="switch-to-team" />
 								<button className={button} disabled={isBusy} type="submit">
-									Switch to Team, $100/month
+									Switch to Team
 								</button>
 							</Form>
 						) : null}
 					</div>
-					{d.currentPlan.id === "public" && d.canSwitchToTeam === false ? (
+					{d.currentPlan.id === "public" && d.switchPath === "in-place" ? (
+						<p className="mt-3 text-xs text-slate-500">
+							Team is $100 a month, prorated from today on your card.
+						</p>
+					) : null}
+					{d.currentPlan.id === "public" && d.switchPath === "beta-checkout" ? (
+						<p className="mt-3 text-xs text-slate-500">
+							Beta: switching ends your Individual plan and opens a Team checkout.
+							Enter your beta code there again. Your keys stay the same and work again
+							as soon as the checkout completes.
+						</p>
+					) : null}
+					{d.currentPlan.id === "public" && d.switchPath === "needs-card" ? (
 						<p className="mt-3 text-xs text-slate-500">
 							To switch to Team, first add a payment method in Manage billing. Team is
 							$100 a month, prorated from today.
 						</p>
 					) : null}
-					{d.currentPlan.id === "public" && d.canSwitchToTeam === null ? (
+					{d.currentPlan.id === "public" && d.switchPath === null ? (
 						<p className="mt-3 text-xs text-slate-500">
 							Switching to Team is unavailable just now. Try again shortly.
 						</p>
@@ -291,7 +333,7 @@ export default function Billing({
 									Choose {plan.name}
 								</button>
 							</Form>
-							{plan.id === d.betaPlan ? (
+							{d.betaPlans.includes(plan.id) ? (
 								<p className="mt-3 text-xs text-slate-500">
 									Beta tester? Enter your code on the checkout page.
 								</p>

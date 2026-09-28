@@ -204,7 +204,7 @@ const ensurePrice = async (plan: TCheckoutPlan, productId: string | null) => {
 	log("+", `price ${plan.id}`, `${created.id} ${stripeLookupKey}`);
 };
 
-const ensureCoupon = async (productId: string | null) => {
+const ensureCoupon = async (productIds: (string | null)[]) => {
 	try {
 		const coupon = await stripe.coupons.retrieve(BETA_PROMOTION.couponId);
 		const isRight =
@@ -221,8 +221,12 @@ const ensureCoupon = async (productId: string | null) => {
 	} catch (error) {
 		if ((error as { code?: string }).code !== "resource_missing") throw error;
 	}
-	if (!IS_APPLY || productId === null) {
-		log("+", "coupon", `would create ${BETA_PROMOTION.couponId} 100% forever`);
+	if (!IS_APPLY || productIds.some((id) => id === null)) {
+		log(
+			"+",
+			"coupon",
+			`would create ${BETA_PROMOTION.couponId} 100% forever on ${BETA_PROMOTION.appliesToPlans.join(" + ")}`,
+		);
 		return false;
 	}
 	await stripe.coupons.create({
@@ -230,14 +234,23 @@ const ensureCoupon = async (productId: string | null) => {
 		name: BETA_PROMOTION.name,
 		percent_off: BETA_PROMOTION.percentOff,
 		duration: BETA_PROMOTION.duration,
-		// Only this product, so the code cannot discount anything else on a
-		// shared account.
-		applies_to: { products: [productId] },
+		// Only these products, so the code cannot discount anything else on a
+		// shared account (OKLocate sells on the same Stripe account).
+		applies_to: { products: productIds as string[] },
 	});
 	log("+", "coupon", BETA_PROMOTION.couponId);
 	return true;
 };
 
+/**
+ * WIMBLEDON on the current beta coupon.
+ *
+ * A code is unique among ACTIVE codes, so moving it to a new coupon means
+ * deactivating the old code first. Only a code on a FORMER beta coupon is moved;
+ * a WIMBLEDON on any other coupon is somebody else's and the seeder refuses.
+ * Deactivating a code stops new redemptions only: subscriptions that already
+ * redeemed it keep their discount.
+ */
 const ensurePromotionCode = async (hasCoupon: boolean) => {
 	const codes = await stripe.promotionCodes.list({
 		code: BETA_PROMOTION.code,
@@ -245,16 +258,35 @@ const ensurePromotionCode = async (hasCoupon: boolean) => {
 		limit: 10,
 	});
 	const existing = codes.data[0];
+	const couponOf = (code: Stripe.PromotionCode) => {
+		const coupon = code.promotion?.coupon;
+		return typeof coupon === "string" ? coupon : coupon?.id;
+	};
 	if (existing) {
-		const coupon = existing.promotion?.coupon;
-		const couponId = typeof coupon === "string" ? coupon : coupon?.id;
-		if (couponId !== BETA_PROMOTION.couponId) {
+		const couponId = couponOf(existing);
+		if (couponId === BETA_PROMOTION.couponId) {
+			log("=", "promotion code", `${existing.id} ${existing.code}`);
+			return;
+		}
+		if (
+			!(BETA_PROMOTION.formerCouponIds as readonly string[]).includes(
+				couponId ?? "",
+			)
+		) {
 			fail(
-				`an active code ${BETA_PROMOTION.code} exists on coupon ${couponId}, not ${BETA_PROMOTION.couponId}`,
+				`an active code ${BETA_PROMOTION.code} exists on coupon ${couponId}, which is not a beta coupon; refusing to touch it`,
 			);
 		}
-		log("=", "promotion code", `${existing.id} ${existing.code}`);
-		return;
+		if (!IS_APPLY || !hasCoupon) {
+			log(
+				"~",
+				"promotion code",
+				`would move ${existing.code} from ${couponId} to ${BETA_PROMOTION.couponId} (existing discounts unaffected)`,
+			);
+			return;
+		}
+		await stripe.promotionCodes.update(existing.id, { active: false });
+		log("~", "promotion code", `${existing.id} on ${couponId} deactivated`);
 	}
 	if (!IS_APPLY || !hasCoupon) {
 		log("+", "promotion code", `would create ${BETA_PROMOTION.code}`);
@@ -264,7 +296,11 @@ const ensurePromotionCode = async (hasCoupon: boolean) => {
 		code: BETA_PROMOTION.code,
 		promotion: { type: "coupon", coupon: BETA_PROMOTION.couponId },
 	});
-	log("+", "promotion code", `${created.id} ${created.code}`);
+	log(
+		"+",
+		"promotion code",
+		`${created.id} ${created.code} on ${BETA_PROMOTION.couponId}`,
+	);
 };
 
 /** Pipe a value into Doppler through stdin: never argv, never printed. */
@@ -357,9 +393,9 @@ for (const plan of CHECKOUT_PLANS) {
 	await ensurePrice(plan, productId);
 	productIds.set(plan.id, productId);
 }
-// The beta coupon is restricted to its plan's product only.
+// The beta coupon is restricted to its plans' products only.
 const hasCoupon = await ensureCoupon(
-	productIds.get(BETA_PROMOTION.appliesToPlan) ?? null,
+	BETA_PROMOTION.appliesToPlans.map((id) => productIds.get(id) ?? null),
 );
 await ensurePromotionCode(hasCoupon);
 await ensureWebhook();

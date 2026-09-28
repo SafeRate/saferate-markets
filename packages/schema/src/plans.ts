@@ -22,6 +22,8 @@ import { z } from "zod";
  *    financial product) is a named add-on here, not folded into redistribution:
  *    it is a different deal and can carry regulatory obligations.
  *
+ * The beta code (BETA_PROMOTION) covers both checkout plans.
+ *
  * NOT YET TRUE, so not claimed in any copy: more than one seat (Team is one seat
  * until invitations are built), and any history cap on Individual (every plan
  * has full history today). The terms themselves are for counsel.
@@ -145,8 +147,13 @@ export const rateLimitFor = (idPlan: string | null | undefined) => {
 
 /**
  * The beta: a 100%-off, never-expiring discount, entered at checkout as
- * WIMBLEDON (decided 2026-09-28). It applies to INDIVIDUAL only, so Team is a
- * real paid plan; the Stripe coupon is restricted to Individual's product.
+ * WIMBLEDON, on EITHER checkout plan (Individual only until later on
+ * 2026-09-28, when Dylan extended it to Team).
+ *
+ * A Stripe coupon's product restriction cannot be edited, so extending it meant
+ * a NEW coupon (`couponId`) and moving the WIMBLEDON code onto it. The first
+ * coupon stays in `formerCouponIds`: subscriptions that redeemed it keep its
+ * discount, and the billing page must still recognise them as beta.
  *
  * Indefinite by decision: the beta ends when Dylan ends it, by deactivating the
  * code (no new redemptions) and removing the discount from existing
@@ -155,20 +162,28 @@ export const rateLimitFor = (idPlan: string | null | undefined) => {
  * goes past_due and then loses access until they add one; warn them first.
  */
 export const BETA_PROMOTION = {
-	couponId: "markets_beta_wimbledon",
+	couponId: "markets_beta_all_plans",
+	formerCouponIds: ["markets_beta_wimbledon"],
 	code: "WIMBLEDON",
 	name: "Safe Rate Markets beta",
 	percentOff: 100,
 	duration: "forever",
-	appliesToPlan: "public",
+	appliesToPlans: ["public", "team"],
 } as const satisfies {
 	couponId: string;
+	formerCouponIds: readonly string[];
 	code: string;
 	name: string;
 	percentOff: number;
 	duration: "forever" | "once" | "repeating";
-	appliesToPlan: TPlanId;
+	appliesToPlans: readonly TPlanId[];
 };
+
+/** Every coupon that marks a subscription as beta, current and former. */
+export const BETA_COUPON_IDS: readonly string[] = [
+	BETA_PROMOTION.couponId,
+	...BETA_PROMOTION.formerCouponIds,
+];
 
 /** What a card statement says. Stripe allows 22 characters. */
 export const STATEMENT_DESCRIPTOR = "SAFE RATE MARKETS";
