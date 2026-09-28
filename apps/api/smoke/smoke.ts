@@ -234,6 +234,7 @@ else fail("MCP tools/list", `${tools.status} ${names.length} tools`);
 
 for (const [name, args] of [
 	["get_treasury_curve", {}],
+	["get_treasury_index", {}],
 	["get_treasury_index", { code: "broad" }],
 	["list_treasury_securities", {}],
 ] as const) {
@@ -246,13 +247,28 @@ for (const [name, args] of [
 			return null;
 		}
 	})();
-	if (
+	const label = `MCP ${name}${Object.keys(args).length ? ` ${JSON.stringify(args)}` : ""}`;
+	// The listing must carry a DAILY latest per index, never the month-end
+	// mislabelled as latest (the defect fixed 2026-09-28).
+	type TListed = {
+		latest?: { date: string } | null;
+		last_month_end?: { date: string } | null;
+	};
+	const isStaleListing =
+		Array.isArray(payload?.indices) &&
+		(payload.indices as TListed[]).some(
+			(i) =>
+				!i.latest || (i.last_month_end && i.latest.date < i.last_month_end.date),
+		);
+	if (isStaleListing) {
+		fail(label, "an index has no latest, or one older than its month-end");
+	} else if (
 		call.status === 200 &&
 		result &&
 		!result.isError &&
 		payload?.ok !== false
 	) {
-		pass(`MCP ${name}`);
+		pass(label);
 	} else {
 		fail(`MCP ${name}`, JSON.stringify(call.body).slice(0, 200));
 	}
