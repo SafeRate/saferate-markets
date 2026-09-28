@@ -9,6 +9,7 @@ import { rateLimit } from "./middleware/rateLimit";
 import { registerCurveRoutes } from "./routes/curves";
 import { registerIndexRoutes } from "./routes/indices";
 import { registerMcpRoute } from "./routes/mcp";
+import { registerSecurityRoutes } from "./routes/securities";
 
 /**
  * api.saferate.markets: the REST API and the MCP server.
@@ -88,6 +89,7 @@ app.get("/health", (c) =>
 app.use("/v1/*", apiKeyAuth(), rateLimit(), meterUsage("rest"));
 registerCurveRoutes(app);
 registerIndexRoutes(app);
+registerSecurityRoutes(app);
 
 registerMcpRoute(app);
 

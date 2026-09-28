@@ -1,0 +1,35 @@
+[
+	{
+		"cusip": "91282CMM0",
+		"date": "2026-09-25",
+		"security_type": "MARKET BASED NOTE",
+		"rate": 0.04625,
+		"maturity_date": "2035-02-15",
+		"call_date": null,
+		"buy": 96.265625,
+		"sell": 96.25,
+		"close": 96.53125
+	},
+	{
+		"cusip": "91282CMM0",
+		"date": "2026-09-24",
+		"security_type": "MARKET BASED NOTE",
+		"rate": 0.04625,
+		"maturity_date": "2035-02-15",
+		"call_date": null,
+		"buy": 96.546875,
+		"sell": 96.53125,
+		"close": 96.375
+	},
+	{
+		"cusip": "91282CMM0",
+		"date": "2026-09-23",
+		"security_type": "MARKET BASED NOTE",
+		"rate": 0.04625,
+		"maturity_date": "2035-02-15",
+		"call_date": null,
+		"buy": 97.046875,
+		"sell": 97.03125,
+		"close": 96.8125
+	}
+]

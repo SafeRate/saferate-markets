@@ -25,6 +25,11 @@ import {
 import type { z } from "zod";
 import { ZZeroCurveOut } from "../src/routes/curves";
 import {
+	ZSecurityAnalyticsOut,
+	ZSecurityOut,
+	ZSecurityPricesOut,
+} from "../src/routes/securities";
+import {
 	ZClosedConstituentsOut,
 	ZIndexAnalyticsOut,
 	ZIndexLevelsOut,
@@ -56,7 +61,7 @@ if (!/^srm_live_[A-Za-z0-9]{32}$/.test(key)) {
 }
 
 const API = SITE_HOSTS[environment].api;
-const PACE_MS = 1_200; // 50/min at most, under the 60/min limit
+const PACE_MS = 1_300; // ~46/min, under the 60/min Individual limit
 const MCP_TOOLS_EXPECTED = 9;
 
 let failures = 0;
@@ -183,6 +188,9 @@ if (list) {
 }
 const monthEnd = list?.indices[0]?.last_month_end?.date;
 // A deep check on four that differ in kind: nominal, bills, linkers, floaters.
+// Each one's heaviest constituent is kept for the security checks below, so
+// those always use a live CUSIP of that kind rather than a hardcoded one.
+const cusipsByIndex = new Map<string, string>();
 for (const code of ["broad", "BILL", "TIPS", "FRN"]) {
 	await check(`/v1/indices/${code}`, ZIndexSummaryOut);
 	const levels = await check(
@@ -193,7 +201,12 @@ for (const code of ["broad", "BILL", "TIPS", "FRN"]) {
 		fail(`${code} has recent levels`, "none in 14 days");
 	await check(`/v1/indices/${code}/returns`, ZIndexReturnsOut);
 	await check(`/v1/indices/${code}/analytics`, ZIndexAnalyticsOut);
-	await check(`/v1/indices/${code}/constituents`, ZOpenConstituentsOut);
+	const open = await check(
+		`/v1/indices/${code}/constituents`,
+		ZOpenConstituentsOut,
+	);
+	const top = open?.constituents[0]?.cusip;
+	if (top) cusipsByIndex.set(code, top);
 	if (monthEnd)
 		await check(
 			`/v1/indices/${code}/constituents/${monthEnd}`,
@@ -201,6 +214,44 @@ for (const code of ["broad", "BILL", "TIPS", "FRN"]) {
 		);
 }
 await expectStatus("an unknown index is a 404", "/v1/indices/SPX", {}, 404);
+
+// ── Securities (CUSIP lookup) ───────────────────────────────────────────────
+// One of each analytics basis: the broad index's top holding is a note or bond
+// (nominal), BILL's a bill (nominal), TIPS's a TIPS, FRN's a floater.
+const EXPECTED_BASIS: Record<string, string> = {
+	broad: "nominal",
+	BILL: "nominal",
+	TIPS: "tips",
+	FRN: "frn",
+};
+for (const [code, basis] of Object.entries(EXPECTED_BASIS)) {
+	const cusip = cusipsByIndex.get(code);
+	if (!cusip) {
+		fail(`security from ${code}`, "no constituent to look up");
+		continue;
+	}
+	const security = await check(`/v1/securities/${cusip}`, ZSecurityOut);
+	if (security && security.analytics_basis !== basis) {
+		fail(
+			`${cusip} analytics basis`,
+			`expected ${basis}, got ${security.analytics_basis}`,
+		);
+	}
+	await check(
+		`/v1/securities/${cusip}/prices?from=${daysAgo(14)}`,
+		ZSecurityPricesOut,
+	);
+	await check(
+		`/v1/securities/${cusip}/analytics?from=${daysAgo(14)}`,
+		ZSecurityAnalyticsOut,
+	);
+}
+await expectStatus(
+	"an unknown CUSIP is a 404",
+	"/v1/securities/912810ZZ9",
+	{},
+	404,
+);
 
 // ── The published contract ──────────────────────────────────────────────────
 const spec = (await (

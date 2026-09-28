@@ -6,7 +6,7 @@ import {
 	type TTreasuryEnv,
 } from "@saferate/treasury-client/client";
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
-import { TreasuryAbsent } from "../reads/indices";
+import { TreasuryAbsent } from "../reads/treasury";
 
 /**
  * The parts every treasury tool shares.

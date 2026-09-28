@@ -12,6 +12,8 @@ import type { TDepsTreasury } from "./tools/shared";
 import { valueSavingsBond } from "./tools/valueSavingsBond";
 
 export * from "./reads/indices";
+export * from "./reads/securities";
+export * from "./reads/treasury";
 export * from "./tools/shared";
 
 /**
