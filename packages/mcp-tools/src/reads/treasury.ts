@@ -46,6 +46,7 @@ const read = async (label: string, run: () => Promise<unknown>) => {
 		try {
 			return await run();
 		} catch (error) {
+			if (error instanceof TreasuryAbsent) throw error;
 			if (isMissingMethod(error)) throw new TreasuryAbsent(label);
 			if (isTreasuryRefusal(error)) throw error;
 			console.error(

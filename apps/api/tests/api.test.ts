@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { snakeKeys } from "@markets/mcp-tools";
+import { snakeKeys, TREASURY_TOOL_NAMES } from "@markets/mcp-tools";
 import { generateApiKey } from "@markets/persistence";
 import { getLatestCurve } from "@saferate/treasury-client/client";
 import { ZZeroCurveOut } from "../src/routes/curves";
@@ -189,14 +189,13 @@ describe("MCP over /mcp", () => {
 		return JSON.parse(json);
 	};
 
-	test("lists the nine treasury tools to an authenticated caller", async () => {
+	test("lists every treasury tool to an authenticated caller", async () => {
 		const { call, key } = await setup();
 		const response = await call("/mcp", rpc(key, "tools/list"));
 		expect(response.status).toBe(200);
 		const body = await readRpc(response);
 		const names = body.result.tools.map((t: { name: string }) => t.name);
-		expect(names).toHaveLength(9);
-		expect(names).toContain("get_treasury_curve");
+		expect([...names].sort()).toEqual([...TREASURY_TOOL_NAMES].sort());
 	});
 
 	test("a tool call answers from the binding and is metered as mcp", async () => {

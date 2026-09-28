@@ -9,6 +9,7 @@ import { rateLimit } from "./middleware/rateLimit";
 import { registerCurveRoutes } from "./routes/curves";
 import { registerIndexRoutes } from "./routes/indices";
 import { registerMcpRoute } from "./routes/mcp";
+import { registerRichCheapRoutes } from "./routes/richCheap";
 import { registerSecurityRoutes } from "./routes/securities";
 
 /**
@@ -90,6 +91,7 @@ app.use("/v1/*", apiKeyAuth(), rateLimit(), meterUsage("rest"));
 registerCurveRoutes(app);
 registerIndexRoutes(app);
 registerSecurityRoutes(app);
+registerRichCheapRoutes(app);
 
 registerMcpRoute(app);
 

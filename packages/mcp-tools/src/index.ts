@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { getRichCheap } from "./tools/getRichCheap";
 import { getSavingsBondRates } from "./tools/getSavingsBondRates";
 import { getTreasuryCurve } from "./tools/getTreasuryCurve";
 import { getTreasuryDebt } from "./tools/getTreasuryDebt";
@@ -12,6 +13,7 @@ import type { TDepsTreasury } from "./tools/shared";
 import { valueSavingsBond } from "./tools/valueSavingsBond";
 
 export * from "./reads/indices";
+export * from "./reads/richCheap";
 export * from "./reads/securities";
 export * from "./reads/treasury";
 export * from "./tools/shared";
@@ -53,6 +55,7 @@ export const TREASURY_TOOL_NAMES = [
 	"get_savings_bond_rates",
 	"get_treasury_index",
 	"get_treasury_debt",
+	"get_treasury_rich_cheap",
 ] as const;
 export type TTreasuryToolName = (typeof TREASURY_TOOL_NAMES)[number];
 
@@ -445,6 +448,68 @@ export function registerTreasuryTools(
 		},
 		wrap("get_treasury_debt", async (args) => {
 			const result = await getTreasuryDebt(args, deps);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		}),
+	);
+
+	server.registerTool(
+		"get_treasury_rich_cheap",
+		{
+			description:
+				"Rank U.S. Treasuries by how rich or cheap they are to Safe Rate's fitted curve on one day. Ranked by z-score (today's curve residual against the security's own history), so it surfaces what has MOVED, not what always trades off the curve. Use for relative-value questions: 'which notes look cheap', 'what has richened in the 5 to 10 year sector'. Nominal notes and bonds by default; basis 'tips' ranks TIPS against the real curve. Read how_to_read before quoting a residual: the price and yield residuals have opposite signs.",
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: false,
+			},
+			inputSchema: z.object({
+				date: z
+					.string()
+					.regex(/^\d{4}-\d{2}-\d{2}$/)
+					.optional()
+					.describe(
+						"Trading day as YYYY-MM-DD. Omit for the most recent day with analytics.",
+					),
+				basis: z
+					.enum(["nominal", "tips"])
+					.optional()
+					.describe('"nominal" (notes and bonds, the default) or "tips".'),
+				direction: z
+					.enum(["richer", "cheaper"])
+					.optional()
+					.describe(
+						"Only securities that have richened (negative z) or cheapened (positive z) against their own history.",
+					),
+				family: z
+					.enum(["note", "bond"])
+					.optional()
+					.describe("Nominal basis only: restrict to notes or to bonds."),
+				min_years: z
+					.number()
+					.min(0)
+					.max(40)
+					.optional()
+					.describe("Minimum years to maturity."),
+				max_years: z
+					.number()
+					.min(0)
+					.max(40)
+					.optional()
+					.describe("Maximum years to maturity."),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(100)
+					.optional()
+					.describe("How many to return. Default 15."),
+			}),
+		},
+		wrap("get_treasury_rich_cheap", async (args) => {
+			const result = await getRichCheap(args, deps);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
 			};

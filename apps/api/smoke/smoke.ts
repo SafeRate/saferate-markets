@@ -17,12 +17,14 @@
  * The key is read from the environment and never printed. Requests are paced
  * well under the 60/min rate limit, which this key's organization shares.
  */
+import { TREASURY_TOOL_NAMES } from "@markets/mcp-tools";
 import {
 	resolveMarketsEnv,
 	SITE_HOSTS,
 	type TMarketsEnv,
 } from "@markets/schema";
 import type { z } from "zod";
+import { ZRichCheapOut } from "../src/routes/richCheap";
 import { ZZeroCurveOut } from "../src/routes/curves";
 import {
 	ZSecurityAnalyticsOut,
@@ -62,7 +64,7 @@ if (!/^srm_live_[A-Za-z0-9]{32}$/.test(key)) {
 
 const API = SITE_HOSTS[environment].api;
 const PACE_MS = 1_300; // ~46/min, under the 60/min Individual limit
-const MCP_TOOLS_EXPECTED = 9;
+const MCP_TOOLS_EXPECTED = TREASURY_TOOL_NAMES.length;
 
 let failures = 0;
 let passes = 0;
@@ -253,6 +255,33 @@ await expectStatus(
 	404,
 );
 
+// ── Rich/cheap ──────────────────────────────────────────────────────────────
+// Ranked by |z|, on a recent day, and non-empty for nominal: an empty ranking
+// on a normal day is absence wearing a 200, so it fails here.
+for (const basis of ["nominal", "tips"] as const) {
+	const ranking = await check(`/v1/rich-cheap?basis=${basis}`, ZRichCheapOut);
+	if (!ranking) continue;
+	const zs = ranking.securities.map((s) => Math.abs(s.z_score));
+	const isSorted = zs.every((z, i) => i === 0 || zs[i - 1] >= z);
+	const isRecent = ranking.date >= daysAgo(7);
+	const detail = `${ranking.date}: ${ranking.matched_count} scored, ${ranking.unscored_count} unscored`;
+	if (!isSorted) fail(`rich-cheap ${basis} order`, "not sorted by |z|");
+	else if (!isRecent) fail(`rich-cheap ${basis} date`, detail);
+	else if (basis === "nominal" && ranking.matched_count === 0)
+		fail("rich-cheap nominal", `nothing scored: ${detail}`);
+	else pass(`rich-cheap ${basis}`, detail);
+}
+await check(
+	"/v1/rich-cheap?family=bond&direction=cheaper&min_years=10&limit=5",
+	ZRichCheapOut,
+);
+await expectStatus(
+	"rich-cheap on a Sunday is a 404",
+	"/v1/rich-cheap?date=2026-09-27",
+	{},
+	404,
+);
+
 // ── The published contract ──────────────────────────────────────────────────
 const spec = (await (
 	await request("/openapi.json", { auth: false })
@@ -288,6 +317,7 @@ for (const [name, args] of [
 	["get_treasury_index", {}],
 	["get_treasury_index", { code: "broad" }],
 	["list_treasury_securities", {}],
+	["get_treasury_rich_cheap", {}],
 ] as const) {
 	const call = await mcp("tools/call", { name, arguments: args });
 	const result = call.body?.result;
