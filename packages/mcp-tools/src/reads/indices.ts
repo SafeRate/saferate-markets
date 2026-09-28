@@ -16,8 +16,11 @@ import {
 import { z } from "zod";
 
 /**
- * Index reads for REST, and why they do NOT call the client's getIndex*
- * functions.
+ * Index reads for BOTH surfaces, REST (apps/api routes/indices.ts) and MCP
+ * (tools/getTreasuryIndex.ts), and why they do NOT call the client's getIndex*
+ * functions. One set of readers so a fix to either surface is a fix to both;
+ * moved here from apps/api on 2026-09-28 after the MCP tool was found serving
+ * the month-end as "latest" while REST had been fixed.
  *
  * Those functions were written for web pages, where an index panel is optional
  * and a degraded page beats a 503. So several of them SWALLOW failure:

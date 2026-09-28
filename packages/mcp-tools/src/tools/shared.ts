@@ -6,6 +6,7 @@ import {
 	type TTreasuryEnv,
 } from "@saferate/treasury-client/client";
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
+import { TreasuryAbsent } from "../reads/indices";
 
 /**
  * The parts every treasury tool shares.
@@ -119,7 +120,7 @@ export const runTreasury = async <T>(
 export const readableOutage = (error: unknown) => {
 	// Deploy skew: the treasury service is older than this server. Still a
 	// failure, never "no data", but one that says what it is.
-	if (isTreasuryMethodMissing(error)) {
+	if (isTreasuryMethodMissing(error) || error instanceof TreasuryAbsent) {
 		const readable = new Error(
 			"This Treasury data is not available from the service yet (it is older than this server). This is a fault on Safe Rate's side, NOT an absence of data.",
 		);

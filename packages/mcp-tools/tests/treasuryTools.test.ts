@@ -364,15 +364,91 @@ describe("value_savings_bond", () => {
 });
 
 describe("get_treasury_index — the total-return misreading", () => {
+	// Real-shaped rows (from production treasury-api, 2026-09-28): the daily
+	// latest is 2026-09-25 while the month-end series stops at 2026-08-31.
+	const DAILY_LATEST = [
+		{
+			code: "broad",
+			date: "2026-09-25",
+			level: 143.397,
+			return_since_rebalance: -0.0174,
+			rebalance_date: "2026-08-31",
+			constituents: 298,
+			methodology: "0.1",
+			provisional: 1,
+		},
+	];
+	const MONTH_END = [
+		{
+			code: "broad",
+			constituents: 298,
+			date: "2026-08-31",
+			level: 145.935,
+			methodology: "0.1",
+			month_return: 0.00376,
+		},
+	];
+	const listing = () =>
+		fakeTreasury({
+			indexLevelsDailyOn: async () => DAILY_LATEST,
+			indexLevels: async () => MONTH_END,
+		});
+
 	test("warns that a level is not a yield, on the listing", async () => {
-		const out = await getTreasuryIndex(
-			{},
-			{ env: fakeTreasury({ indexLevels: async () => [] }) },
-		);
+		const out = await getTreasuryIndex({}, { env: listing() });
 		expect(out.ok).toBe(true);
 		expect(out.total_return_warning).toContain("not yields");
 		expect(out.total_return_warning).toContain("yields FELL");
 		expect(out.not_official).toContain("Not an official");
+	});
+
+	// The defect this replaced: "latest published day" was the latest MONTH-END,
+	// four weeks stale. Now both, labelled, from the same readers as REST.
+	test("latest is the newest business day; the month-end is labelled apart", async () => {
+		const out = (await getTreasuryIndex({}, { env: listing() })) as {
+			as_of: string;
+			indices: {
+				code: string;
+				latest: { date: string; is_provisional: boolean } | null;
+				last_month_end: { date: string } | null;
+			}[];
+		};
+		const broad = out.indices.find((i) => i.code === "broad");
+		expect(out.as_of).toBe("2026-09-25");
+		expect(broad?.latest?.date).toBe("2026-09-25");
+		expect(broad?.latest?.is_provisional).toBe(true);
+		expect(broad?.last_month_end?.date).toBe("2026-08-31");
+	});
+
+	test("a method the deployed service lacks fails loudly, never as an empty list", async () => {
+		const call = getTreasuryIndex(
+			{},
+			{
+				env: fakeTreasury({
+					indexLevelsDailyOn: async () => {
+						throw new TypeError(
+							'The RPC receiver does not implement the method "indexLevelsDailyOn".',
+						);
+					},
+				}),
+			},
+		);
+		await expect(call).rejects.toThrow("NOT an absence of data");
+	});
+
+	test("links an index to its saferate.com page by SLUG, not by code", async () => {
+		const out = (await getTreasuryIndex(
+			{ code: "broad" },
+			{
+				env: fakeTreasury({
+					curveSeries: async () => [],
+					indexLevels: async () => MONTH_END,
+				}),
+			},
+		)) as { next_steps: { index_url: string } };
+		expect(out.next_steps.index_url).toBe(
+			"https://saferate.com/treasury/indices/nominal",
+		);
 	});
 
 	// "broad" is LOWERCASE in the code list while TIPS/AGG/20PL are upper, so

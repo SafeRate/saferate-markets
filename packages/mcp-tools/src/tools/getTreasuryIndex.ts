@@ -10,14 +10,19 @@ import {
 	getConstituentDates,
 	getFundComparison,
 	getIndexBaseDate,
-	getIndexConstituents,
 	getIndexLevelOn,
-	getIndexLevelsDaily,
-	getIndexLevelsOn,
 	getIndexSeries,
-	getLatestIndexLevels,
 } from "@saferate/treasury-client/client";
-import { INDEX_DISPLAY_ORDER } from "@saferate/treasury-client/types";
+import {
+	INDEX_DISPLAY_ORDER,
+	INDEX_SLUG,
+} from "@saferate/treasury-client/types";
+import {
+	readConstituentsOn,
+	readDailyLevels,
+	readDailyLevelsOn,
+	readLatestLevels,
+} from "../reads/indices";
 import { z } from "zod";
 
 /**
@@ -82,16 +87,37 @@ export async function getTreasuryIndex(
 		// `on` switches the catalogue from "latest" to "as at that date", which is
 		// how a caller compares every index across one day rather than reading
 		// them one at a time.
-		const levels = await runTreasury(() =>
-			input.on === undefined
-				? getLatestIndexLevels({ env })
-				: getIndexLevelsOn({ date: input.on, env }),
-		);
-		if (_isFailure(levels)) return levels;
+		/*
+		 * TWO LEVELS PER INDEX, LABELLED, and the reason is a bug this replaced.
+		 *
+		 * This used to answer from the client's getLatestIndexLevels and call it
+		 * "latest published day". That is the latest MONTH-END: on 2026-09-28 it
+		 * was dated 2026-08-31 while the daily series ran to 2026-09-25, so an
+		 * assistant asked "where is the index now" quoted a four-week-old level.
+		 * `latest` is now the most recent business day (provisional until prices
+		 * settle); `last_month_end` is the final month-end with its month return.
+		 * Same readers as REST /v1/indices, so the two surfaces cannot disagree.
+		 */
+		const daily = await runTreasury(() => readDailyLevelsOn(env, input.on));
+		if (_isFailure(daily)) return daily;
+		if (daily.length === 0) {
+			return noData("index levels", input.on ?? "the latest day");
+		}
+		const monthEnd =
+			input.on === undefined ? await runTreasury(() => readLatestLevels(env)) : [];
+		if (_isFailure(monthEnd)) return monthEnd;
+		const dailyByCode = new Map(daily.map((row) => [row.code, row]));
+		const monthEndByCode = new Map(monthEnd.map((row) => [row.code, row]));
 		const result: Record<string, unknown> = {
 			ok: true,
-			as_of: input.on ?? "latest published day",
-			indices: snakeKeys(levels),
+			as_of: input.on ?? daily[0]?.date,
+			indices: INDEX_DISPLAY_ORDER.map((code) => ({
+				code,
+				latest: snakeKeys(dailyByCode.get(code) ?? null),
+				last_month_end: snakeKeys(monthEndByCode.get(code) ?? null),
+			})),
+			latest_vs_month_end:
+				"`latest` is the most recent business day and can be provisional (is_provisional) while prices settle. `last_month_end` is the final month-end level with its month return; quote it for performance reporting. With `on`, only that day's daily levels are given.",
 			available_codes: [...INDEX_DISPLAY_ORDER],
 			total_return_warning: TOTAL_RETURN_WARNING,
 			not_official: NOT_OFFICIAL,
@@ -152,13 +178,19 @@ export async function getTreasuryIndex(
 	};
 
 	if (include.has("daily_history")) {
+		// The strict reader: the client's getIndexLevelsDaily returns an "absent"
+		// marker for a missing method or an empty series, which this used to pass
+		// on as though it were levels.
 		const daily = await runTreasury(() =>
-			getIndexLevelsDaily({ code, env, since: input.since }),
+			readDailyLevels(env, { code, from: input.since }),
 		);
 		if (_isFailure(daily)) return daily;
 		result.daily_history =
-			daily === null
-				? null
+			daily.length === 0
+				? noData(
+						`daily levels for ${code}`,
+						input.since ? `since ${input.since}` : undefined,
+					)
 				: {
 						levels: snakeKeys(daily),
 						since: input.since ?? "start of the index",
@@ -176,7 +208,7 @@ export async function getTreasuryIndex(
 			result.constituents = noData("constituent snapshots", `index ${code}`);
 		} else {
 			const [constituents, levelOn] = await Promise.all([
-				runTreasury(() => getIndexConstituents({ code, date: on, env })),
+				runTreasury(() => readConstituentsOn(env, { code, date: on })),
 				runTreasury(() => getIndexLevelOn({ code, date: on, env })),
 			]);
 			if (_isFailure(constituents)) return constituents;
@@ -213,7 +245,10 @@ export async function getTreasuryIndex(
 		...result,
 		disclosure: DISCLOSURE_TREASURY,
 		next_steps: {
-			index_url: `${TREASURY_URLS.indices}/${code.toLowerCase()}`,
+			// The page's SLUG, not its code: /treasury/indices/broad only redirects
+			// to /nominal (measured 2026-09-28), so a lowercased code is at best a
+			// hop and at worst a 404 for a code whose slug differs more.
+			index_url: `${TREASURY_URLS.indices}/${INDEX_SLUG[code]}`,
 			indices_url: TREASURY_URLS.indices,
 		},
 	};

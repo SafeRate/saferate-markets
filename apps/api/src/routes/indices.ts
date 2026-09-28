@@ -17,7 +17,7 @@ import {
 	readLatestLevels,
 	readOpenConstituents,
 	readReturns,
-} from "../lib/indexReads";
+} from "@markets/mcp-tools";
 import { treasuryErrorResponse, treasuryUnbound } from "../lib/treasury";
 
 /**

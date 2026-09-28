@@ -6,7 +6,7 @@ import {
 } from "@saferate/treasury-client/client";
 import type { Context } from "hono";
 import type { AppEnv } from "../env";
-import { TreasuryAbsent } from "./indexReads";
+import { TreasuryAbsent } from "@markets/mcp-tools";
 
 /**
  * The client returns null when the TREASURY binding is absent, the same null it
