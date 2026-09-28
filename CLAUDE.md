@@ -171,14 +171,18 @@ Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
   `we_1UKj1S5aTiygYfqnOei8z6Qf`.
 - Verified on staging: unsigned and forged webhooks 400; a webhook signed with
   the real secret 200.
-- **Not yet verified: a real checkout.** Stripe Checkout is a hosted page and
-  needs a browser. Until someone completes one on staging with WIMBLEDON, the
-  path from checkout.session.completed to an entitled key is unproven.
+- **Proven end to end on staging, 2026-09-28**, by Dylan in a browser: a new
+  key 402'd, checkout with WIMBLEDON completed at $0 with no card, and the same
+  key then returned the 2026-09-25 zero curve (10y 5.145%, matching
+  saferate.com/treasury). Read back afterwards: organizationSubscriptions and the
+  plugin mirror both `active` on `sub_1UKjGM5aTiygYfqncUbnDqtG`, which in Stripe
+  is on markets_public_monthly with no payment method and the WIMBLEDON code.
 
 ## Not built yet, in order
 
-1. A real staging checkout, then production: `stripe-seed.ts` under `prd` with
-   `I_UNDERSTAND_THIS_IS_LIVE=1`, the production D1, deploy.
+1. Production: confirm the TT Norms licence covers saferate.markets; create the
+   production D1; `stripe-seed.ts` under `prd` with `I_UNDERSTAND_THIS_IS_LIVE=1`;
+   migrate, deploy both Workers, push secrets; verify.
 2. Ending the beta: a script that removes the WIMBLEDON discount from existing
    subscriptions, plus the warning email and dashboard banner (no card is on
    file, so removal leads to past_due and then lost access).
