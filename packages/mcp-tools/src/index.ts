@@ -458,7 +458,7 @@ export function registerTreasuryTools(
 		"get_treasury_rich_cheap",
 		{
 			description:
-				"Rank U.S. Treasuries by how rich or cheap they are to Safe Rate's fitted curve on one day. Ranked by z-score (today's curve residual against the security's own history), so it surfaces what has MOVED, not what always trades off the curve. Use for relative-value questions: 'which notes look cheap', 'what has richened in the 5 to 10 year sector'. Nominal notes and bonds by default; basis 'tips' ranks TIPS against the real curve. Read how_to_read before quoting a residual: the price and yield residuals have opposite signs.",
+				"Rank U.S. Treasuries by how rich or cheap they are to Safe Rate's fitted curve on one day. Ranked by z-score (today's curve residual against the security's own history), so it surfaces what has MOVED, not what always trades off the curve. Use for relative-value questions: 'which notes look cheap', 'what has richened in the 5 to 10 year sector'. Notes and bonds at least a year from maturity by default (TIPS are not scored yet). Read how_to_read before quoting a residual: the price and yield residuals have opposite signs.",
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -473,10 +473,6 @@ export function registerTreasuryTools(
 					.describe(
 						"Trading day as YYYY-MM-DD. Omit for the most recent day with analytics.",
 					),
-				basis: z
-					.enum(["nominal", "tips"])
-					.optional()
-					.describe('"nominal" (notes and bonds, the default) or "tips".'),
 				direction: z
 					.enum(["richer", "cheaper"])
 					.optional()
@@ -486,13 +482,15 @@ export function registerTreasuryTools(
 				family: z
 					.enum(["note", "bond"])
 					.optional()
-					.describe("Nominal basis only: restrict to notes or to bonds."),
+					.describe("Restrict to notes or to bonds."),
 				min_years: z
 					.number()
 					.min(0)
 					.max(40)
 					.optional()
-					.describe("Minimum years to maturity."),
+					.describe(
+						"Minimum years to maturity. Default 1: shorter securities sit where the curve is extrapolated and their residuals are inflated. Pass 0 to include them.",
+					),
 				max_years: z
 					.number()
 					.min(0)

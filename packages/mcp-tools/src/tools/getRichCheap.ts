@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { rankRichCheap, readRichCheap } from "../reads/richCheap";
+import {
+	RICH_CHEAP_MIN_YEARS,
+	rankRichCheap,
+	readRichCheap,
+} from "../reads/richCheap";
 import {
 	DISCLOSURE_TREASURY,
 	noData,
@@ -24,7 +28,6 @@ export const ZInputGetRichCheap = z.object({
 		.string()
 		.regex(/^\d{4}-\d{2}-\d{2}$/)
 		.optional(),
-	basis: z.enum(["nominal", "tips"]).optional(),
 	direction: z.enum(["richer", "cheaper"]).optional(),
 	family: z.enum(["note", "bond"]).optional(),
 	min_years: z.number().min(0).max(40).optional(),
@@ -37,18 +40,11 @@ export async function getRichCheap(
 	_deps: TDepsTreasury,
 ) {
 	const input = ZInputGetRichCheap.parse(_input);
-	const basis = input.basis ?? "nominal";
-	if (input.family !== undefined && basis === "tips") {
-		return {
-			ok: false as const,
-			error: "bad_request",
-			message: "`family` applies to basis nominal only; every TIPS is one family.",
-		};
-	}
+	const minYears = input.min_years ?? RICH_CHEAP_MIN_YEARS;
 
 	const day = await runTreasury(() =>
 		readRichCheap(_deps.env, {
-			basis,
+			basis: "nominal",
 			date: input.date,
 		}),
 	);
@@ -57,13 +53,8 @@ export async function getRichCheap(
 
 	const ranking = rankRichCheap(day.rows, {
 		direction: input.direction,
-		families:
-			basis === "tips"
-				? ["tips"]
-				: input.family === undefined
-					? ["note", "bond"]
-					: [input.family],
-		minYears: input.min_years,
+		families: input.family === undefined ? ["note", "bond"] : [input.family],
+		minYears,
 		maxYears: input.max_years,
 		limit: input.limit ?? 15,
 	});
@@ -71,8 +62,8 @@ export async function getRichCheap(
 	return {
 		ok: true,
 		date: day.date,
-		basis,
 		ranked_by: "abs_z_score",
+		min_years: minYears,
 		matched_count: ranking.matchedCount,
 		unscored_count: ranking.unscoredCount,
 		securities: ranking.ranked.map((row, index) => ({
@@ -80,7 +71,7 @@ export async function getRichCheap(
 			...(snakeKeys(row) as Record<string, unknown>),
 		})),
 		how_to_read:
-			"residual_basis_points is yield minus the fitted curve: POSITIVE = CHEAP. price_residual_cents is price minus model: POSITIVE = RICH (opposite sign, same fact). vs_curve says which, in words. z_score compares today's residual with the security's own history: positive = cheaper than usual. vs_history says which; it can disagree with vs_curve. Ranked by |z_score|. Securities with no z-score (new issues for about a month, anything within a month of maturity; bills are never scored) are counted in unscored_count, not ranked: a missing z is not zero.",
+			"residual_basis_points is yield minus the fitted curve: POSITIVE = CHEAP. price_residual_cents is price minus model: POSITIVE = RICH (opposite sign, same fact). vs_curve says which, in words. z_score compares today's residual with the security's own history: positive = cheaper than usual. vs_history says which; it can disagree with vs_curve. Ranked by |z_score|. Securities with no z-score (new issues for about a month) are counted in unscored_count, not ranked: a missing z is not zero. Only securities at least min_years from maturity are ranked (default 1): shorter ones sit where the curve is extrapolated and their residuals are inflated, so they are left out unless asked for with min_years 0.",
 		disclosure: DISCLOSURE_TREASURY,
 	};
 }

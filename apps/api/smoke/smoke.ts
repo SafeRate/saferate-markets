@@ -256,20 +256,22 @@ await expectStatus(
 );
 
 // ── Rich/cheap ──────────────────────────────────────────────────────────────
-// Ranked by |z|, on a recent day, and non-empty for nominal: an empty ranking
-// on a normal day is absence wearing a 200, so it fails here.
-for (const basis of ["nominal", "tips"] as const) {
-	const ranking = await check(`/v1/rich-cheap?basis=${basis}`, ZRichCheapOut);
-	if (!ranking) continue;
+// Ranked by |z|, on a recent day, non-empty, and nothing inside the one-year
+// floor: an empty ranking on a normal day is absence wearing a 200.
+const ranking = await check("/v1/rich-cheap?limit=100", ZRichCheapOut);
+if (ranking) {
 	const zs = ranking.securities.map((s) => Math.abs(s.z_score));
-	const isSorted = zs.every((z, i) => i === 0 || zs[i - 1] >= z);
-	const isRecent = ranking.date >= daysAgo(7);
 	const detail = `${ranking.date}: ${ranking.matched_count} scored, ${ranking.unscored_count} unscored`;
-	if (!isSorted) fail(`rich-cheap ${basis} order`, "not sorted by |z|");
-	else if (!isRecent) fail(`rich-cheap ${basis} date`, detail);
-	else if (basis === "nominal" && ranking.matched_count === 0)
-		fail("rich-cheap nominal", `nothing scored: ${detail}`);
-	else pass(`rich-cheap ${basis}`, detail);
+	if (!zs.every((z, i) => i === 0 || zs[i - 1] >= z))
+		fail("rich-cheap order", "not sorted by |z|");
+	else if (ranking.date < daysAgo(7)) fail("rich-cheap date", detail);
+	else if (ranking.matched_count === 0)
+		fail("rich-cheap", `nothing scored: ${detail}`);
+	else if (
+		ranking.securities.some((s) => s.years_to_maturity < ranking.min_years)
+	)
+		fail("rich-cheap floor", `a security inside ${ranking.min_years}y`);
+	else pass("rich-cheap ranking", detail);
 }
 await check(
 	"/v1/rich-cheap?family=bond&direction=cheaper&min_years=10&limit=5",

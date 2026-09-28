@@ -5,6 +5,7 @@ import noteAnalytics from "./fixtures/securities/nominal-analytics.json";
 import notePrices from "./fixtures/securities/nominal-prices.json";
 import tipsPrices from "./fixtures/securities/tips-prices.json";
 import tipsAnalytics from "./fixtures/securities/tips-tips-analytics.json";
+import { readRichCheap } from "@markets/mcp-tools";
 import { bearer, setup } from "./helpers";
 
 /**
@@ -202,21 +203,52 @@ describe("filters", () => {
 			["91282CBBB", "91282CMM0"],
 		);
 	});
+});
 
-	test("family with basis=tips is a 400, not an empty list", async () => {
-		const { status } = await get("/v1/rich-cheap?basis=tips&family=note");
-		expect(status).toBe(400);
+describe("the one-year floor", () => {
+	// Measured 2026-09-25: inside a year the curve is extrapolated and the
+	// shortest notes filled the top of the list on 2-3 cent price errors.
+	const shortDay = () => ({
+		analyticsOn: async (date: string) =>
+			date === DAY
+				? [...nominalDay, { ...note, cusip: "91282CSHT", residual_z_score: 5.3 }]
+				: [],
+		pricesOn: async ({ date }: { date: string }) =>
+			date === DAY
+				? [
+						...priceDay,
+						{ ...notePrice, cusip: "91282CSHT", maturity_date: "2026-11-15" },
+					]
+				: [],
+	});
+
+	test("by default, nothing inside a year is ranked, and the floor is stated", async () => {
+		const { body } = await get(`/v1/rich-cheap?date=${DAY}`, shortDay());
+		expect(body.min_years).toBe(1);
+		expect(body.securities.map((s: { cusip: string }) => s.cusip)).not.toContain(
+			"91282CSHT",
+		);
+	});
+
+	test("min_years=0 asks for them", async () => {
+		const { body } = await get(
+			`/v1/rich-cheap?date=${DAY}&min_years=0`,
+			shortDay(),
+		);
+		expect(body.min_years).toBe(0);
+		expect(body.securities[0].cusip).toBe("91282CSHT");
 	});
 });
 
-describe("TIPS", () => {
-	test("basis=tips ranks linkers from their own table", async () => {
-		const { status, body } = await get(`/v1/rich-cheap?date=${DAY}&basis=tips`);
-		expect(status).toBe(200);
-		expect(body.basis).toBe("tips");
-		expect(body.securities).toHaveLength(1);
-		expect(body.securities[0].family).toBe("tips");
-		expect(body.securities[0].yield_percent).toBeCloseTo(
+describe("the reader's TIPS basis (not yet published: upstream scores no TIPS)", () => {
+	test("reads linkers from their own table", async () => {
+		const day = await readRichCheap(
+			{ TREASURY: treasury() },
+			{ basis: "tips", date: DAY },
+		);
+		expect(day?.rows).toHaveLength(1);
+		expect(day?.rows[0].family).toBe("tips");
+		expect(day?.rows[0].yieldPercent).toBeCloseTo(
 			tipsAnalytics[0].real_yield,
 			10,
 		);

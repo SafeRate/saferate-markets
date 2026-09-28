@@ -96,6 +96,17 @@ const readAnalyticsOn = async (
 	});
 };
 
+/**
+ * The default years-to-maturity floor. Measured on 2026-09-25 (344 scored
+ * notes and bonds): median |z| was 3.04 under three months, 1.81 at three to
+ * six, 1.02 at six to twelve, and the whole top of the list sat inside four
+ * months of maturity, at residuals of 20bp from price errors of 2 to 3 cents.
+ * The nominal curve's fitted domain starts at one year, so those residuals are
+ * against an extrapolation, annualised over a vanishing horizon. Below one
+ * year a caller asks for them explicitly.
+ */
+export const RICH_CHEAP_MIN_YEARS = 1;
+
 /** How far back an omitted date looks for a day with analytics. */
 export const RICH_CHEAP_LOOKBACK_DAYS = 7;
 
@@ -180,6 +191,14 @@ export const readRichCheap = async (
 	return { date, rows, unpriced };
 };
 
+export type TScoredRow = TRichCheapRow & {
+	zScore: number;
+	residualBasisPoints: number;
+	yieldPercent: number;
+	vsCurve: TRichCheapSide;
+	vsHistory: "richer" | "cheaper";
+};
+
 export type TRichCheapFilter = {
 	/** Filter on vsHistory: what has cheapened or richened unusually. */
 	direction?: "richer" | "cheaper";
@@ -205,17 +224,22 @@ export const rankRichCheap = (
 			(filter.minYears === undefined || row.yearsToMaturity >= filter.minYears) &&
 			(filter.maxYears === undefined || row.yearsToMaturity <= filter.maxYears),
 	);
+	// Scored means a z AND the residual and yield it came from. Upstream nulls
+	// all three together; requiring all three keeps a partial row out of the
+	// ranking instead of publishing a z with no residual beside it.
+	const isScored = (row: TRichCheapRow): row is TScoredRow =>
+		row.zScore !== null &&
+		row.residualBasisPoints !== null &&
+		row.yieldPercent !== null;
 	const scored = kept
-		.filter(
-			(row): row is TRichCheapRow & { zScore: number } => row.zScore !== null,
-		)
+		.filter(isScored)
 		.filter(
 			(row) =>
 				filter.direction === undefined ||
 				(filter.direction === "cheaper" ? row.zScore > 0 : row.zScore < 0),
 		)
 		.sort((left, right) => Math.abs(right.zScore) - Math.abs(left.zScore));
-	const unscoredCount = kept.filter((row) => row.zScore === null).length;
+	const unscoredCount = kept.filter((row) => !isScored(row)).length;
 	return {
 		matchedCount: scored.length,
 		unscoredCount,

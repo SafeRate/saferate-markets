@@ -17,23 +17,20 @@ const ZRichCheapRowOut = z
 		rank: z.number().int(),
 		cusip: z.string().openapi({ example: "91282CMM0" }),
 		family: z
-			.enum(["bill", "note", "bond", "tips", "frn"])
-			.nullable()
+			.enum(["note", "bond"])
 			.openapi({ description: "From the day's price record." }),
 		coupon_percent: z.number(),
 		maturity_date: z.string(),
 		years_to_maturity: z.number(),
 		price: z.number().openapi({
-			description:
-				"End-of-day clean price per 100 face, as quoted. A TIPS is quoted in real terms, before its index ratio.",
+			description: "End-of-day clean price per 100 face.",
 		}),
-		yield_percent: z.number().nullable().openapi({
-			description:
-				"Yield to maturity, percent. For TIPS, the REAL yield. Null inside a month of maturity, where annualising stops meaning anything.",
+		yield_percent: z.number().openapi({
+			description: "Yield to maturity, percent.",
 		}),
-		residual_basis_points: z.number().nullable().openapi({
+		residual_basis_points: z.number().openapi({
 			description:
-				"Yield minus the fitted curve, bp. POSITIVE MEANS CHEAP. Nominal securities against the nominal zero curve; TIPS against the real curve.",
+				"Yield minus the fitted nominal curve, bp. POSITIVE MEANS CHEAP.",
 		}),
 		price_residual_cents: z.number().openapi({
 			description:
@@ -43,11 +40,11 @@ const ZRichCheapRowOut = z
 			description:
 				"The residual against this security's own history, in standard deviations. Positive: cheaper than usual; negative: richer. The ranking key, by absolute value.",
 		}),
-		vs_curve: z.enum(["rich", "cheap"]).nullable().openapi({
+		vs_curve: z.enum(["rich", "cheap"]).openapi({
 			description:
 				"Today, against the curve: the sign of residual_basis_points in words.",
 		}),
-		vs_history: z.enum(["richer", "cheaper"]).nullable().openapi({
+		vs_history: z.enum(["richer", "cheaper"]).openapi({
 			description:
 				"Against its own history: the sign of z_score in words. Can disagree with vs_curve: a bond that always trades rich can be rich today and still cheaper than usual.",
 		}),
@@ -58,8 +55,10 @@ const ZRichCheapRowOut = z
 export const ZRichCheapOut = z
 	.object({
 		date: z.string().openapi({ description: "The trading day ranked." }),
-		basis: z.enum(["nominal", "tips"]),
 		ranked_by: z.literal("abs_z_score"),
+		min_years: z.number().openapi({
+			description: `The years-to-maturity floor applied: yours, or ${"`"}1${"`"} by default.`,
+		}),
 		matched_count: z.number().int().openapi({
 			description: "Scored securities matching the filters, before `limit`.",
 		}),
@@ -79,7 +78,7 @@ const route = createRoute({
 	path: "/v1/rich-cheap",
 	summary: "Rich/cheap: securities furthest from the curve",
 	description:
-		"Every Treasury's distance from the fitted curve on one day, ranked by how unusual that distance is for the security (|z-score|), not by its size, so a bond that always trades a little cheap does not crowd out one that has just moved. `basis=nominal` covers notes and bonds (bills are never scored); `basis=tips` covers TIPS against the real curve. Omit `date` for the most recent day with analytics.",
+		"Every Treasury note and bond's distance from the fitted nominal curve on one day, ranked by how unusual that distance is for the security (|z-score|), not by its size, so a bond that always trades a little cheap does not crowd out one that has just moved. Bills are never scored, and TIPS are not yet. By default only securities at least a year from maturity are ranked: below that the curve is extrapolated and a cent of price becomes many basis points, so the shortest notes would fill the list. Pass `min_years=0` to include them. Omit `date` for the most recent day with analytics.",
 	tags: ["Rich/cheap"],
 	request: {
 		query: z.object({
@@ -88,17 +87,15 @@ const route = createRoute({
 				.regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD")
 				.optional()
 				.openapi({ example: "2026-09-25" }),
-			basis: z.enum(["nominal", "tips"]).default("nominal"),
 			direction: z.enum(["richer", "cheaper"]).optional().openapi({
 				description:
 					"Only securities that have richened (negative z) or cheapened (positive z) against their own history.",
 			}),
-			family: z.enum(["note", "bond"]).optional().openapi({
-				description: "Nominal basis only: notes or bonds.",
+			family: z.enum(["note", "bond"]).optional(),
+			min_years: zYears.default(1).openapi({
+				description:
+					"Minimum years to maturity. Default 1; 0 includes the shortest notes.",
 			}),
-			min_years: zYears
-				.optional()
-				.openapi({ description: "Minimum years to maturity." }),
 			max_years: zYears
 				.optional()
 				.openapi({ description: "Maximum years to maturity." }),
@@ -132,19 +129,9 @@ export const registerRichCheapRoutes = (app: OpenAPIHono<AppEnv>) =>
 		const unbound = treasuryUnbound(c);
 		if (unbound) return unbound;
 		const query = c.req.valid("query");
-		if (query.family !== undefined && query.basis === "tips") {
-			return c.json(
-				{
-					error: "bad_request" as const,
-					message:
-						"`family` applies to basis=nominal only; every TIPS is one family.",
-				},
-				400,
-			);
-		}
 		try {
 			const day = await readRichCheap(c.env, {
-				basis: query.basis,
+				basis: "nominal",
 				date: query.date,
 			});
 			if (day === null) {
@@ -161,17 +148,12 @@ export const registerRichCheapRoutes = (app: OpenAPIHono<AppEnv>) =>
 			}
 			if (day.unpriced > 0) {
 				console.warn(
-					`[rich-cheap] ${day.unpriced} ${query.basis} analytics rows on ${day.date} had no price row and were left out`,
+					`[rich-cheap] ${day.unpriced} analytics rows on ${day.date} had no price row and were left out`,
 				);
 			}
 			const ranking = rankRichCheap(day.rows, {
 				direction: query.direction,
-				families:
-					query.basis === "tips"
-						? ["tips"]
-						: query.family === undefined
-							? ["note", "bond"]
-							: [query.family],
+				families: query.family === undefined ? ["note", "bond"] : [query.family],
 				minYears: query.min_years,
 				maxYears: query.max_years,
 				limit: query.limit,
@@ -179,8 +161,8 @@ export const registerRichCheapRoutes = (app: OpenAPIHono<AppEnv>) =>
 			return c.json(
 				ZRichCheapOut.parse({
 					date: day.date,
-					basis: query.basis,
 					ranked_by: "abs_z_score",
+					min_years: query.min_years,
 					matched_count: ranking.matchedCount,
 					unscored_count: ranking.unscoredCount,
 					securities: ranking.ranked.map((row, index) => ({
