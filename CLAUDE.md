@@ -34,6 +34,17 @@ Mail sends from `noreply@notifications.saferate.markets` (Cloudflare Email
 Service). A new sending domain has no reputation: check spam before debugging a
 magic link.
 
+## Look: the saferate.com brand, not OKLocate's
+
+Decided 2026-09-28: Markets is part of the Safe Rate brand; OKLocate is a
+separate one. Tokens (indigo `#4F46E5` primary, slate neutrals, 0.625rem
+radius), the TT Norms font, the logo SVG and the header/footer shape are copied
+from `saferate-ai/apps/consumer` @ 48da6e68. Change them there first, then copy.
+Light only, as saferate.com is.
+
+⚠️ **TT Norms is a commercial font.** Its web licence may name domains. Confirm
+it covers saferate.markets before production.
+
 ## Layout
 
 ```

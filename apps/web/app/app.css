@@ -1,47 +1,113 @@
 @import "tailwindcss";
 
-@theme {
-	--font-sans:
-		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-	--font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-
+/*
+ * The saferate.com theme, not OKLocate's (decided 2026-09-28: Markets is part of
+ * the Safe Rate brand, OKLocate is a separate one). Tokens, font and radius are
+ * copied from saferate-ai/apps/consumer/app/app.css @ 48da6e68 so the two sites
+ * read as one product. Change them THERE first, then copy.
+ *
+ * LIGHT ONLY, like saferate.com, which uses its dark palette only for bands.
+ * A prefers-color-scheme dark mode here would make Markets the one Safe Rate
+ * surface that looks different at night.
+ *
+ * Not copied: saferate.com's `--accent` is a near-white NEUTRAL for hover fills,
+ * not a link colour. Links and emphasis use --primary.
+ */
 :root {
-	--background: oklch(0.99 0.002 250);
-	--foreground: oklch(0.18 0.02 255);
-	--muted: oklch(0.955 0.006 250);
-	--muted-foreground: oklch(0.5 0.018 255);
-	--border: oklch(0.9 0.01 250);
-	--primary: oklch(0.26 0.05 255);
-	--primary-foreground: oklch(0.99 0 0);
-	--accent: oklch(0.52 0.12 160);
+	color-scheme: light;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.145 0 0);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.145 0 0);
+	/* indigo, #4F46E5: saferate.com's primary */
+	--primary: oklch(0.515 0.21 274);
+	--primary-muted: oklch(0.9 0.05 274);
+	--primary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.97 0 0);
+	--muted-foreground: oklch(0.556 0 0);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.922 0 0);
+	--input: oklch(0.922 0 0);
+	--ring: oklch(0.87 0 0);
+	--success: oklch(0.7 0.15 162);
+	--radius: 0.625rem;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: oklch(0.17 0.015 255);
-		--foreground: oklch(0.96 0.004 250);
-		--muted: oklch(0.23 0.015 255);
-		--muted-foreground: oklch(0.7 0.014 250);
-		--border: oklch(0.3 0.015 255);
-		--primary: oklch(0.95 0.01 250);
-		--primary-foreground: oklch(0.17 0.015 255);
-		--accent: oklch(0.72 0.12 160);
-	}
+/*
+ * The brand font, self-hosted as on saferate.com.
+ * ⚠️ TT Norms is a COMMERCIAL face (TypeType). A web licence can be scoped to
+ * named domains; confirm it covers saferate.markets before production.
+ */
+@font-face {
+	font-family: "tt_norms";
+	font-style: normal;
+	font-weight: 300;
+	font-display: swap;
+	src: url("/fonts/ttnorms-light-webfont.woff") format("woff");
+}
+@font-face {
+	font-family: "tt_norms";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("/fonts/ttnorms-regular-webfont.woff") format("woff");
+}
+@font-face {
+	font-family: "tt_norms";
+	font-style: italic;
+	font-weight: 400;
+	font-display: swap;
+	src: url("/fonts/ttnorms-italic-webfont.woff") format("woff");
+}
+@font-face {
+	font-family: "tt_norms";
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("/fonts/ttnorms-medium-webfont.woff") format("woff");
+}
+@font-face {
+	font-family: "tt_norms";
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("/fonts/ttnorms-bold-webfont.woff") format("woff");
 }
 
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-primary: var(--primary);
+	--color-primary-muted: var(--primary-muted);
+	--color-primary-foreground: var(--primary-foreground);
 	--color-muted: var(--muted);
 	--color-muted-foreground: var(--muted-foreground);
+	--color-destructive: var(--destructive);
 	--color-border: var(--border);
-	--color-primary: var(--primary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-accent: var(--accent);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-success: var(--success);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme {
+	/* Fallbacks so a font that fails to load still reads as intended. */
+	--font-sans:
+		"tt_norms", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	--font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 body {
 	background-color: var(--background);
 	color: var(--foreground);
+}
+
+/* Market data is columns of numbers; they must align. */
+.tabular {
+	font-variant-numeric: tabular-nums;
 }

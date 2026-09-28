@@ -49,7 +49,9 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 	if (actionData?.status === "sent") {
 		return (
 			<main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6">
-				<h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
+				<h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+					Check your email
+				</h1>
 				<p className="mt-3 text-muted-foreground">
 					If an account can be created or found for{" "}
 					<span className="font-mono text-foreground">{actionData.email}</span>, a
@@ -57,7 +59,7 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 				</p>
 				<p className="mt-6 text-sm text-muted-foreground">
 					Nothing arrived? Check spam, then{" "}
-					<a className="text-accent underline underline-offset-4" href="/sign-in">
+					<a className="text-primary underline underline-offset-4" href="/sign-in">
 						try again
 					</a>
 					.
@@ -68,10 +70,12 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 
 	return (
 		<main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6">
-			<p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				{PRODUCT_NAME}
 			</p>
-			<h1 className="mt-4 text-2xl font-semibold tracking-tight">Sign in</h1>
+			<h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-900">
+				Sign in
+			</h1>
 			<p className="mt-3 text-muted-foreground">
 				We email you a link. No password to choose or forget.
 			</p>
@@ -84,7 +88,7 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 					autoComplete="email"
 					// biome-ignore lint/a11y/noAutofocus: the rule guards against stealing focus on a content page. This page IS the single field — there is nothing else here to read past — and landing ready to type is why someone followed a "Sign in" link.
 					autoFocus
-					className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+					className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
 					id="email"
 					name="email"
 					placeholder="you@company.com"
@@ -92,7 +96,7 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 					type="email"
 				/>
 				<button
-					className="mt-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+					className="mt-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60"
 					disabled={isSubmitting}
 					type="submit"
 				>

@@ -114,14 +114,16 @@ export default function Billing({
 	const d = loaderData;
 	const isBusy = useNavigation().state === "submitting";
 	const button =
-		"rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60";
+		"rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60";
 
 	return (
 		<main className="mx-auto max-w-2xl px-6 py-16">
-			<p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				{d.organizationName}
 			</p>
-			<h1 className="mt-3 text-3xl font-semibold tracking-tight">Billing</h1>
+			<h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
+				Billing
+			</h1>
 
 			{d.checkout === "done" && !d.isEntitled ? (
 				// Stripe redirects before its webhook necessarily lands. Say so,

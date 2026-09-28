@@ -51,11 +51,13 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 };
 
 const Stat = ({ label, value }: { label: string; value: string }) => (
-	<div className="rounded-lg border border-border p-4">
+	<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 		<p className="text-xs uppercase tracking-wide text-muted-foreground">
 			{label}
 		</p>
-		<p className="mt-2 font-mono text-2xl tabular-nums">{value}</p>
+		<p className="tabular mt-2 text-2xl font-semibold text-neutral-900">
+			{value}
+		</p>
 	</div>
 );
 
@@ -63,10 +65,12 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 	const d = loaderData;
 	return (
 		<main className="mx-auto max-w-3xl px-6 py-16">
-			<p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				{d.organizationName}
 			</p>
-			<h1 className="mt-3 text-3xl font-semibold tracking-tight">Dashboard</h1>
+			<h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
+				Dashboard
+			</h1>
 			<p className="mt-2 text-sm text-muted-foreground">Signed in as {d.email}.</p>
 
 			<section className="mt-10 grid gap-4 sm:grid-cols-3">
@@ -92,7 +96,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 						<>
 							No plan yet, so your keys will be refused.{" "}
 							<a
-								className="text-accent underline underline-offset-4"
+								className="text-primary underline underline-offset-4"
 								href="/dashboard/billing"
 							>
 								Subscribe
@@ -104,18 +108,18 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 
 			<nav className="mt-10 flex gap-6 text-sm">
 				<a
-					className="text-accent underline underline-offset-4"
+					className="text-primary underline underline-offset-4"
 					href="/dashboard/keys"
 				>
 					Manage API keys
 				</a>
 				<a
-					className="text-accent underline underline-offset-4"
+					className="text-primary underline underline-offset-4"
 					href="/dashboard/billing"
 				>
 					Billing
 				</a>
-				<a className="text-accent underline underline-offset-4" href="/docs">
+				<a className="text-primary underline underline-offset-4" href="/docs">
 					Read the docs
 				</a>
 				<form action="/sign-out" method="post">
