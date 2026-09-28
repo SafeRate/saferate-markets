@@ -1,0 +1,9 @@
+{
+	"daysInYear": 365,
+	"daysToMaturity": 171,
+	"discountRate": 0.04000000000000012,
+	"investmentRate": 0.04134103522482739,
+	"maturityDate": "2027-03-18",
+	"price": 98.1,
+	"settlementDate": "2026-09-28"
+}

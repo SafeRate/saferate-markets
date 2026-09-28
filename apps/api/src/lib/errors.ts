@@ -15,6 +15,10 @@ export const ZError = z
 		]),
 		message: z.string(),
 		code: z.string().optional(),
+		is_correctable: z.boolean().optional().openapi({
+			description:
+				"On a calculator refusal: whether different inputs can succeed (a bad date) or not (a valuation the series will never answer).",
+		}),
 	})
 	.openapi("Error");
 

@@ -1,0 +1,16 @@
+{
+	"accruedInterest": 0.5529891304347826,
+	"cleanPrice": 96.53125,
+	"convexity": 55.267816297641204,
+	"couponRate": 0.04625,
+	"couponsRemaining": 17,
+	"cusip": "91282CMM0",
+	"dirtyPrice": 97.08423913043478,
+	"dv01": 0.06601334067195067,
+	"isFinalPeriod": false,
+	"macaulayDuration": 6.974304083325901,
+	"maturityDate": "2035-02-15",
+	"modifiedDuration": 6.799593967385407,
+	"settlementDate": "2026-09-28",
+	"yieldToMaturity": 5.138839665382976
+}

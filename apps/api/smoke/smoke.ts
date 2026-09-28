@@ -30,6 +30,7 @@ import {
 	ZParCurveOut,
 	ZRealCurveOut,
 } from "../src/routes/curveFamilies";
+import { ZBillPriceOut, ZCouponPriceOut } from "../src/routes/pricing";
 import { ZRichCheapOut } from "../src/routes/richCheap";
 import { ZOnTheRunOut, ZSecurityListOut } from "../src/routes/securityLists";
 import { ZZeroCurveOut, ZZeroCurvePointOut } from "../src/routes/curves";
@@ -312,6 +313,38 @@ if (onTheRun) {
 	else pass("on-the-run", `${onTheRun.date}: ${onTheRun.queues.length} queues`);
 }
 await check("/v1/on-the-run?basis=auction", ZOnTheRunOut);
+
+// ── Calculators: price a real note and a real bill at their own closes ─────
+const aNote = listed?.securities.find((s) => s.family === "note");
+const aBill = listed?.securities.find((s) => s.family === "bill");
+if (listed && aNote) {
+	const priced = await check(
+		`/v1/price/coupon?cusip=${aNote.cusip}&clean_price=${aNote.price}&trade_date=${listed.date}`,
+		ZCouponPriceOut,
+	);
+	if (
+		priced &&
+		!(
+			priced.yield_to_maturity_percent > 0 && priced.yield_to_maturity_percent < 15
+		)
+	)
+		fail(
+			"coupon yield",
+			`${priced.yield_to_maturity_percent}% for ${aNote.cusip}`,
+		);
+}
+if (listed && aBill) {
+	const priced = await check(
+		`/v1/price/bill?maturity_date=${aBill.maturity_date}&price=${aBill.price}&trade_date=${listed.date}`,
+		ZBillPriceOut,
+	);
+	// For a positive rate the investment rate always exceeds the discount rate.
+	if (priced && !(priced.investment_rate_percent > priced.discount_rate_percent))
+		fail(
+			"bill rates",
+			`investment ${priced.investment_rate_percent} vs discount ${priced.discount_rate_percent}`,
+		);
+}
 
 await expectStatus(
 	"an unknown CUSIP is a 404",
