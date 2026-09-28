@@ -78,7 +78,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 272 tests at 2026-09-28
+bun test                               # 337 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 
@@ -251,8 +251,9 @@ Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
 3. The contact-us enquiry form for Redistribution and Benchmark (to
    team@saferate.com, stored in D1 as well so a bounce loses nothing), and a
    usage page.
-4. More REST routes. Each needs its response schema pinned by a test against the
-   client's real parse, as `apps/api/tests/api.test.ts` does for /v1/curves/zero.
+4. REST parity with MCP is DONE (28 routes, 2026-09-28). New routes: pin the
+   response schema on real rows, add a smoke check, and add the path to
+   `API_SURFACES` (tests/surfaces.test.ts fails otherwise).
 5. OAuth for the MCP server (claude.ai / Desktop connectors), targeting CIMD.
 
 ## Known: client readers that swallow failure
@@ -263,7 +264,42 @@ turn an outage into empty data. REST and MCP index reads avoid them through
 **getFundComparison** (503 -> []), behind get_treasury_index's
 `fund_comparison` include. Move it onto a strict reader before relying on it.
 
-## Rich/cheap — how to build it, from the treasury-integration session (2026-09-28)
+## REST surface (28 routes at 2026-09-28)
+
+`API_SURFACES` in packages/schema/src/surfaces.ts is the grouped list the /docs
+page renders; tests/surfaces.test.ts holds it to the spec both ways. Built this
+session, each pinned on production rows and smoke-checked: the curve families
+and history (routes/curveFamilies.ts), `/v1/securities` and `/v1/on-the-run`
+(securityLists.ts), `/v1/rich-cheap`, `/v1/price/{coupon,bill}`, `/v1/debt`,
+`/v1/strips`, `/v1/savings-bonds/{rates,i/value,ee/value}`.
+
+- **Fixtures come from our own MCP endpoint**, not D1: a direct `wrangler d1
+  execute --remote` SELECT on the treasury database is refused by the auto-mode
+  classifier (production read). Call the matching MCP tool on production with
+  `MARKETS_SMOKE_KEY`, map the parsed output back to upstream's column names,
+  and confirm the result round-trips through the client's parser.
+- **A smoke run seconds after a deploy can hit the previous version** (seen
+  twice: web 404s, then "No route" for two new API paths). Re-probe before
+  diagnosing; a rerun a minute later was clean both times.
+- **A wall of 503s across old routes is upstream**, not the change (seen once,
+  ~1 minute, 20 failures; clean on rerun). The 503 said "outage", as designed.
+- `/v1/on-the-run` is NOT under `/v1/securities/`: that segment is the CUSIP
+  route's, and "on-the-run" would fail its 9-character validation.
+
+## Rich/cheap — built 2026-09-28 (`/v1/rich-cheap`, `get_treasury_rich_cheap`)
+
+Measured on the first live run (2026-09-25, 344 scored notes and bonds):
+- **Default `min_years=1`.** Without it the top of the list was all notes
+  inside four months of maturity (20bp from 2-3 cent price errors; median |z|
+  3.04 under three months against 1.02 at six to twelve). The nominal curve is
+  fitted from one year out. Echoed in the response; `min_years=0` asks for it.
+- **No TIPS basis published.** All 53 TIPS were unscored (upstream computes no
+  linker z). The reader keeps `basis: "tips"`; publish it when upstream scores
+  them, and re-measure the short-end floor for linkers then.
+- Each row says `vs_curve` (sign of the bp residual) and `vs_history` (sign of
+  z) in words; they disagree for real bonds (91282CQZ7: rich, cheaper).
+
+### The original guidance, from the treasury-integration session
 
 Not a TreasuryService method, deliberately: compute it from `analyticsOn(date)`
 joined to `pricesOn(date)` (type, maturity), both already bound. A method would
