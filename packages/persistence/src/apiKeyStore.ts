@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateApiKey, sha256Hex } from "./apiKeys";
+import { ENTITLED_STATUSES_SQL } from "./subscriptions";
 
 /**
  * D1 operations for API keys. Ported from saferate-oklocate.
@@ -115,6 +116,8 @@ export const ZApiKeyAuthenticated = z.object({
 	idApiKey: z.string(),
 	idOrganization: z.string(),
 	lastUsedAt: z.number().nullable(),
+	/** 0/1 from SQL. Whether the organization has a live subscription. */
+	isEntitled: z.union([z.literal(0), z.literal(1)]).transform(Boolean),
 });
 export type TApiKeyAuthenticated = z.infer<typeof ZApiKeyAuthenticated>;
 
@@ -132,10 +135,11 @@ const ZInputAuthenticateApiKey = z.object({
  * be able to authenticate with one. revokedAt is checked independently of
  * expiresAt so that revoking a key mid-rotation still kills it at once.
  *
- * ⚠️ NOT YET AN ENTITLEMENT CHECK. Any key of any organization authenticates,
- * whether or not it has a subscription. That is correct only while nothing is
- * deployed; billing (migration 0002) adds the join, and it must land before
- * production takes traffic.
+ * ENTITLEMENT rides in the same query, as `isEntitled`, so the hot path is still
+ * one read. It is a LEFT join and a flag rather than an inner join, so the
+ * middleware can tell "not a key" (401) from "a real key whose organization has
+ * no live subscription" (402, with where to subscribe). Telling those apart is
+ * not an oracle: only someone holding the key learns anything.
  */
 export async function authenticateApiKey(
 	_input: z.infer<typeof ZInputAuthenticateApiKey>,
@@ -145,10 +149,16 @@ export async function authenticateApiKey(
 	const row = await input.db
 		.prepare(
 			/* sql */ `
-			select idApiKey, idOrganization, lastUsedAt
-			from apiKeys
-			where hashApiKey = ? and revokedAt is null
-			  and (expiresAt is null or expiresAt > ?)
+			select k.idApiKey, k.idOrganization, k.lastUsedAt,
+			       case when s.idOrganization is not null then 1 else 0 end
+			         as isEntitled
+			from apiKeys k
+			left join organizationSubscriptions s
+			       on s.idOrganization = k.idOrganization
+			      and s.endedAt is null
+			      and s.statusSubscription in (${ENTITLED_STATUSES_SQL})
+			where k.hashApiKey = ? and k.revokedAt is null
+			  and (k.expiresAt is null or k.expiresAt > ?)
 			limit 1
 		`,
 		)

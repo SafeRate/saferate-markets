@@ -13,5 +13,6 @@ export default [
 	route("sign-in", "./routes/sign-in.tsx"),
 	route("sign-out", "./routes/sign-out.tsx"),
 	route("dashboard", "./routes/dashboard.tsx"),
+	route("dashboard/billing", "./routes/dashboard.billing.tsx"),
 	route("dashboard/keys", "./routes/dashboard.keys.tsx"),
 ] satisfies RouteConfig;

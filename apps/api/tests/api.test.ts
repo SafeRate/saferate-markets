@@ -42,6 +42,26 @@ describe("authentication", () => {
 		expect(response.headers.get("WWW-Authenticate")).toContain("invalid_token");
 	});
 
+	test("a real key with no live subscription is a 402 naming the fix", async () => {
+		const { call, key, batches } = await setup({ isEntitled: false });
+		const response = await call("/v1/curves/zero", { headers: bearer(key) });
+		expect(response.status).toBe(402);
+		const body = await response.json();
+		expect(body.error).toBe("payment_required");
+		expect(body.message).toContain("/dashboard/billing");
+		expect(batches).toHaveLength(0);
+	});
+
+	test("the 402 covers MCP too", async () => {
+		const { call, key } = await setup({ isEntitled: false });
+		const response = await call("/mcp", {
+			method: "POST",
+			headers: { ...bearer(key), "Content-Type": "application/json" },
+			body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+		});
+		expect(response.status).toBe(402);
+	});
+
 	test("/mcp is authenticated too", async () => {
 		const { call } = await setup();
 		const response = await call("/mcp", { method: "POST" });

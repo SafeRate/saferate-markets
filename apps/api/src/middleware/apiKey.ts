@@ -9,8 +9,8 @@ import type { AppEnv } from "../env";
  * Registered on /v1/* and /mcp so a route added under either later is
  * authenticated by default rather than silently public.
  *
- * A 401 short-circuits here and is deliberately NOT metered: there is no
- * organization to attribute it to, and a refused request did no work.
+ * A 401 or 402 short-circuits here and is deliberately NOT metered: a refused
+ * request did no work, and a 401 has no organization to attribute it to.
  *
  * `WWW-Authenticate: Bearer` on every 401. MCP clients read it to decide that
  * the server wants a credential, and it costs a REST caller nothing.
@@ -43,6 +43,19 @@ export const apiKeyAuth = () =>
 			return c.json(
 				{ error: "unauthorized" as const, message: "That API key is not valid." },
 				401,
+			);
+		}
+
+		// A real key, but nothing is paying for it. 402 rather than 401 so the
+		// caller is told what to do; the key itself stays valid, and subscribing
+		// makes it work without minting a new one.
+		if (!row.isEntitled) {
+			return c.json(
+				{
+					error: "payment_required" as const,
+					message: `This key's organization has no active subscription. Subscribe at ${dashboard.replace("/keys", "/billing")}; the same key will then work.`,
+				},
+				402,
 			);
 		}
 

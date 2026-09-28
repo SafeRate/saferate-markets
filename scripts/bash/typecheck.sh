@@ -4,6 +4,7 @@
 #   apps/web  `tsc --build`. Its tsconfig.json is a SOLUTION file (files: []), so
 #             `tsc --noEmit` there checks nothing and always prints 0 errors.
 #   apps/api  `tsc --noEmit`, an ordinary tsconfig.
+#   scripts/  `tsc --noEmit` against the root tsconfig (paths for @markets/*).
 #
 # Both generators run first. Their output is gitignored, and without it a fresh
 # checkout reports phantom errors that look like a broken main.
@@ -15,3 +16,5 @@ export PATH="$HOME/.bun/bin:$PATH"
 echo "apps/api: ok"
 ( cd apps/web && bunx react-router typegen >/dev/null && bunx wrangler types >/dev/null && bunx tsc --build )
 echo "apps/web: ok"
+bunx tsc --noEmit -p tsconfig.json
+echo "scripts: ok"

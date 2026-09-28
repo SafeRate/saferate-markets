@@ -9,6 +9,13 @@
 
 interface MarketsSecrets {
 	BETTER_AUTH_SECRET: string;
+	/**
+	 * Optional in the TYPE because sign-in must work without billing. Which keys
+	 * are acceptable where is decided in lib/stripeKey.ts, not by presence.
+	 */
+	STRIPE_SECRET_KEY?: string;
+	/** Written by scripts/stripe-seed.ts when it creates the endpoint. */
+	STRIPE_WEBHOOK_SECRET?: string;
 	/** Optional: a comma list overriding the non-production email allowlist. */
 	EMAIL_RECIPIENT_ALLOWLIST?: string;
 	/**

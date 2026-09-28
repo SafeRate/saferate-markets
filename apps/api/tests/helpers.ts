@@ -39,7 +39,7 @@ type TStatement = { sql: string; args: unknown[] };
  * authentication query when the bound hash is the one live key's, and records
  * every batch so a test can see what was metered.
  */
-const fakeDb = (liveHash: string | null) => {
+const fakeDb = (liveHash: string | null, isEntitled = true) => {
 	const batches: TStatement[][] = [];
 	const statement = (sql: string, args: unknown[] = []): unknown => ({
 		sql,
@@ -47,7 +47,12 @@ const fakeDb = (liveHash: string | null) => {
 		bind: (...bound: unknown[]) => statement(sql, bound),
 		first: async () =>
 			sql.includes("from apiKeys") && args[0] === liveHash
-				? { idApiKey: "key-1", idOrganization: "org-1", lastUsedAt: null }
+				? {
+						idApiKey: "key-1",
+						idOrganization: "org-1",
+						lastUsedAt: null,
+						isEntitled: isEntitled ? 1 : 0,
+					}
 				: null,
 		run: async () => ({ meta: { changes: 1 } }),
 		all: async () => ({ results: [] }),
@@ -69,12 +74,14 @@ type TSetup = {
 	/** Default: always allows, and records which key it was asked about. */
 	limiter?: { limit: (o: { key: string }) => Promise<{ success: boolean }> };
 	omitLimiter?: boolean;
+	/** Whether the key's organization has a live subscription. Default true. */
+	isEntitled?: boolean;
 };
 
 export const setup = async (overrides: TSetup = {}) => {
 	const limitedKeys: string[] = [];
 	const { key } = await generateApiKey();
-	const d1 = fakeDb(await sha256Hex(key));
+	const d1 = fakeDb(await sha256Hex(key), overrides.isEntitled ?? true);
 	const pending: Promise<unknown>[] = [];
 	const env = {
 		DB: d1.db,

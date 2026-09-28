@@ -90,3 +90,43 @@ export const PLANS = [
  * approximate: it stops a runaway script, it is not a contractual figure.
  */
 export const RATE_LIMIT_PER_MINUTE = 60;
+
+/**
+ * The beta: a 100%-off, never-expiring discount on the Markets plan, entered at
+ * checkout as WIMBLEDON (decided 2026-09-28).
+ *
+ * Indefinite by decision: the beta ends when Dylan ends it, by deactivating the
+ * code (no new redemptions) and removing the discount from existing
+ * subscriptions. Deactivating alone does NOT end it for anyone already on it.
+ * No card is collected for a $0 checkout, so a tester whose discount is removed
+ * goes past_due and then loses access until they add one; warn them first.
+ *
+ * `couponId` is ours, set at creation, so the seeder finds it again by id.
+ */
+export const BETA_PROMOTION = {
+	couponId: "markets_beta_wimbledon",
+	code: "WIMBLEDON",
+	name: "Safe Rate Markets beta",
+	percentOff: 100,
+	duration: "forever",
+	appliesToPlan: "public",
+} as const satisfies {
+	couponId: string;
+	code: string;
+	name: string;
+	percentOff: number;
+	duration: "forever" | "once" | "repeating";
+	appliesToPlan: TPlanId;
+};
+
+/** What a card statement says. Stripe allows 22 characters. */
+export const STATEMENT_DESCRIPTOR = "SAFE RATE MARKETS";
+
+/** The one plan Stripe sells, found by id rather than by array position. */
+export const CHECKOUT_PLAN = (() => {
+	const plan = PLANS.find((p) => p.sale.kind === "checkout");
+	if (plan?.sale.kind !== "checkout") {
+		throw new Error("PLANS has no checkout plan");
+	}
+	return { ...plan, sale: plan.sale };
+})();

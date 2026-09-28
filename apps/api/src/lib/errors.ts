@@ -6,6 +6,7 @@ export const ZError = z
 		error: z.enum([
 			"bad_request",
 			"unauthorized",
+			"payment_required",
 			"no_data",
 			"unavailable",
 			"rate_limited",

@@ -2,6 +2,8 @@ import {
 	countActiveApiKeys,
 	currentPeriodMonth,
 	getMonthlyUsage,
+	getOrganizationSubscription,
+	isEntitled,
 } from "@markets/persistence";
 import { PRODUCT_NAME } from "@markets/schema";
 import { requireOrganization } from "@/lib/session.server";
@@ -14,8 +16,8 @@ export const meta: Route.MetaFunction = () => [
 /**
  * THE HONESTY RULE (OKLocate's): every number here is either real or explicitly
  * absent. Usage IS measured from the first request, so a zero this month is a
- * real zero and is shown as one. Billing is NOT built, so the plan is shown as
- * absent with its reason rather than as a plan.
+ * real zero and is shown as one. The plan is read from organizationSubscriptions,
+ * the same record the API's entitlement check reads, so the two cannot disagree.
  */
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
@@ -30,7 +32,12 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const count = (surface: "rest" | "mcp") =>
 		thisMonth.find((u) => u.surface === surface)?.countRequests ?? 0;
 
+	const subscription = await getOrganizationSubscription({
+		db: env.DB,
+		idOrganization: org.idOrganization,
+	});
 	return {
+		hasPlan: isEntitled(subscription),
 		email: org.email,
 		organizationName: org.nameOrganization,
 		activeKeys: await countActiveApiKeys({
@@ -78,7 +85,21 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 				<p className="text-xs uppercase tracking-wide text-muted-foreground">
 					Plan
 				</p>
-				<p className="mt-2 text-sm">No plan yet. Subscriptions are not open.</p>
+				<p className="mt-2 text-sm">
+					{d.hasPlan ? (
+						"Markets, active."
+					) : (
+						<>
+							No plan yet, so your keys will be refused.{" "}
+							<a
+								className="text-accent underline underline-offset-4"
+								href="/dashboard/billing"
+							>
+								Subscribe
+							</a>
+						</>
+					)}
+				</p>
 			</section>
 
 			<nav className="mt-10 flex gap-6 text-sm">
@@ -87,6 +108,12 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 					href="/dashboard/keys"
 				>
 					Manage API keys
+				</a>
+				<a
+					className="text-accent underline underline-offset-4"
+					href="/dashboard/billing"
+				>
+					Billing
 				</a>
 				<a className="text-accent underline underline-offset-4" href="/docs">
 					Read the docs

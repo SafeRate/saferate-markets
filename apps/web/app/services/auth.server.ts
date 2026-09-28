@@ -1,5 +1,11 @@
+import { stripe as stripePlugin } from "@better-auth/stripe";
 import { resolveEmailProvider } from "@markets/email";
 import {
+	endOrganizationSubscription,
+	setOrganizationSubscription,
+} from "@markets/persistence";
+import {
+	CHECKOUT_PLAN,
 	PRODUCT_NAME,
 	REDIRECT_HOSTS,
 	resolveMarketsEnv,
@@ -8,9 +14,15 @@ import {
 } from "@markets/schema";
 import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins";
+import Stripe from "stripe";
 import { z } from "zod";
+import { resolveStripeKey } from "@/lib/stripeKey";
 import { magicLinkEmail } from "@/services/authEmail";
 import createD1Adapter from "@/services/d1Adapter";
+import {
+	isOrganizationMember,
+	setOrganizationStripeCustomer,
+} from "@/services/organizations.server";
 
 /**
  * Better Auth, magic link only, open sign-up. Ported from saferate-oklocate.
@@ -24,9 +36,10 @@ import createD1Adapter from "@/services/d1Adapter";
  * consumer app for about 18 hours. Before bumping, diff @better-auth/core's
  * adapter factory for newly required methods and confirm d1Adapter.ts has them.
  *
- * Stripe is not mounted yet. It arrives with billing, as OKLocate's does:
- * mounted unconditionally so its endpoints stay typed, and never able to take
- * sign-in down over a billing misconfiguration.
+ * Stripe is mounted UNCONDITIONALLY, as in OKLocate: a conditional plugin
+ * changes the inferred type of `auth.api` and loses its typed endpoints. With no
+ * acceptable key it runs on a placeholder, so billing fails at its first call
+ * with a real Stripe error and sign-in is untouched.
  */
 
 const ZAuthEnv = z.object({
@@ -37,14 +50,78 @@ const ZAuthEnv = z.object({
 	EMAIL: z.custom<SendEmail>().optional(),
 	MARKETS_ENV: z.string().optional(),
 	EMAIL_RECIPIENT_ALLOWLIST: z.string().optional(),
+	STRIPE_SECRET_KEY: z.string().optional(),
+	STRIPE_WEBHOOK_SECRET: z.string().optional(),
 });
 type TAuthEnv = z.infer<typeof ZAuthEnv>;
 
 /** Every origin this app is served from, derived rather than typed twice. */
 const TRUSTED_ORIGINS: string[] = Object.values(SITE_HOSTS).map((h) => h.web);
 
-const buildAuth = (env: TAuthEnv, baseURL: string) =>
-	betterAuth({
+/**
+ * Statuses after which a subscription no longer exists for us. Anything else is
+ * projected as-is and the entitlement join decides whether it grants access.
+ */
+const TERMINAL_STATUSES = ["canceled", "unpaid", "incomplete_expired"];
+
+/**
+ * Stripe state -> organizationSubscriptions. Swallows its errors, as OKLocate's
+ * projection does: the plugin has already committed its own row when these run,
+ * so a throw would make Stripe replay a webhook that succeeded, and fix nothing.
+ * The log keeps the discrepancy visible.
+ */
+const project = async (
+	db: D1Database,
+	input: {
+		idOrganization: string;
+		stripeSubscription: Stripe.Subscription;
+	},
+) => {
+	const { stripeSubscription: sub } = input;
+	try {
+		if (TERMINAL_STATUSES.includes(sub.status)) {
+			await endOrganizationSubscription({
+				db,
+				idOrganization: input.idOrganization,
+				statusSubscription: sub.status,
+			});
+			return;
+		}
+		await setOrganizationSubscription({
+			db,
+			idOrganization: input.idOrganization,
+			idPlan: CHECKOUT_PLAN.id,
+			idStripeSubscription: sub.id,
+			statusSubscription: sub.status,
+			// cancel_at, not cancel_at_period_end: Stripe leaves the boolean false
+			// for a period-end cancellation. Seconds from Stripe, ms here.
+			cancelsAt: sub.cancel_at ? sub.cancel_at * 1000 : null,
+		});
+	} catch (error) {
+		console.error(
+			`[stripe] could not project ${sub.id} for ${input.idOrganization}:`,
+			error,
+		);
+	}
+};
+
+const buildAuth = (env: TAuthEnv, baseURL: string) => {
+	const environment = resolveMarketsEnv(env.MARKETS_ENV);
+	const stripeKey = resolveStripeKey({
+		environment,
+		key: env.STRIPE_SECRET_KEY,
+	});
+	if (stripeKey.problem) {
+		console.error(`[stripe] billing unavailable: ${stripeKey.problem}`);
+	}
+	// No apiVersion pin and no httpClient, as OKLocate: the SDK defaults to the
+	// version its own types describe, and stripe@22's `workerd` export condition
+	// selects the fetch-based client on Workers.
+	const stripeClient = new Stripe(stripeKey.key ?? "sk_test_unconfigured", {
+		appInfo: { name: PRODUCT_NAME },
+	});
+
+	return betterAuth({
 		baseURL,
 		secret: env.BETTER_AUTH_SECRET,
 		database: createD1Adapter({ db: env.DB }),
@@ -87,8 +164,97 @@ const buildAuth = (env: TAuthEnv, baseURL: string) =>
 					}
 				},
 			}),
+			stripePlugin({
+				stripeClient,
+				// An empty secret fails verification, which is right for an
+				// unconfigured endpoint: it must never accept an unverified payload.
+				stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET ?? "",
+				// The ORGANIZATION is the billing subject, so no customer per signup.
+				createCustomerOnSignUp: false,
+				/*
+				 * Record the Stripe customer against the organization when it is
+				 * created, during the upgrade call and so before any webhook. OKLocate
+				 * learned this from a race: Stripe delivered all five webhooks of its
+				 * first live checkout within one second, before the mapping existed.
+				 */
+				onCustomerCreate: async ({ stripeCustomer, user }) => {
+					try {
+						await setOrganizationStripeCustomer({
+							db: env.DB,
+							idUser: user.id,
+							idStripeCustomer: stripeCustomer.id,
+						});
+					} catch (error) {
+						console.error(
+							`[stripe] could not link customer ${stripeCustomer.id}:`,
+							error,
+						);
+					}
+				},
+				subscription: {
+					enabled: true,
+					plans: [
+						{
+							name: CHECKOUT_PLAN.id,
+							lookupKey: CHECKOUT_PLAN.sale.stripeLookupKey,
+						},
+					],
+					/*
+					 * Promotion codes ON, so WIMBLEDON can be entered. Card collection
+					 * `if_required`, so a $0 beta checkout completes without one
+					 * (decided 2026-09-28). Both pass through: the plugin strips only
+					 * the fields it owns (mode, customer, urls, line_items, reference).
+					 * Verified against dist/index.mjs of 1.7.1, not the docs.
+					 */
+					getCheckoutSessionParams: () => ({
+						params: {
+							allow_promotion_codes: true,
+							payment_method_collection: "if_required",
+						},
+					}),
+					/*
+					 * The reference is our idOrganization and arrives in a request body,
+					 * so it is attacker-controlled. Better Auth proves the caller is
+					 * signed in; only we can say they own the organization. Fails CLOSED.
+					 */
+					authorizeReference: async ({ user, referenceId, action }) => {
+						try {
+							const isMember = await isOrganizationMember({
+								db: env.DB,
+								idOrganization: referenceId,
+								idUser: user.id,
+							});
+							if (!isMember) {
+								console.warn(
+									`[stripe] refused ${action}: ${user.id} is not in ${referenceId}`,
+								);
+							}
+							return isMember;
+						} catch (error) {
+							console.error("[stripe] authorizeReference failed:", error);
+							return false;
+						}
+					},
+					onSubscriptionComplete: async ({ subscription, stripeSubscription }) =>
+						project(env.DB, {
+							idOrganization: subscription.referenceId,
+							stripeSubscription,
+						}),
+					onSubscriptionUpdate: async ({ subscription, stripeSubscription }) =>
+						project(env.DB, {
+							idOrganization: subscription.referenceId,
+							stripeSubscription,
+						}),
+					onSubscriptionDeleted: async ({ subscription, stripeSubscription }) =>
+						project(env.DB, {
+							idOrganization: subscription.referenceId,
+							stripeSubscription,
+						}),
+				},
+			}),
 		],
 	});
+};
 
 type TAuthInstance = ReturnType<typeof buildAuth>;
 const authCache = new Map<string, TAuthInstance>();

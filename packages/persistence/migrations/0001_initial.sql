@@ -8,10 +8,24 @@
 -- (migration 0002); a table nothing writes yet is a table that looks like a
 -- feature.
 --
--- Dates are INTEGER epoch milliseconds and booleans are INTEGER 0/1. That is not
--- style: apps/web/app/services/d1Adapter.ts declares supportsDates: false and
--- supportsBooleans: false, and a TEXT timestamp here disagrees with it only at
--- read time.
+-- DATES ARE TWO SHAPES, and this header said otherwise until 2026-09-28.
+--
+--   Better Auth's tables (user, session, account, verification) hold ISO 8601
+--   TEXT. d1Adapter.ts declares supportsDates: false, so Better Auth converts a
+--   date with toISOString() before it reaches D1. The columns below are declared
+--   integer and SQLite's dynamic typing stores the string anyway. Measured on
+--   the local D1 that day: typeof(user.createdAt) = 'text',
+--   '2026-09-28T17:04:05.654Z'. OKLocate's migration 0003 records the same.
+--
+--   Our own tables (organizations onward) hold INTEGER epoch milliseconds,
+--   written by our code with Date.now().
+--
+-- The integer declarations on Better Auth's columns are left as they are rather
+-- than changed here, because staging applied this file the same day and an
+-- edited migration makes new databases differ from old ones. Nothing reads those
+-- columns as numbers. New Better Auth tables (0002 onward) declare dates TEXT.
+--
+-- Booleans are INTEGER 0/1 everywhere (supportsBooleans: false).
 
 -- Better Auth owns these four. Column names are Better Auth's, so they break the
 -- id<Table> convention above on purpose. OKLocate's `role` column is omitted:

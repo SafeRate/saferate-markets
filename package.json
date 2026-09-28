@@ -19,6 +19,7 @@
 		"@types/node": "^22",
 		"@types/react": "^19.1.2",
 		"@types/react-dom": "^19.1.2",
+		"bun-types": "^1.4.0",
 		"tailwindcss": "^4.1.4",
 		"typescript": "5.9.3",
 		"vite": "^6.4.3",
@@ -26,12 +27,14 @@
 		"wrangler": "^4.136.2"
 	},
 	"dependencies": {
+		"@better-auth/stripe": "1.7.1",
 		"@react-router/cloudflare": "7.5.0",
 		"better-auth": "1.7.1",
 		"isbot": "^5.1.27",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
 		"react-router": "7.5.0",
+		"stripe": "^22.6.2",
 		"zod": "^4.6.5"
 	},
 	"engines": {

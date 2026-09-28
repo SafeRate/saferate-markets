@@ -138,3 +138,38 @@ export async function isOrganizationMember(
 		.first();
 	return row !== null;
 }
+
+const ZInputSetStripeCustomer = z.object({
+	db: z.custom<D1Database>((v) => v !== null && v !== undefined),
+	idUser: z.string().min(1),
+	idStripeCustomer: z.string().min(1),
+});
+
+/**
+ * Record the Stripe customer behind the user's organization, the first time.
+ *
+ * By USER, because the plugin's onCustomerCreate hands us a user, and single
+ * seat makes that unambiguous (unique index on organizationMembers.idUser).
+ *
+ * Write-once: `idStripeCustomer is null` means a redelivered event or a second
+ * checkout cannot repoint an organization at a different customer and strand
+ * its history.
+ */
+export async function setOrganizationStripeCustomer(
+	_input: z.infer<typeof ZInputSetStripeCustomer>,
+) {
+	const input = ZInputSetStripeCustomer.parse(_input);
+	await input.db
+		.prepare(
+			/* sql */ `
+			update organizations
+			set idStripeCustomer = ?, updatedAt = ?
+			where idStripeCustomer is null
+			  and idOrganization = (
+			    select idOrganization from organizationMembers where idUser = ?
+			  )
+		`,
+		)
+		.bind(input.idStripeCustomer, Date.now(), input.idUser)
+		.run();
+}
