@@ -78,7 +78,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 229 tests at 2026-09-28
+bun test                               # 272 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 
@@ -128,6 +128,33 @@ a fresh checkout shows phantom errors.
 - **An absence must say why.** The treasury client returns null for BOTH "no
   binding" and "no curve that day"; the API checks the binding first and 503s,
   so a misconfiguration can never read as a weekend.
+
+## Analytics — Google Analytics and Microsoft Clarity, four gates (2026-09-28)
+
+Production only: GA `G-GXT251RBGJ` (stream "Safe Rate Markets", 15861881678),
+Clarity `ypjj2lural`, in `apps/web/wrangler.jsonc` vars, committed (public
+config, not secrets). Staging and dev are empty. Design ported from OKLocate
+(its CLAUDE.md "Analytics — four gates"):
+
+1. id configured for the environment (present = may run; there is no isActive)
+2. no `markets_analytics=off` cookie  } read SERVER side: a refused visitor is
+3. no `Sec-GPC: 1`                    } never sent the script
+4. public path: never /dashboard, /sign-in, /sign-out, /api/auth
+   (`isPathPublic` in @markets/schema, fails closed)
+
+**Never paste a vendor snippet into root.tsx or a layout** — it bypasses all
+four. Nothing is injected during SSR; `components/Analytics.tsx` re-decides on
+every navigation, because a client-side move into /dashboard/keys (a new API key
+shown once) must stop session replay. GA advertising signals are off in code.
+`/privacy-choices` is the opt-out.
+
+Verified on production: both injected on /, /pricing, /docs/indices; nothing on
+/sign-in or /dashboard; with Sec-GPC or the opt-out cookie the ids are absent
+from the page. NOT browser-tested: the in-session stop when navigating from a
+public page into the dashboard (component logic, ported unchanged).
+
+**No privacy policy page exists on saferate.markets.** Disclosing GA and Clarity
+is a legal document, not written here. Owed before any real traffic.
 
 ## Stripe — which account each config reaches (checked 2026-09-28)
 
