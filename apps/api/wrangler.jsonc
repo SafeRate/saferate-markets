@@ -1,0 +1,112 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"account_id": "5056399ef6d173a029f7e355967e7b23",
+	"name": "saferate-markets-api",
+	"main": "./src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"traces": { "enabled": true, "head_sampling_rate": 1 }
+	},
+
+	// ---------------------------------------------------------------------------
+	// Why this Worker is separate from the site (apps/web)
+	//
+	// The site does sessions, cookies, magic links and Better Auth. This one
+	// authenticates Bearer API keys and nothing else: no auth secret, no email
+	// binding, no session store, and NO SECRETS AT ALL. It cannot mint or read a
+	// session, which makes CSRF a non-category here. If this Worker ever needs a
+	// secret, something is being built in the wrong one. (OKLocate's rule.)
+	//
+	// Both Workers bind the SAME D1: the site mints keys, this Worker resolves
+	// them. No Vite here, so `wrangler deploy --env <name>` is correct for this
+	// Worker and wrong for apps/web.
+	// ---------------------------------------------------------------------------
+
+	// TOP LEVEL = LOCAL DEV ONLY. Deploys use env.* below, which do not inherit
+	// bindings from here.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_id": "markets-local",
+			"database_name": "markets-local",
+			"migrations_dir": "../../packages/persistence/migrations",
+			"migrations_table": "migrations"
+		}
+	],
+	"analytics_engine_datasets": [
+		{ "binding": "API_USAGE", "dataset": "markets_api_usage_local" }
+	],
+	// Treasury data, by RPC to saferate-treasury's TreasuryService. Not a D1
+	// binding: five FRED series are licensed onward to nobody, and that gate is
+	// enforced inside these methods. A caller with the database writes its own
+	// SQL and the gate is not in the path. See saferate-treasury
+	// docs/consumer-service-binding.md.
+	//
+	// remote: true so local dev reads the DEPLOYED staging service. That needs a
+	// CLOUDFLARE_API_TOKEN for this account, which is why dev-api.sh runs under
+	// Doppler.
+	"services": [
+		{
+			"binding": "TREASURY",
+			"service": "treasury-api-staging",
+			"entrypoint": "TreasuryService",
+			"remote": true
+		}
+	],
+	"vars": { "MARKETS_ENV": "development" },
+
+	"env": {
+		"staging": {
+			"name": "saferate-markets-api-staging",
+			"routes": [
+				{ "pattern": "api-staging.saferate.markets", "custom_domain": true }
+			],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_name": "saferate-markets-staging",
+					"migrations_dir": "../../packages/persistence/migrations",
+					"migrations_table": "migrations"
+				}
+			],
+			"analytics_engine_datasets": [
+				{ "binding": "API_USAGE", "dataset": "markets_api_usage_staging" }
+			],
+			"services": [
+				{
+					"binding": "TREASURY",
+					"service": "treasury-api-staging",
+					"entrypoint": "TreasuryService"
+				}
+			],
+			"vars": { "MARKETS_ENV": "staging" }
+		},
+		"production": {
+			"name": "saferate-markets-api-production",
+			"routes": [{ "pattern": "api.saferate.markets", "custom_domain": true }],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_name": "saferate-markets-production",
+					"migrations_dir": "../../packages/persistence/migrations",
+					"migrations_table": "migrations"
+				}
+			],
+			"analytics_engine_datasets": [
+				{ "binding": "API_USAGE", "dataset": "markets_api_usage" }
+			],
+			"services": [
+				{
+					"binding": "TREASURY",
+					"service": "treasury-api",
+					"entrypoint": "TreasuryService"
+				}
+			],
+			"vars": { "MARKETS_ENV": "production" }
+		}
+	}
+}

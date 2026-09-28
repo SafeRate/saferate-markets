@@ -1,0 +1,105 @@
+import {
+	countActiveApiKeys,
+	currentPeriodMonth,
+	getMonthlyUsage,
+} from "@markets/persistence";
+import { PRODUCT_NAME } from "@markets/schema";
+import { requireOrganization } from "@/lib/session.server";
+import type { Route } from "./+types/dashboard";
+
+export const meta: Route.MetaFunction = () => [
+	{ title: `Dashboard — ${PRODUCT_NAME}` },
+];
+
+/**
+ * THE HONESTY RULE (OKLocate's): every number here is either real or explicitly
+ * absent. Usage IS measured from the first request, so a zero this month is a
+ * real zero and is shown as one. Billing is NOT built, so the plan is shown as
+ * absent with its reason rather than as a plan.
+ */
+export const loader = async ({ request, context }: Route.LoaderArgs) => {
+	const env = context.cloudflare.env;
+	const org = await requireOrganization(request, env);
+	const period = currentPeriodMonth();
+	const usage = await getMonthlyUsage({
+		db: env.DB,
+		idOrganization: org.idOrganization,
+		limitMonths: 1,
+	});
+	const thisMonth = usage.filter((u) => u.periodMonth === period);
+	const count = (surface: "rest" | "mcp") =>
+		thisMonth.find((u) => u.surface === surface)?.countRequests ?? 0;
+
+	return {
+		email: org.email,
+		organizationName: org.nameOrganization,
+		activeKeys: await countActiveApiKeys({
+			db: env.DB,
+			idOrganization: org.idOrganization,
+		}),
+		period,
+		restRequests: count("rest"),
+		mcpRequests: count("mcp"),
+	};
+};
+
+const Stat = ({ label, value }: { label: string; value: string }) => (
+	<div className="rounded-lg border border-border p-4">
+		<p className="text-xs uppercase tracking-wide text-muted-foreground">
+			{label}
+		</p>
+		<p className="mt-2 font-mono text-2xl tabular-nums">{value}</p>
+	</div>
+);
+
+export default function Dashboard({ loaderData }: Route.ComponentProps) {
+	const d = loaderData;
+	return (
+		<main className="mx-auto max-w-3xl px-6 py-16">
+			<p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+				{d.organizationName}
+			</p>
+			<h1 className="mt-3 text-3xl font-semibold tracking-tight">Dashboard</h1>
+			<p className="mt-2 text-sm text-muted-foreground">Signed in as {d.email}.</p>
+
+			<section className="mt-10 grid gap-4 sm:grid-cols-3">
+				<Stat label="Active keys" value={d.activeKeys.toLocaleString("en-US")} />
+				<Stat
+					label={`REST requests, ${d.period}`}
+					value={d.restRequests.toLocaleString("en-US")}
+				/>
+				<Stat
+					label={`MCP requests, ${d.period}`}
+					value={d.mcpRequests.toLocaleString("en-US")}
+				/>
+			</section>
+
+			<section className="mt-6 rounded-lg border border-border p-4">
+				<p className="text-xs uppercase tracking-wide text-muted-foreground">
+					Plan
+				</p>
+				<p className="mt-2 text-sm">No plan yet. Subscriptions are not open.</p>
+			</section>
+
+			<nav className="mt-10 flex gap-6 text-sm">
+				<a
+					className="text-accent underline underline-offset-4"
+					href="/dashboard/keys"
+				>
+					Manage API keys
+				</a>
+				<a className="text-accent underline underline-offset-4" href="/docs">
+					Read the docs
+				</a>
+				<form action="/sign-out" method="post">
+					<button
+						className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+						type="submit"
+					>
+						Sign out
+					</button>
+				</form>
+			</nav>
+		</main>
+	);
+}

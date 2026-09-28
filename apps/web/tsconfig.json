@@ -1,0 +1,26 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.cloudflare.json" }
+	],
+	"compilerOptions": {
+		/*
+		 * A SOLUTION file: `files: []` compiles nothing, so `tsc --noEmit` here
+		 * checks nothing and always prints 0 errors. The real typecheck is
+		 * `tsc --build` (scripts/bash/typecheck.sh). `@/*` is repeated from
+		 * tsconfig.cloudflare.json because `bun test` resolves imports against
+		 * the tsconfig nearest the importing file, which for app/ is this one.
+		 */
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["app/*"]
+		},
+		"checkJs": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true,
+		"types": ["./worker-configuration.d.ts"]
+	}
+}

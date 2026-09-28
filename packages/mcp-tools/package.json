@@ -1,0 +1,13 @@
+{
+	"name": "@markets/mcp-tools",
+	"version": "0.0.1",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/server": "2.0.0",
+		"@saferate/treasury-client": "workspace:*",
+		"zod": "^4.6.5"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"lib": ["ESNext", "DOM"],
+		"module": "esnext",
+		"target": "esnext",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"noEmit": true,
+		"strict": true,
+		"downlevelIteration": true,
+		"skipLibCheck": true,
+		"verbatimModuleSyntax": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["@cloudflare/workers-types", "bun-types"]
+	},
+	"include": ["src", "tests"]
+}

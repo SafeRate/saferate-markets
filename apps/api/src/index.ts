@@ -1,0 +1,133 @@
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { PRODUCT_NAME, resolveMarketsEnv, SITE_HOSTS } from "@markets/schema";
+import { Scalar } from "@scalar/hono-api-reference";
+import { cors } from "hono/cors";
+import type { AppEnv } from "./env";
+import { apiKeyAuth } from "./middleware/apiKey";
+import { meterUsage } from "./middleware/meter";
+import { registerCurveRoutes } from "./routes/curves";
+import { registerMcpRoute } from "./routes/mcp";
+
+/**
+ * api.saferate.markets: the REST API and the MCP server.
+ *
+ * Bearer keys only. No Better Auth, no sessions, no cookies, no email, no
+ * secrets. Structure ported from saferate-oklocate/apps/api.
+ */
+
+const app = new OpenAPIHono<AppEnv>({
+	// A rejected query answers in the same envelope as every other error, so a
+	// caller parses one shape.
+	defaultHook: (result, c) => {
+		if (result.success) return;
+		return c.json(
+			{
+				error: "bad_request" as const,
+				message: result.error.issues
+					.map((i) => `${i.path.join(".") || "request"}: ${i.message}`)
+					.join("; "),
+			},
+			400,
+		);
+	},
+});
+
+/**
+ * Open CORS, deliberately. The credential is a header the caller sets, never a
+ * cookie, so a permissive origin grants nothing an attacker did not already
+ * hold. `credentials` stays off: there are no cookies, and it would forbid the
+ * wildcard anyway. The MCP headers are allowed so a browser-hosted MCP client
+ * can connect.
+ */
+app.use(
+	"*",
+	cors({
+		origin: "*",
+		allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+		allowHeaders: [
+			"Authorization",
+			"Content-Type",
+			"Mcp-Method",
+			"Mcp-Name",
+			"Mcp-Protocol-Version",
+		],
+		exposeHeaders: ["WWW-Authenticate"],
+		maxAge: 86_400,
+	}),
+);
+
+/** Closed to crawlers everywhere until the product is announced. */
+app.use("*", async (c, next) => {
+	await next();
+	c.header("X-Robots-Tag", "noindex, nofollow, noarchive");
+});
+
+app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"));
+
+/** Liveness only. Unauthenticated, and says nothing about bindings or data. */
+app.get("/health", (c) =>
+	c.json({
+		status: "ok",
+		environment: resolveMarketsEnv(c.env.MARKETS_ENV),
+	}),
+);
+
+// Auth, then meter, on everything under /v1: a route added later is
+// authenticated and counted by default rather than silently public.
+app.use("/v1/*", apiKeyAuth(), meterUsage("rest"));
+registerCurveRoutes(app);
+
+registerMcpRoute(app);
+
+app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
+	type: "http",
+	scheme: "bearer",
+	description:
+		"Your API key, from the dashboard. Send it as `Authorization: Bearer srm_live_...`. The same key authenticates the MCP server at /mcp.",
+});
+
+app.doc("/openapi.json", (c) => {
+	const hosts = SITE_HOSTS[resolveMarketsEnv(c.env.MARKETS_ENV)];
+	return {
+		openapi: "3.1.0",
+		// Document-level, not per operation. apiKeyAuth wraps ALL of /v1/*, and a
+		// document default is the same default-on posture: OKLocate published a
+		// route as public while the Worker 401ed it, because security was only
+		// declared per operation.
+		security: [{ bearerAuth: [] }],
+		info: {
+			title: `${PRODUCT_NAME} API`,
+			version: "0.1.0",
+			description: `U.S. Treasury market data from Safe Rate: fitted curves, securities, analytics and indices. End-of-day records for business days from 2008-09-02, not live prices. Manage keys at ${hosts.web}/dashboard/keys. The same data is available to AI assistants over MCP at ${hosts.api}/mcp.`,
+		},
+		servers: [{ url: new URL(c.req.url).origin }],
+	};
+});
+
+app.get(
+	"/reference",
+	Scalar({ url: "/openapi.json", pageTitle: `${PRODUCT_NAME} API reference` }),
+);
+
+app.get("/", (c) => c.redirect("/reference", 302));
+
+// JSON to the last byte. A client should never parse an HTML error page.
+app.notFound((c) =>
+	c.json(
+		{
+			error: "bad_request" as const,
+			message: `No route for ${c.req.method} ${new URL(c.req.url).pathname}. See /reference.`,
+		},
+		404,
+	),
+);
+
+app.onError((error, c) => {
+	console.error("[api] unhandled", new URL(c.req.url).pathname, error);
+	return c.json(
+		{ error: "internal" as const, message: "An unexpected error occurred." },
+		500,
+	);
+});
+
+export default app;

@@ -1,0 +1,40 @@
+{
+	"name": "saferate-markets",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "bash scripts/bash/typecheck.sh",
+		"lint": "biome check ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.14",
+		"@cloudflare/vite-plugin": "^1.57.2",
+		"@cloudflare/workers-types": "^4.20260702.1",
+		"@react-router/dev": "7.5.0",
+		"@tailwindcss/vite": "^4.1.4",
+		"@types/node": "^22",
+		"@types/react": "^19.1.2",
+		"@types/react-dom": "^19.1.2",
+		"tailwindcss": "^4.1.4",
+		"typescript": "5.9.3",
+		"vite": "^6.4.3",
+		"vite-tsconfig-paths": "^5.1.4",
+		"wrangler": "^4.136.2"
+	},
+	"dependencies": {
+		"@react-router/cloudflare": "7.5.0",
+		"better-auth": "1.7.1",
+		"isbot": "^5.1.27",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0",
+		"react-router": "7.5.0",
+		"zod": "^4.6.5"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}

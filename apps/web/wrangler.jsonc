@@ -1,0 +1,81 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"account_id": "5056399ef6d173a029f7e355967e7b23",
+	"name": "saferate-markets-web",
+	"main": "./workers/app.ts",
+	"compatibility_date": "2026-09-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"traces": { "enabled": true, "head_sampling_rate": 1 }
+	},
+
+	// ---------------------------------------------------------------------------
+	// The site: marketing pages, docs, sign-in and the dashboard. Sessions and
+	// cookies live HERE and only here; the API Worker has none.
+	//
+	// Deploy with `--config dist/server/wrangler.json` (deploy-web.sh), NEVER
+	// `--env`: the Cloudflare Vite plugin resolves the environment at BUILD time,
+	// and `wrangler deploy --env production` would ship the top-level local-dev
+	// bindings below. (OKLocate's rule, and the opposite of apps/api.)
+	//
+	// Secrets (BETTER_AUTH_SECRET, BETTER_AUTH_URL) come from Doppler project
+	// saferate-markets via secrets-web.sh. Never in vars, never in .dev.vars.
+	// ---------------------------------------------------------------------------
+
+	// TOP LEVEL = LOCAL DEV ONLY.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_id": "markets-local",
+			"database_name": "markets-local",
+			"migrations_dir": "../../packages/persistence/migrations",
+			"migrations_table": "migrations"
+		}
+	],
+	// Absent locally on purpose: resolveEmailProvider falls back to the console
+	// provider and prints the magic link, so local sign-in needs no mail.
+	"vars": { "MARKETS_ENV": "development" },
+
+	"env": {
+		"staging": {
+			"name": "saferate-markets-web-staging",
+			"routes": [{ "pattern": "staging.saferate.markets", "custom_domain": true }],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_name": "saferate-markets-staging",
+					"migrations_dir": "../../packages/persistence/migrations",
+					"migrations_table": "migrations"
+				}
+			],
+			"send_email": [{ "name": "EMAIL" }],
+			"vars": { "MARKETS_ENV": "staging" }
+		},
+		"production": {
+			"name": "saferate-markets-web-production",
+			// The apex plus every name that only redirects to it (REDIRECT_HOSTS in
+			// @markets/schema). Claimed by this Worker rather than left parked, so
+			// none can be taken over; app/lib/canonicalHost.ts does the redirect.
+			"routes": [
+				{ "pattern": "saferate.markets", "custom_domain": true },
+				{ "pattern": "www.saferate.markets", "custom_domain": true },
+				{ "pattern": "saferate.market", "custom_domain": true },
+				{ "pattern": "www.saferate.market", "custom_domain": true },
+				{ "pattern": "markets.saferate.com", "custom_domain": true }
+			],
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_name": "saferate-markets-production",
+					"migrations_dir": "../../packages/persistence/migrations",
+					"migrations_table": "migrations"
+				}
+			],
+			"send_email": [{ "name": "EMAIL" }],
+			"vars": { "MARKETS_ENV": "production" }
+		}
+	}
+}

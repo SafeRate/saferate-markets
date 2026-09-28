@@ -1,0 +1,10 @@
+{
+	"name": "web",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"@markets/email": "workspace:*",
+		"@markets/persistence": "workspace:*",
+		"@markets/schema": "workspace:*"
+	}
+}

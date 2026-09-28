@@ -1,0 +1,16 @@
+{
+	"name": "api",
+	"private": true,
+	"type": "module",
+	"dependencies": {
+		"@hono/zod-openapi": "1.6.1",
+		"@markets/mcp-tools": "workspace:*",
+		"@markets/persistence": "workspace:*",
+		"@markets/schema": "workspace:*",
+		"@modelcontextprotocol/server": "2.0.0",
+		"@saferate/treasury-client": "workspace:*",
+		"@scalar/hono-api-reference": "0.11.16",
+		"hono": "^4.13.8",
+		"zod": "^4.6.5"
+	}
+}
