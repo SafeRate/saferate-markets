@@ -54,7 +54,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 197 tests at 2026-09-28
+bun test                               # 203 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 ```
@@ -144,20 +144,39 @@ DEPLOYED; that is what the client's optional methods are for.
 Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
 **Re-sync from `main` once that PR merges.**
 
+## Billing — built 2026-09-28, staging only
+
+- Entitlement: `authenticateApiKey` left-joins `organizationSubscriptions`;
+  a real key with no live subscription is a **402** naming /dashboard/billing,
+  not metered. Live = `ENTITLED_STATUSES` (active, trialing, past_due).
+- `organizationSubscriptions` is written ONLY by the webhook callbacks in
+  `auth.server.ts`. The plugin's `subscription` table is a mirror; nothing reads
+  it for access.
+- `lib/stripeKey.ts` refuses a live key outside production and a test key in it.
+- `scripts/stripe-seed.ts` seeds product, price, WIMBLEDON coupon + code and the
+  webhook, and writes the signing secret to Doppler. Applied to the sandbox:
+  `prod_VLPr1f4296sWMO`, `price_1UKj1R5aTiygYfqnYfJW20kt`, coupon
+  `markets_beta_wimbledon`, `promo_1UKj1S5aTiygYfqnrFXH02fH`, webhook
+  `we_1UKj1S5aTiygYfqnOei8z6Qf`.
+- Verified on staging: unsigned and forged webhooks 400; a webhook signed with
+  the real secret 200.
+- **Not yet verified: a real checkout.** Stripe Checkout is a hosted page and
+  needs a browser. Until someone completes one on staging with WIMBLEDON, the
+  path from checkout.session.completed to an entitled key is unproven.
+
 ## Not built yet, in order
 
-1. **Entitlement.** `authenticateApiKey` accepts any key of any organization.
-   Billing must add the subscription join BEFORE production takes traffic.
-2. Billing: migration 0002, `@better-auth/stripe` 1.7.1 exact, a restricted
-   `rk_live_` key, prices seeded from `PLANS` by lookup key, the Beta coupon,
-   OKLocate's guard against moving a lookup key off a price with subscribers.
-3. A usage page, the contact-us enquiry form (stored in D1 as well as emailed,
-   so a bounce loses nothing).
-4. More REST routes. `/v1/curves/zero` is the only one; each new route needs its
-   response schema pinned by a test against the client's real parse, as
-   `apps/api/tests/api.test.ts` does for this one.
-5. Deploy: create the two D1 databases (the `REPLACE_AT_FIRST_DEPLOY` ids),
-   Doppler `stg`/`prd` secrets, then staging end to end.
+1. A real staging checkout, then production: `stripe-seed.ts` under `prd` with
+   `I_UNDERSTAND_THIS_IS_LIVE=1`, the production D1, deploy.
+2. Ending the beta: a script that removes the WIMBLEDON discount from existing
+   subscriptions, plus the warning email and dashboard banner (no card is on
+   file, so removal leads to past_due and then lost access).
+3. The contact-us enquiry form for Redistribution and Benchmark (to
+   team@saferate.com, stored in D1 as well so a bounce loses nothing), and a
+   usage page.
+4. More REST routes. Each needs its response schema pinned by a test against the
+   client's real parse, as `apps/api/tests/api.test.ts` does for /v1/curves/zero.
+5. OAuth for the MCP server (claude.ai / Desktop connectors), targeting CIMD.
 
 ## Markets staging reads PRODUCTION treasury
 
