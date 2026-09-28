@@ -5,7 +5,8 @@ import {
 	setOrganizationSubscription,
 } from "@markets/persistence";
 import {
-	CHECKOUT_PLAN,
+	CHECKOUT_PLANS,
+	checkoutPlanById,
 	PRODUCT_NAME,
 	REDIRECT_HOSTS,
 	resolveMarketsEnv,
@@ -70,15 +71,29 @@ const TERMINAL_STATUSES = ["canceled", "unpaid", "incomplete_expired"];
  * so a throw would make Stripe replay a webhook that succeeded, and fix nothing.
  * The log keeps the discrepancy visible.
  */
-const project = async (
+export const project = async (
 	db: D1Database,
 	input: {
 		idOrganization: string;
+		/** The plugin's plan name for this subscription (lowercased by it). */
+		planName: string;
 		stripeSubscription: Stripe.Subscription;
 	},
 ) => {
 	const { stripeSubscription: sub } = input;
 	try {
+		// The plan the subscription IS on, from the plugin, never assumed. This
+		// was hardcoded to the single plan until Team existed; left that way, a
+		// Team subscriber would be recorded as Individual and limited to 60/min.
+		// An unknown name is refused rather than defaulted: a guessed plan is a
+		// guessed price and a guessed limit.
+		const plan = checkoutPlanById(input.planName);
+		if (!plan && !TERMINAL_STATUSES.includes(sub.status)) {
+			console.error(
+				`[stripe] refusing to project ${sub.id}: unknown plan "${input.planName}" for ${input.idOrganization}`,
+			);
+			return;
+		}
 		if (TERMINAL_STATUSES.includes(sub.status)) {
 			await endOrganizationSubscription({
 				db,
@@ -90,7 +105,7 @@ const project = async (
 		await setOrganizationSubscription({
 			db,
 			idOrganization: input.idOrganization,
-			idPlan: CHECKOUT_PLAN.id,
+			idPlan: (plan as NonNullable<typeof plan>).id,
 			idStripeSubscription: sub.id,
 			statusSubscription: sub.status,
 			// cancel_at, not cancel_at_period_end: Stripe leaves the boolean false
@@ -193,12 +208,12 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 				},
 				subscription: {
 					enabled: true,
-					plans: [
-						{
-							name: CHECKOUT_PLAN.id,
-							lookupKey: CHECKOUT_PLAN.sale.stripeLookupKey,
-						},
-					],
+					// Every checkout plan, by lookup key. Names are the plan ids, which
+					// the plugin stores lowercased: `public` and `team` already are.
+					plans: CHECKOUT_PLANS.map((plan) => ({
+						name: plan.id,
+						lookupKey: plan.sale.stripeLookupKey,
+					})),
 					/*
 					 * Promotion codes ON, so WIMBLEDON can be entered. Card collection
 					 * `if_required`, so a $0 beta checkout completes without one
@@ -238,16 +253,19 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 					onSubscriptionComplete: async ({ subscription, stripeSubscription }) =>
 						project(env.DB, {
 							idOrganization: subscription.referenceId,
+							planName: subscription.plan,
 							stripeSubscription,
 						}),
 					onSubscriptionUpdate: async ({ subscription, stripeSubscription }) =>
 						project(env.DB, {
 							idOrganization: subscription.referenceId,
+							planName: subscription.plan,
 							stripeSubscription,
 						}),
 					onSubscriptionDeleted: async ({ subscription, stripeSubscription }) =>
 						project(env.DB, {
 							idOrganization: subscription.referenceId,
+							planName: subscription.plan,
 							stripeSubscription,
 						}),
 				},

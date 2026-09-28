@@ -1,14 +1,19 @@
-import { RATE_LIMIT_PER_MINUTE } from "@markets/schema";
+import { rateLimitFor } from "@markets/schema";
 import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "../env";
 
 /**
- * RATE_LIMIT_PER_MINUTE per organization, REST and MCP together.
+ * Per-organization rate limit, REST and MCP together, at the organization's
+ * PLAN's limit (Individual 60/min, Team 300/min: rateLimitFor in
+ * @markets/schema).
  *
  * Keyed on the ORGANIZATION, not the key: rotating or minting more keys must
- * not multiply the allowance. Sits after apiKeyAuth, which is what resolves the
- * organization, and before the meter, so a throttled request is not recorded
- * as usage (it did no work, exactly as a 401 does no work).
+ * not multiply the allowance. Sits after apiKeyAuth, which resolves the
+ * organization and its plan, and before the meter, so a throttled request is
+ * not recorded as usage (it did no work, exactly as a 401 does no work).
+ *
+ * One Cloudflare binding per plan, because a binding's limit is fixed in
+ * wrangler config. An unknown plan gets the LOWEST limit (rateLimitFor).
  *
  * FAILS OPEN when the binding is absent or errors, and says so in the log. The
  * limiter protects capacity; it is not access control, and failing closed would
@@ -16,12 +21,15 @@ import type { AppEnv } from "../env";
  */
 export const rateLimit = () =>
 	createMiddleware<AppEnv>(async (c, next) => {
-		const limiter = c.env.RATE_LIMITER;
-		const { idOrganization } = c.get("auth");
+		const { idOrganization, idPlan } = c.get("auth");
+		const plan = rateLimitFor(idPlan);
+		const limiter = c.env[plan.rateLimitBinding];
 
 		let isAllowed = true;
 		if (limiter === undefined) {
-			console.error("[rate-limit] RATE_LIMITER binding missing; not enforcing");
+			console.error(
+				`[rate-limit] ${plan.rateLimitBinding} binding missing; not enforcing`,
+			);
 		} else {
 			try {
 				isAllowed = (await limiter.limit({ key: idOrganization })).success;
@@ -35,7 +43,7 @@ export const rateLimit = () =>
 			return c.json(
 				{
 					error: "rate_limited" as const,
-					message: `Rate limit reached: ${RATE_LIMIT_PER_MINUTE} requests per minute per organization, across the REST API and MCP together. Retry after a minute.`,
+					message: `Rate limit reached: ${plan.rateLimitPerMinute} requests per minute for your organization's plan, across the REST API and MCP together. Retry after a minute.`,
 				},
 				429,
 			);

@@ -39,7 +39,11 @@ type TStatement = { sql: string; args: unknown[] };
  * authentication query when the bound hash is the one live key's, and records
  * every batch so a test can see what was metered.
  */
-const fakeDb = (liveHash: string | null, isEntitled = true) => {
+const fakeDb = (
+	liveHash: string | null,
+	isEntitled = true,
+	idPlan: string | null = "public",
+) => {
 	const batches: TStatement[][] = [];
 	const statement = (sql: string, args: unknown[] = []): unknown => ({
 		sql,
@@ -52,6 +56,7 @@ const fakeDb = (liveHash: string | null, isEntitled = true) => {
 						idOrganization: "org-1",
 						lastUsedAt: null,
 						isEntitled: isEntitled ? 1 : 0,
+						idPlan: isEntitled ? idPlan : null,
 					}
 				: null,
 		run: async () => ({ meta: { changes: 1 } }),
@@ -76,12 +81,21 @@ type TSetup = {
 	omitLimiter?: boolean;
 	/** Whether the key's organization has a live subscription. Default true. */
 	isEntitled?: boolean;
+	/** The organization's plan. Default "public" (Individual). */
+	idPlan?: string | null;
+	/** A fake for the Team binding; default always allows. */
+	teamLimiter?: { limit: (o: { key: string }) => Promise<{ success: boolean }> };
 };
 
 export const setup = async (overrides: TSetup = {}) => {
 	const limitedKeys: string[] = [];
 	const { key } = await generateApiKey();
-	const d1 = fakeDb(await sha256Hex(key), overrides.isEntitled ?? true);
+	const d1 = fakeDb(
+		await sha256Hex(key),
+		overrides.isEntitled ?? true,
+		overrides.idPlan === undefined ? "public" : overrides.idPlan,
+	);
+	const limitedBy: string[] = [];
 	const pending: Promise<unknown>[] = [];
 	const env = {
 		DB: d1.db,
@@ -93,6 +107,14 @@ export const setup = async (overrides: TSetup = {}) => {
 					RATE_LIMITER: overrides.limiter ?? {
 						limit: async ({ key }: { key: string }) => {
 							limitedKeys.push(key);
+							limitedBy.push("RATE_LIMITER");
+							return { success: true };
+						},
+					},
+					RATE_LIMITER_TEAM: overrides.teamLimiter ?? {
+						limit: async ({ key }: { key: string }) => {
+							limitedKeys.push(key);
+							limitedBy.push("RATE_LIMITER_TEAM");
 							return { success: true };
 						},
 					},
@@ -112,7 +134,7 @@ export const setup = async (overrides: TSetup = {}) => {
 		await Promise.all(pending);
 		return response;
 	};
-	return { key, call, batches: d1.batches, limitedKeys };
+	return { key, call, batches: d1.batches, limitedKeys, limitedBy };
 };
 
 export const bearer = (key: string) => ({ Authorization: `Bearer ${key}` });

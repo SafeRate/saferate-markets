@@ -27,6 +27,9 @@ export const SiteHeader = () => (
 				<a className="transition-colors hover:text-slate-900" href="/docs">
 					Docs
 				</a>
+				<a className="transition-colors hover:text-slate-900" href="/pricing">
+					Pricing
+				</a>
 				<a
 					className="rounded-full bg-primary px-4 py-2 font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
 					href="/dashboard"

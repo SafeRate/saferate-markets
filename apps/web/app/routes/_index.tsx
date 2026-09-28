@@ -11,9 +11,8 @@ export const meta: Route.MetaFunction = () => [
 ];
 
 /**
- * Plan copy is READ from @markets/schema, never typed here: a price in prose is
- * a price that goes stale the first time it changes. Prices are not shown until
- * checkout exists, so the page cannot offer what cannot yet be bought.
+ * Plan copy and prices are READ from @markets/schema, never typed here: a price
+ * in prose is a price that goes stale the first time it changes.
  */
 export default function Home() {
 	return (
@@ -51,15 +50,20 @@ export default function Home() {
 						key={plan.id}
 					>
 						<h2 className="font-semibold text-neutral-900">{plan.name}</h2>
-						<p className="mt-1 text-sm text-muted-foreground">{plan.summary}</p>
-						<ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-slate-600 marker:text-primary">
-							{plan.permits.map((line) => (
-								<li key={line}>{line}</li>
-							))}
-						</ul>
+						<p className="mt-1 text-sm text-slate-600">{plan.summary}</p>
+						<p className="mt-3 font-semibold text-neutral-900">
+							{plan.sale.kind === "checkout"
+								? `$${plan.sale.priceUsdMonthly}/month`
+								: "Custom"}
+						</p>
 					</div>
 				))}
 			</section>
+			<p className="mt-6 text-sm">
+				<a className="text-primary underline underline-offset-4" href="/pricing">
+					Compare plans
+				</a>
+			</p>
 		</main>
 	);
 }

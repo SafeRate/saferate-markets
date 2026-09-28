@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { RATE_LIMIT_PER_MINUTE } from "@markets/schema";
+import { CHECKOUT_PLANS } from "@markets/schema";
 
 /** One error envelope for every refusal, so a caller parses a single shape. */
 export const ZError = z
@@ -45,7 +45,7 @@ export const GATE_RESPONSES = {
 	},
 	429: {
 		content: { "application/json": { schema: ZError } },
-		description: `Rate limit reached: ${RATE_LIMIT_PER_MINUTE} requests per minute per organization, across the REST API and MCP together.`,
+		description: `Rate limit reached for your organization's plan (${CHECKOUT_PLANS.map((p) => `${p.name} ${p.sale.rateLimitPerMinute}/min`).join(", ")}), counting the REST API and MCP together.`,
 		headers: {
 			"Retry-After": {
 				schema: { type: "integer" as const },

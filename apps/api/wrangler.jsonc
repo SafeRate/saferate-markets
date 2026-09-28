@@ -57,15 +57,21 @@
 			"remote": true
 		}
 	],
-	// 60 requests a minute per ORGANIZATION, REST and MCP together (confirmed
-	// 2026-09-28). Must equal RATE_LIMIT_PER_MINUTE in @markets/schema;
-	// apps/api/tests/rateLimit.test.ts fails if the two disagree. One namespace
-	// per environment, so staging traffic cannot spend production's allowance.
+	// Per ORGANIZATION, REST and MCP together, one binding per plan: Individual
+	// 60/min, Team 300/min (2026-09-28). Each must equal its plan's
+	// rateLimitPerMinute in @markets/schema; apps/api/tests/rateLimit.test.ts
+	// fails if they disagree. One namespace per binding per environment, so
+	// staging traffic cannot spend production's allowance.
 	"ratelimits": [
 		{
 			"name": "RATE_LIMITER",
 			"namespace_id": "7101",
 			"simple": { "limit": 60, "period": 60 }
+		},
+		{
+			"name": "RATE_LIMITER_TEAM",
+			"namespace_id": "7104",
+			"simple": { "limit": 300, "period": 60 }
 		}
 	],
 	"vars": { "MARKETS_ENV": "development" },
@@ -107,6 +113,11 @@
 					"name": "RATE_LIMITER",
 					"namespace_id": "7102",
 					"simple": { "limit": 60, "period": 60 }
+				},
+				{
+					"name": "RATE_LIMITER_TEAM",
+					"namespace_id": "7105",
+					"simple": { "limit": 300, "period": 60 }
 				}
 			],
 			"vars": { "MARKETS_ENV": "staging" }
@@ -138,6 +149,11 @@
 					"name": "RATE_LIMITER",
 					"namespace_id": "7103",
 					"simple": { "limit": 60, "period": 60 }
+				},
+				{
+					"name": "RATE_LIMITER_TEAM",
+					"namespace_id": "7106",
+					"simple": { "limit": 300, "period": 60 }
 				}
 			],
 			"vars": { "MARKETS_ENV": "production" }

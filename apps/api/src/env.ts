@@ -13,6 +13,8 @@ export type TApiKeyAuth = {
 	idOrganization: string;
 	idApiKey: string;
 	lastUsedAt: number | null;
+	/** The live subscription's plan, which sets the rate limit. */
+	idPlan: string | null;
 };
 
 export type AppEnv = {

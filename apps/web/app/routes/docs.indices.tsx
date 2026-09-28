@@ -213,7 +213,7 @@ export default function IndicesGuide({ loaderData }: Route.ComponentProps) {
 				. Using an index in your own analysis or client reporting is covered by your
 				plan. Using one inside a financial product, as a fund benchmark or in a
 				product whose payout references a level, needs a{" "}
-				<a className="text-primary underline underline-offset-4" href="/">
+				<a className="text-primary underline underline-offset-4" href="/pricing">
 					benchmark licence
 				</a>
 				.

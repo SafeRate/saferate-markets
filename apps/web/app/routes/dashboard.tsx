@@ -5,7 +5,7 @@ import {
 	getOrganizationSubscription,
 	isEntitled,
 } from "@markets/persistence";
-import { PRODUCT_NAME } from "@markets/schema";
+import { checkoutPlanById, PRODUCT_NAME } from "@markets/schema";
 import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard";
 
@@ -38,6 +38,9 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	});
 	return {
 		hasPlan: isEntitled(subscription),
+		planName: isEntitled(subscription)
+			? (checkoutPlanById(subscription?.idPlan)?.name ?? "Unknown plan")
+			: null,
 		email: org.email,
 		organizationName: org.nameOrganization,
 		activeKeys: await countActiveApiKeys({
@@ -91,7 +94,7 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 				</p>
 				<p className="mt-2 text-sm">
 					{d.hasPlan ? (
-						"Markets, active."
+						`${d.planName}, active.`
 					) : (
 						<>
 							No plan yet, so your keys will be refused.{" "}

@@ -1,107 +1,158 @@
 import { z } from "zod";
 
 /**
- * What we sell. Every page that shows a plan, and the Stripe seeder, read this.
+ * What we sell. Every page that shows a plan, the API's rate limiter, the Stripe
+ * plugin and the Stripe seeder read this.
  *
- * Decided 2026-09-28:
+ * Revised 2026-09-28 to Dylan's structure (first pass):
  *
- *  - ONE paid plan, $10/month, one subscription per organization, one seat.
- *  - Beta is NOT a plan. It is a 100%-off promotion code on this same plan, so a
- *    beta tester is on the real price from day one and ending the beta is a
- *    change to their discount rather than a migration to another plan. No card
- *    is collected for a $0 checkout, so when the discount ends their access
- *    lapses until they add one. Coupon terms land with billing (step 4).
- *  - No quota. Access is rate-limited (RATE_LIMIT_PER_MINUTE) and usage is still
- *    metered, so the dashboard shows real numbers.
- *  - The line between plans is WHO SEES THE DATA, the market-data convention:
- *    internal use and client reporting are the $10 plan; putting numbers in
- *    front of the public or inside another product is redistribution; using an
- *    index inside a financial product is a benchmark licence. The last two are
- *    contact-us. The terms themselves are for counsel; this is their structure.
+ *   Individual  $10/mo   one person, their own account, 60/min
+ *   Team        $100/mo  a firm's internal use and client reporting, 300/min
+ *   Enterprise  custom   firm-wide, redistribution, benchmark licence, SLA
+ *
+ * The line between plans is WHO the data is for (the market-data convention):
+ *
+ *  - Individual is a NATURAL PERSON on their own account. An analyst at a fund
+ *    is Team even if they pay personally.
+ *  - Team is a firm's internal use, INCLUDING excerpts in its own client reports
+ *    (attributed) and its own staff's agents, e.g. an analyst's Claude using the
+ *    MCP server.
+ *  - Enterprise is anything serving THEIR customers: public display, feeds, an
+ *    agent or app their clients use. The benchmark licence (an index inside a
+ *    financial product) is a named add-on here, not folded into redistribution:
+ *    it is a different deal and can carry regulatory obligations.
+ *
+ * NOT YET TRUE, so not claimed in any copy: more than one seat (Team is one seat
+ * until invitations are built), and any history cap on Individual (every plan
+ * has full history today). The terms themselves are for counsel.
+ *
+ * ⚠️ `public` IS INDIVIDUAL'S ID AND MUST STAY `public`. Existing subscriptions
+ * carry it as their plan name (the plugin stores it, lowercased) and in
+ * organizationSubscriptions.idPlan, and its Stripe lookup key is
+ * markets_public_monthly. Renaming either orphans every subscription on it: the
+ * plugin matches webhooks to plans by name and price by lookup key, and a
+ * cancellation that matches nothing never revokes (OKLocate, 2026-09-23). Only
+ * the display name changed.
  */
 
-export const ZPlanId = z.enum(["public", "redistribution", "benchmark"]);
+export const ZPlanId = z.enum(["public", "team", "enterprise"]);
 export type TPlanId = z.infer<typeof ZPlanId>;
+
+type TCheckoutSale = {
+	kind: "checkout";
+	priceUsdMonthly: number;
+	/** Stripe resolves the price by this key. Never a price id. */
+	stripeLookupKey: string;
+	/**
+	 * REST and MCP together, per organization. The limiter binding for this plan
+	 * must carry the same number (apps/api/wrangler.jsonc, pinned by
+	 * tests/rateLimit.test.ts).
+	 */
+	rateLimitPerMinute: number;
+	/** The wrangler binding that enforces it. */
+	rateLimitBinding: "RATE_LIMITER" | "RATE_LIMITER_TEAM";
+};
 
 export type TPlan = {
 	id: TPlanId;
 	name: string;
 	summary: string;
-	/** What the licence covers, in the reader's words. Rendered as a list. */
+	/** Who it is for and what it allows, in the reader's words. */
 	permits: readonly string[];
-	/**
-	 * `checkout` is sold self-serve through Stripe; `contact` has no price and no
-	 * checkout, only an enquiry. A contact plan gets a price by becoming checkout.
-	 */
-	sale:
-		| {
-				kind: "checkout";
-				priceUsdMonthly: number;
-				/** Stripe resolves the price by this key. Never a price id. */
-				stripeLookupKey: string;
-		  }
-		| { kind: "contact" };
+	/** `checkout` is sold self-serve through Stripe; `contact` only by enquiry. */
+	sale: TCheckoutSale | { kind: "contact" };
 };
 
 export const PLANS = [
 	{
 		id: "public",
-		name: "Markets",
-		summary: "Use the data and show it to your clients.",
+		name: "Individual",
+		summary: "For one person, on their own account.",
 		permits: [
-			"Your own analysis, models, research and trading decisions",
-			"Excerpts in reports, statements and presentations to your own clients, attributed to Safe Rate",
+			"Your own research, models and decisions",
 			"REST API and MCP access",
+			"60 requests a minute",
 		],
 		sale: {
 			kind: "checkout",
 			priceUsdMonthly: 10,
 			stripeLookupKey: "markets_public_monthly",
+			rateLimitPerMinute: 60,
+			rateLimitBinding: "RATE_LIMITER",
 		},
 	},
 	{
-		id: "redistribution",
-		name: "Redistribution",
-		summary: "Put the data in front of the public or inside your product.",
+		id: "team",
+		name: "Team",
+		summary: "For a firm's own use, and its client reporting.",
 		permits: [
-			"Display on a public website, app or terminal",
-			"Data feeds and APIs to your own customers",
+			"Commercial internal use: analysis, models, trading decisions",
+			"Excerpts in reports and presentations to your own clients, attributed to Safe Rate",
+			"Your staff's own AI agents, over MCP",
+			"300 requests a minute",
+			"Additional seats coming soon",
 		],
-		sale: { kind: "contact" },
+		sale: {
+			kind: "checkout",
+			priceUsdMonthly: 100,
+			stripeLookupKey: "markets_team_monthly",
+			rateLimitPerMinute: 300,
+			rateLimitBinding: "RATE_LIMITER_TEAM",
+		},
 	},
 	{
-		id: "benchmark",
-		name: "Benchmark licence",
-		summary: "Use a Safe Rate index inside a financial product.",
+		id: "enterprise",
+		name: "Enterprise",
+		summary: "Firm-wide, or in front of your own customers.",
 		permits: [
-			"A fund or product that tracks, or is measured against, a Safe Rate index",
-			"Products whose payout references an index level",
+			"Firm-wide use, with an SLA",
+			"Bulk and history exports",
+			"Security review and DPA",
+			"Redistribution: your website, app, terminal or feed, and agents your customers use",
+			"Benchmark licence: an index inside a fund or financial product",
 		],
 		sale: { kind: "contact" },
 	},
 ] as const satisfies readonly TPlan[];
 
-/**
- * Per organization, counting REST requests and MCP tool calls together.
- *
- * Confirmed by Dylan 2026-09-28. Enforced in apps/api/src/middleware/rateLimit.ts
- * by Cloudflare's rate limiting binding, whose limit lives in wrangler.jsonc and
- * is pinned to this constant by a test. It counts per Cloudflare location and is
- * approximate: it stops a runaway script, it is not a contractual figure.
- */
-export const RATE_LIMIT_PER_MINUTE = 60;
+export type TCheckoutPlan = Omit<TPlan, "sale"> & { sale: TCheckoutSale };
+
+/** The plans Stripe sells, in display order. */
+export const CHECKOUT_PLANS: readonly TCheckoutPlan[] = PLANS.filter(
+	(p) => p.sale.kind === "checkout",
+) as readonly TCheckoutPlan[];
 
 /**
- * The beta: a 100%-off, never-expiring discount on the Markets plan, entered at
- * checkout as WIMBLEDON (decided 2026-09-28).
+ * The checkout plan with this id, or undefined. Anything unknown is undefined
+ * rather than a default: a plan name from Stripe or a form that is not ours
+ * must not resolve to a real plan's price or limits.
+ */
+export const checkoutPlanById = (id: string | null | undefined) =>
+	CHECKOUT_PLANS.find((p) => p.id === id);
+
+/**
+ * The limit for an organization on a plan. An unknown or missing plan gets the
+ * LOWEST limit: an entitlement row naming a plan we do not recognise must not
+ * be granted the highest tier's capacity.
+ */
+export const rateLimitFor = (idPlan: string | null | undefined) => {
+	const plan = checkoutPlanById(idPlan);
+	const lowest = [...CHECKOUT_PLANS].sort(
+		(a, b) => a.sale.rateLimitPerMinute - b.sale.rateLimitPerMinute,
+	)[0];
+	return (plan ?? lowest).sale;
+};
+
+/**
+ * The beta: a 100%-off, never-expiring discount, entered at checkout as
+ * WIMBLEDON (decided 2026-09-28). It applies to INDIVIDUAL only, so Team is a
+ * real paid plan; the Stripe coupon is restricted to Individual's product.
  *
  * Indefinite by decision: the beta ends when Dylan ends it, by deactivating the
  * code (no new redemptions) and removing the discount from existing
  * subscriptions. Deactivating alone does NOT end it for anyone already on it.
  * No card is collected for a $0 checkout, so a tester whose discount is removed
  * goes past_due and then loses access until they add one; warn them first.
- *
- * `couponId` is ours, set at creation, so the seeder finds it again by id.
  */
 export const BETA_PROMOTION = {
 	couponId: "markets_beta_wimbledon",
@@ -121,12 +172,3 @@ export const BETA_PROMOTION = {
 
 /** What a card statement says. Stripe allows 22 characters. */
 export const STATEMENT_DESCRIPTOR = "SAFE RATE MARKETS";
-
-/** The one plan Stripe sells, found by id rather than by array position. */
-export const CHECKOUT_PLAN = (() => {
-	const plan = PLANS.find((p) => p.sale.kind === "checkout");
-	if (plan?.sale.kind !== "checkout") {
-		throw new Error("PLANS has no checkout plan");
-	}
-	return { ...plan, sale: plan.sale };
-})();

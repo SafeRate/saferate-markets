@@ -118,6 +118,8 @@ export const ZApiKeyAuthenticated = z.object({
 	lastUsedAt: z.number().nullable(),
 	/** 0/1 from SQL. Whether the organization has a live subscription. */
 	isEntitled: z.union([z.literal(0), z.literal(1)]).transform(Boolean),
+	/** The live subscription's plan id, or null. Decides the rate limit. */
+	idPlan: z.string().nullable(),
 });
 export type TApiKeyAuthenticated = z.infer<typeof ZApiKeyAuthenticated>;
 
@@ -151,7 +153,8 @@ export async function authenticateApiKey(
 			/* sql */ `
 			select k.idApiKey, k.idOrganization, k.lastUsedAt,
 			       case when s.idOrganization is not null then 1 else 0 end
-			         as isEntitled
+			         as isEntitled,
+			       s.idPlan
 			from apiKeys k
 			left join organizationSubscriptions s
 			       on s.idOrganization = k.idOrganization

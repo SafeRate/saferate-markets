@@ -31,10 +31,11 @@
 import { spawnSync } from "node:child_process";
 import {
 	BETA_PROMOTION,
-	CHECKOUT_PLAN,
+	CHECKOUT_PLANS,
 	PRODUCT_NAME,
 	SITE_HOSTS,
 	STATEMENT_DESCRIPTOR,
+	type TCheckoutPlan,
 	type TMarketsEnv,
 } from "@markets/schema";
 import Stripe from "stripe";
@@ -93,25 +94,45 @@ const probeAccount = async () => {
 	}
 };
 
-const ensureProduct = async () => {
+/** "Safe Rate Markets Individual", "Safe Rate Markets Team": what checkout shows. */
+const productName = (plan: TCheckoutPlan) => `${PRODUCT_NAME} ${plan.name}`;
+
+/**
+ * One product per plan, found again by metadata.markets_plan = the plan id.
+ * The name is kept in step with the schema (products are updatable and a name
+ * change touches no subscription); the id and lookup key never change.
+ */
+const ensureProduct = async (plan: TCheckoutPlan) => {
 	const products = await stripe.products.list({ active: true, limit: 100 });
 	const existing = products.data.find(
-		(p) => p.metadata.markets_plan === CHECKOUT_PLAN.id,
+		(p) => p.metadata.markets_plan === plan.id,
 	);
+	const name = productName(plan);
 	if (existing) {
-		log("=", "product", `${existing.id} "${existing.name}"`);
+		if (existing.name === name) {
+			log("=", `product ${plan.id}`, `${existing.id} "${existing.name}"`);
+		} else if (!IS_APPLY) {
+			log(
+				"~",
+				`product ${plan.id}`,
+				`${existing.id} would rename "${existing.name}" -> "${name}"`,
+			);
+		} else {
+			await stripe.products.update(existing.id, { name });
+			log("~", `product ${plan.id}`, `${existing.id} renamed to "${name}"`);
+		}
 		return existing.id;
 	}
 	if (!IS_APPLY) {
-		log("+", "product", `would create "${PRODUCT_NAME}"`);
+		log("+", `product ${plan.id}`, `would create "${name}"`);
 		return null;
 	}
 	const created = await stripe.products.create({
-		name: PRODUCT_NAME,
+		name,
 		statement_descriptor: STATEMENT_DESCRIPTOR,
-		metadata: { markets_plan: CHECKOUT_PLAN.id },
+		metadata: { markets_plan: plan.id },
 	});
-	log("+", "product", created.id);
+	log("+", `product ${plan.id}`, created.id);
 	return created.id;
 };
 
@@ -124,8 +145,8 @@ const activeSubscriptionsOn = async (priceId: string) =>
 		})
 	).data.length;
 
-const ensurePrice = async (productId: string | null) => {
-	const { stripeLookupKey, priceUsdMonthly } = CHECKOUT_PLAN.sale;
+const ensurePrice = async (plan: TCheckoutPlan, productId: string | null) => {
+	const { stripeLookupKey, priceUsdMonthly } = plan.sale;
 	const cents = Math.round(priceUsdMonthly * 100);
 	const found = (
 		await stripe.prices.list({
@@ -142,7 +163,11 @@ const ensurePrice = async (productId: string | null) => {
 		found.recurring?.interval === "month" &&
 		(productId === null || found.product === productId);
 	if (found && matches) {
-		log("=", "price", `${found.id} ${stripeLookupKey} $${priceUsdMonthly}/mo`);
+		log(
+			"=",
+			`price ${plan.id}`,
+			`${found.id} ${stripeLookupKey} $${priceUsdMonthly}/mo`,
+		);
 		return;
 	}
 	if (found) {
@@ -155,12 +180,16 @@ const ensurePrice = async (productId: string | null) => {
 		}
 		log(
 			"~",
-			"price",
+			`price ${plan.id}`,
 			`${found.id} differs from the schema; will move ${stripeLookupKey}`,
 		);
 	}
 	if (!IS_APPLY || productId === null) {
-		log("+", "price", `would create ${stripeLookupKey} $${priceUsdMonthly}/mo`);
+		log(
+			"+",
+			`price ${plan.id}`,
+			`would create ${stripeLookupKey} $${priceUsdMonthly}/mo`,
+		);
 		return;
 	}
 	const created = await stripe.prices.create({
@@ -172,7 +201,7 @@ const ensurePrice = async (productId: string | null) => {
 		// Only reached with zero active subscribers on the old holder (above).
 		transfer_lookup_key: found !== undefined,
 	});
-	log("+", "price", `${created.id} ${stripeLookupKey}`);
+	log("+", `price ${plan.id}`, `${created.id} ${stripeLookupKey}`);
 };
 
 const ensureCoupon = async (productId: string | null) => {
@@ -322,8 +351,15 @@ console.info(
 	IS_APPLY ? "Applying.\n" : "Dry run. Pass --apply to create anything.\n",
 );
 
-const productId = await ensureProduct();
-await ensurePrice(productId);
-const hasCoupon = await ensureCoupon(productId);
+const productIds = new Map<string, string | null>();
+for (const plan of CHECKOUT_PLANS) {
+	const productId = await ensureProduct(plan);
+	await ensurePrice(plan, productId);
+	productIds.set(plan.id, productId);
+}
+// The beta coupon is restricted to its plan's product only.
+const hasCoupon = await ensureCoupon(
+	productIds.get(BETA_PROMOTION.appliesToPlan) ?? null,
+);
 await ensurePromotionCode(hasCoupon);
 await ensureWebhook();
