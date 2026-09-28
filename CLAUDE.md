@@ -156,16 +156,15 @@ were both called "oklocate" and the CLI's was the wrong one).
   **Individual's id stays `public`** (existing subscriptions and the lookup key
   markets_public_monthly carry it); only its display name changed. Not built
   yet: Team seats, any history cap (copy claims neither).
-- **Beta = WIMBLEDON, 100% off forever, on Individual AND Team** (extended to
-  Team the same day). Coupon `markets_beta_all_plans` on both products; the
-  first coupon `markets_beta_wimbledon` (Individual only) stays on the
-  subscriptions that redeemed it and is still recognised as beta
-  (BETA_COUPON_IDS). No card collected at $0. Individual -> Team: a BETA
-  subscriber is switched by ending Individual now and opening a Team checkout
-  (an in-place upgrade cannot carry a new discount and would bill $100 to a
-  subscription with no card); a paying subscriber with a card switches in place,
-  prorated. (billing.server.ts switchPathFor, checked against the real sandbox
-  subscription.)
+- **Beta codes, 100% off forever (BETA_COUPONS / BETA_CODES in plans.ts):**
+  WIMBLEDON on Individual AND Team (coupon `markets_beta_all_plans`); MIT2004
+  on Individual ONLY (coupon `markets_beta_wimbledon`, named for its first code,
+  which has since moved), so a Team checkout must refuse MIT2004. Coupon product
+  restrictions cannot be edited, hence one coupon per restriction; the seeder
+  checks each existing coupon's products against the schema. No card collected
+  at $0. Individual -> Team: a BETA subscriber (either coupon) is switched by
+  ending Individual now and opening a Team checkout; a paying subscriber with a
+  card switches in place, prorated (billing.server.ts switchPathFor).
 - **Rate limit per plan**, per organization, REST and MCP together: one
   Cloudflare binding per plan per environment (RATE_LIMITER 60,
   RATE_LIMITER_TEAM 300), chosen from the organization's plan; pinned to the
