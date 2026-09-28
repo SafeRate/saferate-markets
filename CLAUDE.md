@@ -156,10 +156,16 @@ were both called "oklocate" and the CLI's was the wrong one).
   **Individual's id stays `public`** (existing subscriptions and the lookup key
   markets_public_monthly carry it); only its display name changed. Not built
   yet: Team seats, any history cap (copy claims neither).
-- **Beta = WIMBLEDON, 100% off forever, Individual only** (the coupon is
-  restricted to Individual's product), no card collected. Individual -> Team is
-  an in-place upgrade that invoices the proration at once, so it is offered only
-  when a card is on file (billing.server.ts canCharge).
+- **Beta = WIMBLEDON, 100% off forever, on Individual AND Team** (extended to
+  Team the same day). Coupon `markets_beta_all_plans` on both products; the
+  first coupon `markets_beta_wimbledon` (Individual only) stays on the
+  subscriptions that redeemed it and is still recognised as beta
+  (BETA_COUPON_IDS). No card collected at $0. Individual -> Team: a BETA
+  subscriber is switched by ending Individual now and opening a Team checkout
+  (an in-place upgrade cannot carry a new discount and would bill $100 to a
+  subscription with no card); a paying subscriber with a card switches in place,
+  prorated. (billing.server.ts switchPathFor, checked against the real sandbox
+  subscription.)
 - **Rate limit per plan**, per organization, REST and MCP together: one
   Cloudflare binding per plan per environment (RATE_LIMITER 60,
   RATE_LIMITER_TEAM 300), chosen from the organization's plan; pinned to the
@@ -200,8 +206,9 @@ Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
   the real secret 200.
 - **Live Stripe seeded 2026-09-28** on Safe Rate Inc.: Individual
   `prod_VLQBvNmXJThfhy` / `price_1UKjLJG4qd65LvbdNG7hrD1D`, Team
-  `prod_VLRDu1CVAIsPWg` / `price_1UKkKeG4qd65LvbdFuAMqdxh`, coupon `markets_beta_wimbledon`,
-  `promo_1UKjLKG4qd65Lvbdsn1Io6VP` (WIMBLEDON), webhook
+  `prod_VLRDu1CVAIsPWg` / `price_1UKkKeG4qd65LvbdFuAMqdxh`, coupon `markets_beta_all_plans` with WIMBLEDON
+  `promo_1UKkb6G4qd65LvbdCbEWunWF` (the first code, on the Individual-only coupon, is
+  deactivated), webhook
   `we_1UKjLKG4qd65LvbdnWeyp7JO` to https://saferate.markets.
 - **Proven end to end on staging, 2026-09-28**, by Dylan in a browser: a new
   key 402'd, checkout with WIMBLEDON completed at $0 with no card, and the same
