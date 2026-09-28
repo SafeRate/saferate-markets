@@ -22,7 +22,7 @@ import { z } from "zod";
  *    financial product) is a named add-on here, not folded into redistribution:
  *    it is a different deal and can carry regulatory obligations.
  *
- * The beta code (BETA_PROMOTION) covers both checkout plans.
+ * The beta codes (BETA_CODES) are listed below with the plans each covers.
  *
  * NOT YET TRUE, so not claimed in any copy: more than one seat (Team is one seat
  * until invitations are built), and any history cap on Individual (every plan
@@ -146,43 +146,47 @@ export const rateLimitFor = (idPlan: string | null | undefined) => {
 };
 
 /**
- * The beta: a 100%-off, never-expiring discount, entered at checkout as
- * WIMBLEDON, on EITHER checkout plan (Individual only until later on
- * 2026-09-28, when Dylan extended it to Team).
+ * The beta: 100% off, forever, through promotion codes entered at checkout.
+ * Decided 2026-09-28, in three steps the same day: WIMBLEDON on Individual;
+ * WIMBLEDON extended to Team; MIT2004 added on Individual ONLY, so a code that
+ * does NOT cover Team can be tested (it must be refused at a Team checkout).
  *
- * A Stripe coupon's product restriction cannot be edited, so extending it meant
- * a NEW coupon (`couponId`) and moving the WIMBLEDON code onto it. The first
- * coupon stays in `formerCouponIds`: subscriptions that redeemed it keep its
- * discount, and the billing page must still recognise them as beta.
+ * Coupons carry the product restriction and it CANNOT be edited in Stripe, so
+ * each restriction is its own coupon, and codes point at coupons. Coupon ids are
+ * set by us at creation and never change, which is why the Individual-only one
+ * is still called markets_beta_wimbledon although WIMBLEDON has moved off it.
+ * Subscriptions keep the coupon they redeemed.
  *
  * Indefinite by decision: the beta ends when Dylan ends it, by deactivating the
- * code (no new redemptions) and removing the discount from existing
+ * codes (no new redemptions) and removing the discount from existing
  * subscriptions. Deactivating alone does NOT end it for anyone already on it.
  * No card is collected for a $0 checkout, so a tester whose discount is removed
  * goes past_due and then loses access until they add one; warn them first.
  */
-export const BETA_PROMOTION = {
-	couponId: "markets_beta_all_plans",
-	formerCouponIds: ["markets_beta_wimbledon"],
-	code: "WIMBLEDON",
+export const BETA_COUPONS = [
+	{ id: "markets_beta_all_plans", plans: ["public", "team"] },
+	{ id: "markets_beta_wimbledon", plans: ["public"] },
+] as const satisfies readonly { id: string; plans: readonly TPlanId[] }[];
+
+export type TBetaCouponId = (typeof BETA_COUPONS)[number]["id"];
+
+export const BETA_CODES = [
+	{ code: "WIMBLEDON", couponId: "markets_beta_all_plans" },
+	{ code: "MIT2004", couponId: "markets_beta_wimbledon" },
+] as const satisfies readonly { code: string; couponId: TBetaCouponId }[];
+
+export const BETA_TERMS = {
 	name: "Safe Rate Markets beta",
 	percentOff: 100,
 	duration: "forever",
-	appliesToPlans: ["public", "team"],
-} as const satisfies {
-	couponId: string;
-	formerCouponIds: readonly string[];
-	code: string;
-	name: string;
-	percentOff: number;
-	duration: "forever" | "once" | "repeating";
-	appliesToPlans: readonly TPlanId[];
-};
+} as const;
 
-/** Every coupon that marks a subscription as beta, current and former. */
-export const BETA_COUPON_IDS: readonly string[] = [
-	BETA_PROMOTION.couponId,
-	...BETA_PROMOTION.formerCouponIds,
+/** Every coupon that marks a subscription as beta. */
+export const BETA_COUPON_IDS: readonly string[] = BETA_COUPONS.map((c) => c.id);
+
+/** Plans at least one beta code covers, for the "have a code?" hint. */
+export const BETA_PLANS: readonly TPlanId[] = [
+	...new Set(BETA_COUPONS.flatMap((c) => c.plans)),
 ];
 
 /** What a card statement says. Stripe allows 22 characters. */

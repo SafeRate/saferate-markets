@@ -30,7 +30,10 @@
  */
 import { spawnSync } from "node:child_process";
 import {
-	BETA_PROMOTION,
+	BETA_CODES,
+	BETA_COUPON_IDS,
+	BETA_COUPONS,
+	BETA_TERMS,
 	CHECKOUT_PLANS,
 	PRODUCT_NAME,
 	SITE_HOSTS,
@@ -204,103 +207,120 @@ const ensurePrice = async (plan: TCheckoutPlan, productId: string | null) => {
 	log("+", `price ${plan.id}`, `${created.id} ${stripeLookupKey}`);
 };
 
-const ensureCoupon = async (productIds: (string | null)[]) => {
+type TBetaCoupon = (typeof BETA_COUPONS)[number];
+type TBetaCode = (typeof BETA_CODES)[number];
+
+/**
+ * One beta coupon, restricted to its plans' products.
+ *
+ * An existing coupon is CHECKED, not trusted, including its product
+ * restriction: coupons cannot be edited, so a wrong one has to be replaced by
+ * hand, and a coupon quietly covering the wrong products is exactly how a code
+ * meant for Individual would discount Team.
+ */
+const ensureCoupon = async (
+	coupon: TBetaCoupon,
+	productIds: Map<string, string | null>,
+) => {
+	const wanted = coupon.plans.map((plan) => productIds.get(plan) ?? null);
 	try {
-		const coupon = await stripe.coupons.retrieve(BETA_PROMOTION.couponId);
+		const found = await stripe.coupons.retrieve(coupon.id, {
+			expand: ["applies_to"],
+		});
+		const covers = [...(found.applies_to?.products ?? [])].sort();
+		const expected = [...wanted].filter((id): id is string => id !== null).sort();
 		const isRight =
-			coupon.percent_off === BETA_PROMOTION.percentOff &&
-			coupon.duration === BETA_PROMOTION.duration &&
-			coupon.valid;
+			found.percent_off === BETA_TERMS.percentOff &&
+			found.duration === BETA_TERMS.duration &&
+			found.valid &&
+			JSON.stringify(covers) === JSON.stringify(expected);
 		if (!isRight) {
 			fail(
-				`coupon ${coupon.id} exists but is ${coupon.percent_off}% ${coupon.duration} valid=${coupon.valid}; coupons cannot be edited, so delete it in the dashboard and re-run`,
+				`coupon ${found.id} exists but is ${found.percent_off}% ${found.duration} valid=${found.valid} on ${covers.join(",") || "every product"}, not ${expected.join(",")}; coupons cannot be edited, so replace it by hand and re-run`,
 			);
 		}
-		log("=", "coupon", `${coupon.id} ${coupon.percent_off}% ${coupon.duration}`);
+		log(
+			"=",
+			`coupon ${coupon.id}`,
+			`${found.percent_off}% ${found.duration} on ${coupon.plans.join(" + ")}`,
+		);
 		return true;
 	} catch (error) {
 		if ((error as { code?: string }).code !== "resource_missing") throw error;
 	}
-	if (!IS_APPLY || productIds.some((id) => id === null)) {
+	if (!IS_APPLY || wanted.some((id) => id === null)) {
 		log(
 			"+",
-			"coupon",
-			`would create ${BETA_PROMOTION.couponId} 100% forever on ${BETA_PROMOTION.appliesToPlans.join(" + ")}`,
+			`coupon ${coupon.id}`,
+			`would create 100% forever on ${coupon.plans.join(" + ")}`,
 		);
 		return false;
 	}
 	await stripe.coupons.create({
-		id: BETA_PROMOTION.couponId,
-		name: BETA_PROMOTION.name,
-		percent_off: BETA_PROMOTION.percentOff,
-		duration: BETA_PROMOTION.duration,
-		// Only these products, so the code cannot discount anything else on a
+		id: coupon.id,
+		name: BETA_TERMS.name,
+		percent_off: BETA_TERMS.percentOff,
+		duration: BETA_TERMS.duration,
+		// Only these products, so a code cannot discount anything else on a
 		// shared account (OKLocate sells on the same Stripe account).
-		applies_to: { products: productIds as string[] },
+		applies_to: { products: wanted as string[] },
 	});
-	log("+", "coupon", BETA_PROMOTION.couponId);
+	log("+", `coupon ${coupon.id}`, `on ${coupon.plans.join(" + ")}`);
 	return true;
 };
 
 /**
- * WIMBLEDON on the current beta coupon.
+ * One promotion code on its coupon.
  *
- * A code is unique among ACTIVE codes, so moving it to a new coupon means
- * deactivating the old code first. Only a code on a FORMER beta coupon is moved;
- * a WIMBLEDON on any other coupon is somebody else's and the seeder refuses.
- * Deactivating a code stops new redemptions only: subscriptions that already
- * redeemed it keep their discount.
+ * A code is unique among ACTIVE codes, so moving it to another coupon means
+ * deactivating the old code first. Only a code sitting on one of OUR beta
+ * coupons is moved; the same code on any other coupon is somebody else's and
+ * the seeder refuses. Deactivating a code stops new redemptions only:
+ * subscriptions that already redeemed it keep their discount.
  */
-const ensurePromotionCode = async (hasCoupon: boolean) => {
+const ensurePromotionCode = async (code: TBetaCode, hasCoupon: boolean) => {
 	const codes = await stripe.promotionCodes.list({
-		code: BETA_PROMOTION.code,
+		code: code.code,
 		active: true,
 		limit: 10,
 	});
 	const existing = codes.data[0];
-	const couponOf = (code: Stripe.PromotionCode) => {
-		const coupon = code.promotion?.coupon;
+	const couponOf = (promo: Stripe.PromotionCode) => {
+		const coupon = promo.promotion?.coupon;
 		return typeof coupon === "string" ? coupon : coupon?.id;
 	};
+	const label = `code ${code.code}`;
 	if (existing) {
 		const couponId = couponOf(existing);
-		if (couponId === BETA_PROMOTION.couponId) {
-			log("=", "promotion code", `${existing.id} ${existing.code}`);
+		if (couponId === code.couponId) {
+			log("=", label, `${existing.id} on ${couponId}`);
 			return;
 		}
-		if (
-			!(BETA_PROMOTION.formerCouponIds as readonly string[]).includes(
-				couponId ?? "",
-			)
-		) {
+		if (!BETA_COUPON_IDS.includes(couponId ?? "")) {
 			fail(
-				`an active code ${BETA_PROMOTION.code} exists on coupon ${couponId}, which is not a beta coupon; refusing to touch it`,
+				`an active code ${code.code} exists on coupon ${couponId}, which is not a beta coupon; refusing to touch it`,
 			);
 		}
 		if (!IS_APPLY || !hasCoupon) {
 			log(
 				"~",
-				"promotion code",
-				`would move ${existing.code} from ${couponId} to ${BETA_PROMOTION.couponId} (existing discounts unaffected)`,
+				label,
+				`would move from ${couponId} to ${code.couponId} (existing discounts unaffected)`,
 			);
 			return;
 		}
 		await stripe.promotionCodes.update(existing.id, { active: false });
-		log("~", "promotion code", `${existing.id} on ${couponId} deactivated`);
+		log("~", label, `${existing.id} on ${couponId} deactivated`);
 	}
 	if (!IS_APPLY || !hasCoupon) {
-		log("+", "promotion code", `would create ${BETA_PROMOTION.code}`);
+		log("+", label, `would create on ${code.couponId}`);
 		return;
 	}
 	const created = await stripe.promotionCodes.create({
-		code: BETA_PROMOTION.code,
-		promotion: { type: "coupon", coupon: BETA_PROMOTION.couponId },
+		code: code.code,
+		promotion: { type: "coupon", coupon: code.couponId },
 	});
-	log(
-		"+",
-		"promotion code",
-		`${created.id} ${created.code} on ${BETA_PROMOTION.couponId}`,
-	);
+	log("+", label, `${created.id} on ${code.couponId}`);
 };
 
 /** Pipe a value into Doppler through stdin: never argv, never printed. */
@@ -393,9 +413,12 @@ for (const plan of CHECKOUT_PLANS) {
 	await ensurePrice(plan, productId);
 	productIds.set(plan.id, productId);
 }
-// The beta coupon is restricted to its plans' products only.
-const hasCoupon = await ensureCoupon(
-	BETA_PROMOTION.appliesToPlans.map((id) => productIds.get(id) ?? null),
-);
-await ensurePromotionCode(hasCoupon);
+// Each beta coupon restricted to its plans' products; then each code on its coupon.
+const couponReady = new Map<string, boolean>();
+for (const coupon of BETA_COUPONS) {
+	couponReady.set(coupon.id, await ensureCoupon(coupon, productIds));
+}
+for (const code of BETA_CODES) {
+	await ensurePromotionCode(code, couponReady.get(code.couponId) ?? false);
+}
 await ensureWebhook();

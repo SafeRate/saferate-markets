@@ -1,6 +1,6 @@
 import { getOrganizationSubscription, isEntitled } from "@markets/persistence";
 import {
-	BETA_PROMOTION,
+	BETA_PLANS,
 	CHECKOUT_PLANS,
 	checkoutPlanById,
 	PRODUCT_NAME,
@@ -42,7 +42,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 			priceUsdMonthly: p.sale.priceUsdMonthly,
 			permits: p.permits,
 		})),
-		betaPlans: BETA_PROMOTION.appliesToPlans as readonly string[],
+		betaPlans: BETA_PLANS as readonly string[],
 		subscription: entitled ? subscription : null,
 		currentPlan: current ? { id: current.id, name: current.name } : null,
 		// Only asked when it matters: an Individual subscriber who could move up.
