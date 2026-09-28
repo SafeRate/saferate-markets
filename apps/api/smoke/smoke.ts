@@ -23,9 +23,15 @@ import {
 	SITE_HOSTS,
 	type TMarketsEnv,
 } from "@markets/schema";
-import type { z } from "zod";
+import { z } from "zod";
+import {
+	ZBreakevenOut,
+	ZMoneyMarketCurveOut,
+	ZParCurveOut,
+	ZRealCurveOut,
+} from "../src/routes/curveFamilies";
 import { ZRichCheapOut } from "../src/routes/richCheap";
-import { ZZeroCurveOut } from "../src/routes/curves";
+import { ZZeroCurveOut, ZZeroCurvePointOut } from "../src/routes/curves";
 import {
 	ZSecurityAnalyticsOut,
 	ZSecurityOut,
@@ -174,6 +180,34 @@ await expectStatus(
 
 // ── Curves ──────────────────────────────────────────────────────────────────
 const curve = await check("/v1/curves/zero", ZZeroCurveOut);
+
+// ── The other curves: each must be on the same recent day as the zero curve
+// or close to it, and every history non-empty over the last two weeks.
+for (const [path, schema] of [
+	["/v1/curves/par", ZParCurveOut],
+	["/v1/curves/money-market", ZMoneyMarketCurveOut],
+	["/v1/curves/real", ZRealCurveOut],
+	["/v1/curves/breakeven", ZBreakevenOut],
+] as const) {
+	const day = (await check(path, schema as z.ZodType)) as {
+		date: string;
+	} | null;
+	if (day && day.date < daysAgo(7)) fail(`${path} date`, `stale: ${day.date}`);
+}
+for (const [slug, field, schema] of [
+	["zero", "points", ZZeroCurvePointOut],
+	["money-market", "days", ZMoneyMarketCurveOut],
+	["real", "days", ZRealCurveOut],
+] as const) {
+	const history = (await check(
+		`/v1/curves/${slug}/history?from=${daysAgo(14)}&to=${daysAgo(0)}`,
+		z
+			.object({ from: z.string(), to: z.string(), [field]: z.array(schema) })
+			.strict(),
+	)) as Record<string, unknown[]> | null;
+	if (history && (history[field] ?? []).length === 0)
+		fail(`${slug} history`, "empty over the last two weeks");
+}
 if (curve && curve.points.length !== 10)
 	fail("zero curve has 10 tenors", String(curve.points.length));
 
