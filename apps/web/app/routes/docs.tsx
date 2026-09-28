@@ -1,4 +1,9 @@
-import { PRODUCT_NAME, resolveMarketsEnv, SITE_HOSTS } from "@markets/schema";
+import {
+	API_SURFACES,
+	PRODUCT_NAME,
+	resolveMarketsEnv,
+	SITE_HOSTS,
+} from "@markets/schema";
 import type { Route } from "./+types/docs";
 
 export const meta: Route.MetaFunction = () => [
@@ -54,6 +59,44 @@ export default function Docs({ loaderData }: Route.ComponentProps) {
 					returns and analytics, and the two date conventions.
 				</p>
 			</a>
+
+			<h2 className="mt-12 text-xl font-semibold tracking-tight">
+				What is in the API
+			</h2>
+			<p className="mt-2 text-sm text-muted-foreground">
+				Every endpoint is a GET with the same key. Dates are optional almost
+				everywhere and mean the most recent published day. Each group has an MCP
+				tool serving the same data.
+			</p>
+			<div className="mt-4 space-y-6">
+				{API_SURFACES.map((surface) => (
+					<section key={surface.group}>
+						<div className="flex flex-wrap items-baseline justify-between gap-2">
+							<h3 className="font-semibold text-neutral-900">{surface.group}</h3>
+							{surface.tool ? (
+								<p className="font-mono text-xs text-slate-500">MCP: {surface.tool}</p>
+							) : null}
+						</div>
+						<div className="mt-2 overflow-x-auto rounded-lg border border-slate-200">
+							<table className="w-full border-collapse text-sm">
+								<tbody>
+									{surface.routes.map((route) => (
+										<tr
+											className="border-t border-slate-100 first:border-t-0"
+											key={route.path}
+										>
+											<td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-neutral-900">
+												{route.path}
+											</td>
+											<td className="px-3 py-2 text-slate-600">{route.what}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</section>
+				))}
+			</div>
 
 			<h2 className="mt-12 text-xl font-semibold tracking-tight">REST</h2>
 			<p className="mt-2 text-sm text-muted-foreground">

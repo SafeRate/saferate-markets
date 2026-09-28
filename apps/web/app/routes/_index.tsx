@@ -24,9 +24,9 @@ export default function Home() {
 				U.S. Treasury market data, for your systems and your AI agents.
 			</h1>
 			<p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-600">
-				Fitted zero, par, money-market and TIPS curves, per-security analytics and
-				Safe Rate's total-return indices, daily from 2008. One key, over a REST API
-				and an MCP server.
+				Fitted zero, par, money-market and TIPS curves, every security's price and
+				analytics, rich/cheap to the curve, and Safe Rate's total-return indices,
+				daily from 2008. One key, over a REST API and an MCP server.
 			</p>
 			<div className="mt-8 flex gap-3">
 				<a
