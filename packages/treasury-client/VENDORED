@@ -1,5 +1,5 @@
 repo:   SafeRate/saferate-treasury
 path:   packages/client
-ref:    treasury-client
-commit: 3b5efe416de1278048a1b2b97ff55fa5e6e93134
-synced: 2026-09-28T19:07:54Z
+ref:    main
+commit: e2e7c7ed79bba3e3b75c0c346af542b7393d7018
+synced: 2026-09-28T21:11:06Z
