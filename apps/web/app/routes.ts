@@ -12,6 +12,7 @@ export default [
 	route("docs", "./routes/docs.tsx"),
 	route("docs/indices", "./routes/docs.indices.tsx"),
 	route("pricing", "./routes/pricing.tsx"),
+	route("privacy-choices", "./routes/privacy-choices.tsx"),
 	route("sign-in", "./routes/sign-in.tsx"),
 	route("sign-out", "./routes/sign-out.tsx"),
 	route("dashboard", "./routes/dashboard.tsx"),

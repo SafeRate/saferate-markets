@@ -35,7 +35,15 @@
 	],
 	// Absent locally on purpose: resolveEmailProvider falls back to the console
 	// provider and prints the magic link, so local sign-in needs no mail.
-	"vars": { "MARKETS_ENV": "development" },
+	// Analytics ids are PUBLIC (they are in every page's source) and are config,
+	// not secrets, so they live here, committed: a reviewable diff, as OKLocate
+	// settled. EMPTY outside production, so test traffic never reaches the
+	// production properties. Present = the tool may run (lib/analytics.ts).
+	"vars": {
+		"MARKETS_ENV": "development",
+		"GA_MEASUREMENT_ID": "",
+		"CLARITY_PROJECT_ID": ""
+	},
 
 	"env": {
 		"staging": {
@@ -51,7 +59,11 @@
 				}
 			],
 			"send_email": [{ "name": "EMAIL" }],
-			"vars": { "MARKETS_ENV": "staging" }
+			"vars": {
+				"MARKETS_ENV": "staging",
+				"GA_MEASUREMENT_ID": "",
+				"CLARITY_PROJECT_ID": ""
+			}
 		},
 		"production": {
 			"name": "saferate-markets-web-production",
@@ -75,7 +87,13 @@
 				}
 			],
 			"send_email": [{ "name": "EMAIL" }],
-			"vars": { "MARKETS_ENV": "production" }
+			// GA stream "Safe Rate Markets" (15861881678), and the saferate.markets
+			// Clarity project; both given by Dylan 2026-09-28.
+			"vars": {
+				"MARKETS_ENV": "production",
+				"GA_MEASUREMENT_ID": "G-GXT251RBGJ",
+				"CLARITY_PROJECT_ID": "ypjj2lural"
+			}
 		}
 	}
 }

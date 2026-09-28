@@ -51,8 +51,11 @@ export const SiteFooter = () => (
 				Source data is published by the U.S. Department of the Treasury. Figures are
 				end-of-day records, not live prices, and nothing here is investment advice.
 			</p>
-			<span className="text-[13px] text-slate-400">
-				© {new Date().getFullYear()} Safe Rate Inc.
+			<span className="flex gap-4 text-[13px] text-slate-400">
+				<a className="hover:text-slate-900" href="/privacy-choices">
+					Privacy choices
+				</a>
+				<span>© {new Date().getFullYear()} Safe Rate Inc.</span>
 			</span>
 		</div>
 	</footer>
