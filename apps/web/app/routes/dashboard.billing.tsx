@@ -349,7 +349,14 @@ export default function Billing({
 				</section>
 			)}
 
-			<p className="mt-8 text-sm text-slate-600">
+			<p className="mt-8 text-xs text-slate-500">
+				Subscribing means you accept our{" "}
+				<a className="underline underline-offset-4" href="/terms">
+					terms of service
+				</a>
+				, including what each plan licenses (section 4).
+			</p>
+			<p className="mt-3 text-sm text-slate-600">
 				Firm-wide use, redistribution or a benchmark licence:{" "}
 				<a className="text-primary underline underline-offset-4" href="/pricing">
 					see Enterprise

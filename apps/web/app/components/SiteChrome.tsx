@@ -52,6 +52,12 @@ export const SiteFooter = () => (
 				end-of-day records, not live prices, and nothing here is investment advice.
 			</p>
 			<span className="flex gap-4 text-[13px] text-slate-400">
+				<a className="hover:text-slate-900" href="/terms">
+					Terms
+				</a>
+				<a className="hover:text-slate-900" href="/privacy">
+					Privacy
+				</a>
 				<a className="hover:text-slate-900" href="/privacy-choices">
 					Privacy choices
 				</a>

@@ -127,6 +127,21 @@ describe("the conventions a client could misread", () => {
 	});
 });
 
+// The privacy policy (section 3) promises our usage records hold the route
+// PATTERN, not the CUSIP or dates asked about. This keeps that promise true.
+describe("what the meter records", () => {
+	test("the route pattern, never the CUSIP or the query", async () => {
+		const { call, key, batches } = await setup({ treasury: treasuryFor("note") });
+		await call("/v1/securities/91282CMM0/prices?from=2026-09-24", {
+			headers: bearer(key),
+		});
+		const operation = String(batches[0][0].args[4]);
+		expect(operation).toBe("/v1/securities/:cusip/prices");
+		expect(operation).not.toContain("91282CMM0");
+		expect(operation).not.toContain("2026");
+	});
+});
+
 describe("absence, and an unknown CUSIP", () => {
 	test("an unknown CUSIP is a 404", async () => {
 		const { status, body } = await get("note", "/v1/securities/912810ZZ9", {

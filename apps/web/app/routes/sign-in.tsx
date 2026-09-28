@@ -109,7 +109,15 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 			) : null}
 
 			<p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-				New here? Signing in creates your account.
+				New here? Signing in creates your account, and means you accept our{" "}
+				<a className="underline underline-offset-4" href="/terms">
+					terms
+				</a>{" "}
+				and{" "}
+				<a className="underline underline-offset-4" href="/privacy">
+					privacy policy
+				</a>
+				.
 			</p>
 		</main>
 	);

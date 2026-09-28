@@ -60,7 +60,11 @@ export default function PrivacyChoices({ loaderData }: Route.ComponentProps) {
 			</h1>
 			<p className="mt-4 text-slate-600">
 				On public pages only (never the dashboard or sign-in), we use these to
-				understand how the site is used:
+				understand how the site is used. The{" "}
+				<a className="underline underline-offset-4" href="/privacy">
+					privacy policy
+				</a>{" "}
+				has the detail.
 			</p>
 			<ul className="mt-4 space-y-3">
 				{tools.map((tool) => (
