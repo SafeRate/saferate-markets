@@ -31,6 +31,7 @@ import {
 	ZRealCurveOut,
 } from "../src/routes/curveFamilies";
 import { ZRichCheapOut } from "../src/routes/richCheap";
+import { ZOnTheRunOut, ZSecurityListOut } from "../src/routes/securityLists";
 import { ZZeroCurveOut, ZZeroCurvePointOut } from "../src/routes/curves";
 import {
 	ZSecurityAnalyticsOut,
@@ -282,6 +283,36 @@ for (const [code, basis] of Object.entries(EXPECTED_BASIS)) {
 		ZSecurityAnalyticsOut,
 	);
 }
+// ── Finding a CUSIP ─────────────────────────────────────────────────────────
+// The whole priced stock is several hundred securities of every family, and
+// every on-the-run security is priced: a short or unpriced list is absence.
+const listed = await check("/v1/securities", ZSecurityListOut);
+if (listed) {
+	const families = new Set(listed.securities.map((s) => s.family));
+	const missing = ["bill", "note", "bond", "tips", "frn"].filter(
+		(f) => !families.has(f as never),
+	);
+	if (listed.count < 200 || missing.length > 0)
+		fail(
+			"securities list",
+			`${listed.count} listed; missing ${missing.join(", ") || "none"}`,
+		);
+	else pass("securities list", `${listed.date}: ${listed.count} securities`);
+}
+const onTheRun = await check("/v1/on-the-run", ZOnTheRunOut);
+if (onTheRun) {
+	const unpriced = onTheRun.queues
+		.map((q) => q.members[0])
+		.filter((m) => m?.run_rank !== 0 || m.maturity_date === null);
+	if (onTheRun.queues.length < 10 || unpriced.length > 0)
+		fail(
+			"on-the-run",
+			`${onTheRun.queues.length} queues; ${unpriced.length} leaders unpriced`,
+		);
+	else pass("on-the-run", `${onTheRun.date}: ${onTheRun.queues.length} queues`);
+}
+await check("/v1/on-the-run?basis=auction", ZOnTheRunOut);
+
 await expectStatus(
 	"an unknown CUSIP is a 404",
 	"/v1/securities/912810ZZ9",

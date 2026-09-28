@@ -12,6 +12,7 @@ import { registerIndexRoutes } from "./routes/indices";
 import { registerMcpRoute } from "./routes/mcp";
 import { registerRichCheapRoutes } from "./routes/richCheap";
 import { registerSecurityRoutes } from "./routes/securities";
+import { registerSecurityListRoutes } from "./routes/securityLists";
 
 /**
  * api.saferate.markets: the REST API and the MCP server.
@@ -93,6 +94,7 @@ registerCurveRoutes(app);
 registerCurveFamilyRoutes(app);
 registerIndexRoutes(app);
 registerSecurityRoutes(app);
+registerSecurityListRoutes(app);
 registerRichCheapRoutes(app);
 
 registerMcpRoute(app);

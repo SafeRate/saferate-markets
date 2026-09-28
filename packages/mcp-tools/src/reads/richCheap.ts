@@ -1,11 +1,11 @@
 import {
 	securityFamilyFromPriceType,
 	type TSecurityFamily,
-	ZPriceOnDate,
 	ZSecurityAnalytics,
 	ZTipsAnalytics,
 } from "@saferate/treasury-client/types";
 import { z } from "zod";
+import { readLatestPriceDate, readPricesOn } from "./securities";
 import { call, type TEnv } from "./treasury";
 
 /**
@@ -126,12 +126,7 @@ export const readRichCheap = async (
 	env: TEnv,
 	input: { basis: TRichCheapBasis; date?: string },
 ) => {
-	let date =
-		input.date ??
-		(z
-			.union([z.string(), z.object({ date: z.string() })])
-			.transform((value) => (typeof value === "string" ? value : value.date))
-			.parse(await call(env, "latestPriceDate")()) as string);
+	let date = input.date ?? (await readLatestPriceDate(env));
 
 	let analytics = await readAnalyticsOn(env, input.basis, date);
 	for (
@@ -147,10 +142,7 @@ export const readRichCheap = async (
 	if (analytics.length === 0) return null;
 
 	const prices = new Map(
-		z
-			.array(ZPriceOnDate)
-			.parse((await call(env, "pricesOn")({ date })) ?? [])
-			.map((row) => [row.cusip, row]),
+		(await readPricesOn(env, date)).map((row) => [row.cusip, row]),
 	);
 
 	const rows: TRichCheapRow[] = [];

@@ -1,7 +1,11 @@
 import {
+	RUN_KIND_ORDER,
 	securityFamilyFromPriceType,
+	termYears,
 	type TSecurityFamily,
 	ZFrnAnalytics,
+	ZPriceOnDate,
+	ZRunStatus,
 	ZSecurityAnalytics,
 	ZSecurityDetail,
 	ZSecurityPrice,
@@ -25,6 +29,8 @@ import { call, type TEnv } from "./treasury";
  *  - The family comes from the price type (MARKET BASED NOTE -> note, TIPS ->
  *    tips, MARKET BASED FRN -> frn), the client's securityFamilyFromPriceType.
  */
+
+const zDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 const byDate = <T extends { date: string }>(rows: T[]) =>
 	[...rows].sort((left, right) => left.date.localeCompare(right.date));
@@ -95,4 +101,49 @@ export const readAnalyticsFor = async (
 		basis: "nominal" as const,
 		rows: keep(z.array(ZSecurityAnalytics).parse(rows ?? [])),
 	};
+};
+
+/** Every security priced on a date, oldest maturity first. Empty when none. */
+export const readPricesOn = async (env: TEnv, date: string) =>
+	z
+		.array(ZPriceOnDate)
+		.parse((await call(env, "pricesOn")({ date })) ?? [])
+		.sort((left, right) => left.maturityDate.localeCompare(right.maturityDate));
+
+/** The latest date the price archive holds. */
+export const readLatestPriceDate = async (env: TEnv) =>
+	z
+		.union([zDate, z.object({ date: zDate })])
+		.transform((value) => (typeof value === "string" ? value : value.date))
+		.parse(await call(env, "latestPriceDate")());
+
+/**
+ * Each on-the-run queue on a date: the security kind and original term, and
+ * its members by run rank (0 is on the run). Upstream tracks ranks 0 to 10.
+ * Kinds in RUN_KIND_ORDER, then shortest term first, as the client orders them.
+ */
+export const readRunQueuesOn = async (
+	env: TEnv,
+	input: { date: string; basis: "auction" | "issue" },
+) => {
+	const rows = z
+		.array(ZRunStatus)
+		.parse(
+			(await call(env, "runStatusOn")({ basis: input.basis, date: input.date })) ??
+				[],
+		);
+	const queues = new Map<string, typeof rows>();
+	for (const row of rows) {
+		const key = `${row.securityKind}|${row.originalSecurityTerm}`;
+		queues.set(key, [...(queues.get(key) ?? []), row]);
+	}
+	return [...queues.values()]
+		.map((members) => [...members].sort((a, b) => a.runRank - b.runRank))
+		.sort(
+			(left, right) =>
+				RUN_KIND_ORDER.indexOf(left[0].securityKind) -
+					RUN_KIND_ORDER.indexOf(right[0].securityKind) ||
+				termYears(left[0].originalSecurityTerm) -
+					termYears(right[0].originalSecurityTerm),
+		);
 };

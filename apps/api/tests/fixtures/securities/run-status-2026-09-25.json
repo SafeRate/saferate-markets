@@ -1,0 +1,1234 @@
+[
+	{
+		"basis": "issue",
+		"cusip": "912797WQ6",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 0,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VM6",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 1,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VX2",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 2,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WP8",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 3,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VL8",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 4,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VW4",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 5,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WN3",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 6,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VK0",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 7,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VP9",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 8,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WH6",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 9,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VE4",
+		"date": "2026-09-25",
+		"original_security_term": "17-Week",
+		"run_rank": 10,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WL7",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 0,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797UM7",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 1,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VH7",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 2,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WK9",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 3,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797UL9",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 4,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VG9",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 5,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WD5",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 6,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797UK1",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 7,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VA2",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 8,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WC7",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 9,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797UJ4",
+		"date": "2026-09-25",
+		"original_security_term": "26-Week",
+		"run_rank": 10,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797TC1",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 0,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797SK4",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 1,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797UD7",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 2,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797WA1",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 3,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797SU2",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 4,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797SA6",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 5,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797TV9",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 6,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VR5",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 7,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797RS8",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 8,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797TM9",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 9,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912797VQ7",
+		"date": "2026-09-25",
+		"original_security_term": "52-Week",
+		"run_rank": 10,
+		"security_kind": "Bill"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRH6",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 0,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRB9",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 1,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQY0",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 2,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQS3",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 3,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQL8",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 4,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQH7",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 5,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQB0",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 6,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPS4",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 7,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPL9",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 8,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPE5",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 9,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPB1",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 10,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRL7",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 0,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRG8",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 1,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQZ7",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 2,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQV6",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 3,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQR5",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 4,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQJ3",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 5,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQE4",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 6,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQA2",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 7,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPT2",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 8,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPP0",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 9,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPK1",
+		"date": "2026-09-25",
+		"original_security_term": "3-Year",
+		"run_rank": 10,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRK9",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 0,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRA1",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 1,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQX2",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 2,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQU8",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 3,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQK0",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 4,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQG9",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 5,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQD6",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 6,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPW5",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 7,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CGH8",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 8,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPR6",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 9,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPN5",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 10,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRJ2",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 0,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRC7",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 1,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQW4",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 2,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQT1",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 3,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQN4",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 4,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQF1",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 5,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQC8",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 6,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPY1",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 7,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPQ8",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 8,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPM7",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 9,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPF2",
+		"date": "2026-09-25",
+		"original_security_term": "7-Year",
+		"run_rank": 10,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRF0",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 0,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQQ7",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 1,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPZ8",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 2,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPJ4",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 3,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CNT4",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 4,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CNC1",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 5,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CMM0",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 6,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLW9",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 7,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLF6",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 8,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CKQ3",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 9,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CJZ5",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 10,
+		"security_kind": "Note"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UX4",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 0,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UV8",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 1,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UT3",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 2,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UQ9",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 3,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UN6",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 4,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UL0",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 5,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UJ5",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 6,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UF3",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 7,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UD8",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 8,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UB2",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 9,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810TZ1",
+		"date": "2026-09-25",
+		"original_security_term": "20-Year",
+		"run_rank": 10,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UW6",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 0,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UU0",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 1,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UR7",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 2,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UP1",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 3,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UM8",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 4,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UK2",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 5,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UG1",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 6,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UE6",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 7,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UC0",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 8,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UA4",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 9,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810TX6",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 10,
+		"security_kind": "Bond"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQP9",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 0,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPH8",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 1,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CNB3",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 2,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLV1",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 3,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CKL4",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 4,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CJH5",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 5,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CGW5",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 6,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CFR7",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 7,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CEJ6",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 8,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CDC2",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 9,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CCA7",
+		"date": "2026-09-25",
+		"original_security_term": "5-Year",
+		"run_rank": 10,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRE3",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 0,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPU9",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 1,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CNS6",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 2,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CML2",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 3,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLE9",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 4,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CJY8",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 5,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CHP9",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 6,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CGK1",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 7,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CEZ0",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 8,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CDX6",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 9,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CCM1",
+		"date": "2026-09-25",
+		"original_security_term": "10-Year",
+		"run_rank": 10,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810US5",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 0,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810UH9",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 1,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810TY4",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 2,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810TP3",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 3,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810TE8",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 4,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810SV1",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 5,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810SM1",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 6,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810SG4",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 7,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810SB5",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 8,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810RW0",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 9,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "912810RR1",
+		"date": "2026-09-25",
+		"original_security_term": "30-Year",
+		"run_rank": 10,
+		"security_kind": "TIPS"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CRD5",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 0,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CQM6",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 1,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPX3",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 2,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CPG0",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 3,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CNQ0",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 4,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CMX6",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 5,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CMJ7",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 6,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLT6",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 7,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CLA7",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 8,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CKM2",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 9,
+		"security_kind": "FRN"
+	},
+	{
+		"basis": "issue",
+		"cusip": "91282CJU6",
+		"date": "2026-09-25",
+		"original_security_term": "2-Year",
+		"run_rank": 10,
+		"security_kind": "FRN"
+	}
+]
