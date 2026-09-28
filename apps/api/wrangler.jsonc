@@ -77,7 +77,7 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_id": "4d2e5f0e-bccd-42d1-bb28-4a5ddab37a0c",
 					"database_name": "saferate-markets-staging",
 					"migrations_dir": "../../packages/persistence/migrations",
 					"migrations_table": "migrations"
