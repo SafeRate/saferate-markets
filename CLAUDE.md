@@ -54,7 +54,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 188 tests at 2026-09-28
+bun test                               # 197 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 ```
@@ -100,8 +100,13 @@ a fresh checkout shows phantom errors.
 - **Beta = a 100%-off promotion code on that plan**, no card collected. When the
   discount ends, access lapses until a card is added; build the warning email and
   banner with billing.
-- **No quota; rate-limited** (60/min per organization proposed, REST + MCP
-  together, Cloudflare rate-limit binding, approximate). Not enforced yet.
+- **No quota; rate-limited at 60/min per organization** (confirmed), REST and
+  MCP together, keyed on the organization so more keys do not mean more
+  allowance. Cloudflare's rate-limit binding; the number is in wrangler.jsonc
+  per environment and pinned to `RATE_LIMIT_PER_MINUTE` by
+  `apps/api/tests/rateLimit.test.ts`. A throttled request is a 429, not metered.
+  Fails OPEN if the binding is missing, with a log line. Verified on wrangler dev
+  2026-09-28: 60 requests 200, the next 5 429 with Retry-After: 60.
 - **Licence tiers by who sees the data:** internal use and client reporting are
   the $10 plan; public display or inside another product is Redistribution;
   inside a financial product is a Benchmark licence. The last two are
@@ -129,19 +134,22 @@ Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
 2. Billing: migration 0002, `@better-auth/stripe` 1.7.1 exact, a restricted
    `rk_live_` key, prices seeded from `PLANS` by lookup key, the Beta coupon,
    OKLocate's guard against moving a lookup key off a price with subscribers.
-3. Rate limiting, a usage page, the contact-us enquiry form (stored in D1 as well
-   as emailed, so a bounce loses nothing).
+3. A usage page, the contact-us enquiry form (stored in D1 as well as emailed,
+   so a bounce loses nothing).
 4. More REST routes. `/v1/curves/zero` is the only one; each new route needs its
    response schema pinned by a test against the client's real parse, as
    `apps/api/tests/api.test.ts` does for this one.
 5. Deploy: create the two D1 databases (the `REPLACE_AT_FIRST_DEPLOY` ids),
    Doppler `stg`/`prd` secrets, then staging end to end.
 
-## Known issue upstream
+## Markets staging reads PRODUCTION treasury
 
-**`treasury-api-staging` is stale.** Its healthcheck on 2026-09-28 reported
-`mostRecentCurveDate: 2026-09-09` against production's 2026-09-25, and it lacks
-the index and analytics fields production reports, so it is also an older deploy.
-Local dev and markets staging read it, so their "latest" curve is 19 days old.
-Decide before staging goes to anyone outside: refresh it, or bind markets
-staging to production treasury-api (the RPC is read-only).
+Decided 2026-09-28. `treasury-api-staging` was stale that day (healthcheck
+`mostRecentCurveDate: 2026-09-09` against production's 2026-09-25) and an older
+deploy lacking production's index and analytics fields, so markets staging would
+have rehearsed against data no customer sees. The TreasuryService entrypoint is
+read-only, so binding production cannot write anything.
+
+The cost: a treasury-api deploy reaches markets staging and production at the
+same moment, with no rehearsal. **Local dev still binds treasury-api-staging**,
+so its "latest" curve is stale; switch it too if that starts to mislead.

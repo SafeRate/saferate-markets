@@ -5,6 +5,7 @@ import type { AppEnv } from "../env";
 import { readClientIdentity } from "../lib/clientIdentity";
 import { apiKeyAuth } from "../middleware/apiKey";
 import { meterUsage } from "../middleware/meter";
+import { rateLimit } from "../middleware/rateLimit";
 
 /**
  * The Safe Rate Markets MCP server: MCP v2 (revision 2026-07-28), Streamable
@@ -64,7 +65,7 @@ const toolNameFromBody = async (request: Request) => {
 };
 
 export const registerMcpRoute = (app: OpenAPIHono<AppEnv>) => {
-	app.use("/mcp", apiKeyAuth(), meterUsage("mcp"));
+	app.use("/mcp", apiKeyAuth(), rateLimit(), meterUsage("mcp"));
 
 	app.all("/mcp", async (c) => {
 		const client = await readClientIdentity(c.req.raw);

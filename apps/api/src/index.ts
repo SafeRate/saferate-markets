@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import type { AppEnv } from "./env";
 import { apiKeyAuth } from "./middleware/apiKey";
 import { meterUsage } from "./middleware/meter";
+import { rateLimit } from "./middleware/rateLimit";
 import { registerCurveRoutes } from "./routes/curves";
 import { registerMcpRoute } from "./routes/mcp";
 
@@ -72,9 +73,9 @@ app.get("/health", (c) =>
 	}),
 );
 
-// Auth, then meter, on everything under /v1: a route added later is
-// authenticated and counted by default rather than silently public.
-app.use("/v1/*", apiKeyAuth(), meterUsage("rest"));
+// Auth, then rate limit, then meter, on everything under /v1: a route added
+// later is authenticated, limited and counted by default.
+app.use("/v1/*", apiKeyAuth(), rateLimit(), meterUsage("rest"));
 registerCurveRoutes(app);
 
 registerMcpRoute(app);

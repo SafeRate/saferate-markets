@@ -84,8 +84,9 @@ export const PLANS = [
 /**
  * Per organization, counting REST requests and MCP tool calls together.
  *
- * Proposed 2026-09-28 and not yet objected to. Enforced with Cloudflare's rate
- * limiting binding, which counts per location and is approximate: it stops a
- * runaway script, it is not a contractual figure. Enforcement is not built yet.
+ * Confirmed by Dylan 2026-09-28. Enforced in apps/api/src/middleware/rateLimit.ts
+ * by Cloudflare's rate limiting binding, whose limit lives in wrangler.jsonc and
+ * is pinned to this constant by a test. It counts per Cloudflare location and is
+ * approximate: it stops a runaway script, it is not a contractual figure.
  */
 export const RATE_LIMIT_PER_MINUTE = 60;

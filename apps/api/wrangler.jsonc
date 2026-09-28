@@ -55,6 +55,17 @@
 			"remote": true
 		}
 	],
+	// 60 requests a minute per ORGANIZATION, REST and MCP together (confirmed
+	// 2026-09-28). Must equal RATE_LIMIT_PER_MINUTE in @markets/schema;
+	// apps/api/tests/rateLimit.test.ts fails if the two disagree. One namespace
+	// per environment, so staging traffic cannot spend production's allowance.
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER",
+			"namespace_id": "7101",
+			"simple": { "limit": 60, "period": 60 }
+		}
+	],
 	"vars": { "MARKETS_ENV": "development" },
 
 	"env": {
@@ -75,11 +86,25 @@
 			"analytics_engine_datasets": [
 				{ "binding": "API_USAGE", "dataset": "markets_api_usage_staging" }
 			],
+			// PRODUCTION treasury-api, deliberately, decided 2026-09-28. The
+			// treasury-api-staging service was 19 days stale that day (curves to
+			// 2026-09-09 against production's 2026-09-25) and an older deploy, so
+			// markets staging would have rehearsed against data no customer sees.
+			// Safe because the entrypoint is read-only: nothing here can write to
+			// the treasury database. The cost is that a treasury-api change reaches
+			// markets staging and production at the same moment.
 			"services": [
 				{
 					"binding": "TREASURY",
-					"service": "treasury-api-staging",
+					"service": "treasury-api",
 					"entrypoint": "TreasuryService"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "RATE_LIMITER",
+					"namespace_id": "7102",
+					"simple": { "limit": 60, "period": 60 }
 				}
 			],
 			"vars": { "MARKETS_ENV": "staging" }
@@ -104,6 +129,13 @@
 					"binding": "TREASURY",
 					"service": "treasury-api",
 					"entrypoint": "TreasuryService"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "RATE_LIMITER",
+					"namespace_id": "7103",
+					"simple": { "limit": 60, "period": 60 }
 				}
 			],
 			"vars": { "MARKETS_ENV": "production" }

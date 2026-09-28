@@ -8,6 +8,7 @@ export const ZError = z
 			"unauthorized",
 			"no_data",
 			"unavailable",
+			"rate_limited",
 			"internal",
 		]),
 		message: z.string(),
