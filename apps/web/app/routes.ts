@@ -10,6 +10,7 @@ import { index, route } from "@react-router/dev/routes";
 export default [
 	index("./routes/_index.tsx"),
 	route("docs", "./routes/docs.tsx"),
+	route("docs/indices", "./routes/docs.indices.tsx"),
 	route("sign-in", "./routes/sign-in.tsx"),
 	route("sign-out", "./routes/sign-out.tsx"),
 	route("dashboard", "./routes/dashboard.tsx"),

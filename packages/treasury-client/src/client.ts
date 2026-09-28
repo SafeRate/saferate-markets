@@ -176,6 +176,14 @@ export type TTreasuryService = {
       code: string;
       since?: string;
    }) => Promise<unknown>;
+   /**
+    * Every index's DAILY level on one day, or the latest day when no date is
+    * given. Added 2026-09-28 for saferate-markets: `indexLevels` is the latest
+    * MONTH-END level (dated 2026-08-31 that day while the daily series ran to
+    * 2026-09-25), so it cannot answer "what is the level now". Optional for
+    * the same deploy-skew reason as every method added after a consumer.
+    */
+   indexLevelsDailyOn?: (input?: { date?: string }) => Promise<unknown>;
    indexLevels: (input?: { code?: string }) => Promise<unknown>;
    indexLevelsOn: (input: { date: string }) => Promise<unknown>;
    fundComparison: () => Promise<unknown>;

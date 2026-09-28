@@ -44,13 +44,15 @@
 	// SQL and the gate is not in the path. See saferate-treasury
 	// docs/consumer-service-binding.md.
 	//
-	// remote: true so local dev reads the DEPLOYED staging service. That needs a
-	// CLOUDFLARE_API_TOKEN for this account, which is why dev-api.sh runs under
-	// Doppler.
+	// remote: true so local dev reads the DEPLOYED service, and it is PRODUCTION
+	// treasury-api, like markets staging (switched 2026-09-28): the staging
+	// service was 19 days stale and an older deploy lacking methods the index
+	// routes call, so local results described data no customer sees. The
+	// entrypoint is read-only. Needs CLOUDFLARE_API_TOKEN (dev-api.sh, Doppler).
 	"services": [
 		{
 			"binding": "TREASURY",
-			"service": "treasury-api-staging",
+			"service": "treasury-api",
 			"entrypoint": "TreasuryService",
 			"remote": true
 		}

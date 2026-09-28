@@ -1,0 +1,32 @@
+[
+	{
+		"code": "broad",
+		"date": "2026-09-23",
+		"level": 143.67789649228558,
+		"return_since_rebalance": -0.015469448720515982,
+		"rebalance_date": "2026-08-31",
+		"constituents": 299,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "broad",
+		"date": "2026-09-24",
+		"level": 143.2283398018498,
+		"return_since_rebalance": -0.018549966371954798,
+		"rebalance_date": "2026-08-31",
+		"constituents": 299,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "broad",
+		"date": "2026-09-25",
+		"level": 143.39650480833464,
+		"return_since_rebalance": -0.01739764168887945,
+		"rebalance_date": "2026-08-31",
+		"constituents": 299,
+		"methodology": "0.1",
+		"provisional": 1
+	}
+]

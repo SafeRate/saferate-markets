@@ -7,6 +7,7 @@ import { apiKeyAuth } from "./middleware/apiKey";
 import { meterUsage } from "./middleware/meter";
 import { rateLimit } from "./middleware/rateLimit";
 import { registerCurveRoutes } from "./routes/curves";
+import { registerIndexRoutes } from "./routes/indices";
 import { registerMcpRoute } from "./routes/mcp";
 
 /**
@@ -77,6 +78,7 @@ app.get("/health", (c) =>
 // later is authenticated, limited and counted by default.
 app.use("/v1/*", apiKeyAuth(), rateLimit(), meterUsage("rest"));
 registerCurveRoutes(app);
+registerIndexRoutes(app);
 
 registerMcpRoute(app);
 

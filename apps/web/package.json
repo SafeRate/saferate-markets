@@ -5,6 +5,7 @@
 	"dependencies": {
 		"@markets/email": "workspace:*",
 		"@markets/persistence": "workspace:*",
-		"@markets/schema": "workspace:*"
+		"@markets/schema": "workspace:*",
+		"@saferate/treasury-client": "workspace:*"
 	}
 }

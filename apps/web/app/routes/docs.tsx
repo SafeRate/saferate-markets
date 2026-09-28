@@ -41,6 +41,20 @@ export default function Docs({ loaderData }: Route.ComponentProps) {
 				, authenticates both the REST API and the MCP server.
 			</p>
 
+			<a
+				className="mt-8 block rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-primary/40"
+				href="/docs/indices"
+			>
+				<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+					Guide
+				</p>
+				<p className="mt-1 font-semibold text-neutral-900">Treasury indices</p>
+				<p className="mt-1 text-sm text-slate-600">
+					The eleven total-return indices: what each covers, how to read levels,
+					returns and analytics, and the two date conventions.
+				</p>
+			</a>
+
 			<h2 className="mt-12 text-xl font-semibold tracking-tight">REST</h2>
 			<p className="mt-2 text-sm text-muted-foreground">
 				The full reference is generated from the API itself:{" "}

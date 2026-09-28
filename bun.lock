@@ -52,6 +52,7 @@
         "@markets/email": "workspace:*",
         "@markets/persistence": "workspace:*",
         "@markets/schema": "workspace:*",
+        "@saferate/treasury-client": "workspace:*",
       },
     },
     "packages/email": {

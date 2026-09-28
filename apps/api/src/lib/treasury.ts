@@ -5,6 +5,7 @@ import {
 } from "@saferate/treasury-client/client";
 import type { Context } from "hono";
 import type { AppEnv } from "../env";
+import { TreasuryAbsent } from "./indexReads";
 
 /**
  * The client returns null when the TREASURY binding is absent, the same null it
@@ -35,6 +36,19 @@ export const treasuryUnbound = (c: Context<AppEnv>) =>
  * is re-thrown to the error handler.
  */
 export const treasuryErrorResponse = (c: Context<AppEnv>, error: unknown) => {
+	// The deployed treasury-api lacks a method this route calls: deploy skew
+	// between repos. Logged, because it is always our fault and always fixable.
+	if (error instanceof TreasuryAbsent) {
+		console.error("[treasury]", error.message);
+		return c.json(
+			{
+				error: "unavailable" as const,
+				message:
+					"This data is not available from the Treasury service yet. This is a fault on our side, not an absence of data.",
+			},
+			503,
+		);
+	}
 	if (error instanceof Response) {
 		return c.json(
 			{

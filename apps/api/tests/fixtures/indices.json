@@ -1,0 +1,90 @@
+[
+	{
+		"code": "0103",
+		"date": "2026-08-31",
+		"level": 133.1689919007233,
+		"month_return": 0.0025385912072752774,
+		"constituents": 96,
+		"methodology": "0.1"
+	},
+	{
+		"code": "0307",
+		"date": "2026-08-31",
+		"level": 152.7213597708417,
+		"month_return": 0.001818919846446466,
+		"constituents": 90,
+		"methodology": "0.1"
+	},
+	{
+		"code": "0710",
+		"date": "2026-08-31",
+		"level": 163.44272779013804,
+		"month_return": 0.0027079446758240203,
+		"constituents": 13,
+		"methodology": "0.1"
+	},
+	{
+		"code": "1020",
+		"date": "2026-08-31",
+		"level": 152.6442350573988,
+		"month_return": 0.01048342041401635,
+		"constituents": 59,
+		"methodology": "0.1"
+	},
+	{
+		"code": "20PL",
+		"date": "2026-08-31",
+		"level": 151.58332241774002,
+		"month_return": 0.008800016798218452,
+		"constituents": 40,
+		"methodology": "0.1"
+	},
+	{
+		"code": "AGG",
+		"date": "2026-08-31",
+		"level": 144.29760019778055,
+		"month_return": 0.0034189159140857977,
+		"constituents": 447,
+		"methodology": "0.1"
+	},
+	{
+		"code": "BILL",
+		"date": "2026-08-31",
+		"level": 128.0421075695835,
+		"month_return": 0.002948585423135323,
+		"constituents": 17,
+		"methodology": "0.1"
+	},
+	{
+		"code": "FRN",
+		"date": "2026-08-31",
+		"level": 130.6268426578403,
+		"month_return": 0.0031369407028373074,
+		"constituents": 8,
+		"methodology": "0.1"
+	},
+	{
+		"code": "SHRT",
+		"date": "2026-08-31",
+		"level": 130.05553500337155,
+		"month_return": 0.0030257604184796665,
+		"constituents": 88,
+		"methodology": "0.1"
+	},
+	{
+		"code": "TIPS",
+		"date": "2026-08-31",
+		"level": 176.52067395056147,
+		"month_return": 0.002004264161062823,
+		"constituents": 48,
+		"methodology": "0.1"
+	},
+	{
+		"code": "broad",
+		"date": "2026-08-31",
+		"level": 145.93543725541429,
+		"month_return": 0.0037562853664867136,
+		"constituents": 298,
+		"methodology": "0.1"
+	}
+]

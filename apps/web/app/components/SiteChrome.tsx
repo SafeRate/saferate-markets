@@ -21,6 +21,9 @@ export const SiteHeader = () => (
 				</span>
 			</a>
 			<div className="flex items-center gap-6 text-sm font-medium text-slate-600">
+				<a className="transition-colors hover:text-slate-900" href="/docs/indices">
+					Indices
+				</a>
 				<a className="transition-colors hover:text-slate-900" href="/docs">
 					Docs
 				</a>

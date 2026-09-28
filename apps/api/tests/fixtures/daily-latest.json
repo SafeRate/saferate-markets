@@ -1,0 +1,112 @@
+[
+	{
+		"code": "0103",
+		"date": "2026-09-25",
+		"level": 132.4292299441694,
+		"return_since_rebalance": -0.005555061625046968,
+		"rebalance_date": "2026-08-31",
+		"constituents": 96,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "0307",
+		"date": "2026-09-25",
+		"level": 150.07520655752762,
+		"return_since_rebalance": -0.017326673998218824,
+		"rebalance_date": "2026-08-31",
+		"constituents": 89,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "0710",
+		"date": "2026-09-25",
+		"level": 159.12642147996596,
+		"return_since_rebalance": -0.026408677636084583,
+		"rebalance_date": "2026-08-31",
+		"constituents": 13,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "1020",
+		"date": "2026-09-25",
+		"level": 147.55719028890135,
+		"return_since_rebalance": -0.03332615061803376,
+		"rebalance_date": "2026-08-31",
+		"constituents": 61,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "20PL",
+		"date": "2026-09-25",
+		"level": 146.40429161211893,
+		"return_since_rebalance": -0.03416623097459552,
+		"rebalance_date": "2026-08-31",
+		"constituents": 40,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "AGG",
+		"date": "2026-09-25",
+		"level": 142.626853711456,
+		"return_since_rebalance": -0.011578477286070959,
+		"rebalance_date": "2026-08-31",
+		"constituents": 449,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "BILL",
+		"date": "2026-09-25",
+		"level": 128.37928686374795,
+		"return_since_rebalance": 0.0026333469556584564,
+		"rebalance_date": "2026-08-31",
+		"constituents": 17,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "FRN",
+		"date": "2026-09-25",
+		"level": 131.03073590457103,
+		"return_since_rebalance": 0.0030919620999234985,
+		"rebalance_date": "2026-08-31",
+		"constituents": 8,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "SHRT",
+		"date": "2026-09-25",
+		"level": 130.31110817560392,
+		"return_since_rebalance": 0.0019651079996382817,
+		"rebalance_date": "2026-08-31",
+		"constituents": 89,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "TIPS",
+		"date": "2026-09-25",
+		"level": 172.71672171692165,
+		"return_since_rebalance": -0.021549613133163226,
+		"rebalance_date": "2026-08-31",
+		"constituents": 48,
+		"methodology": "0.1",
+		"provisional": 1
+	},
+	{
+		"code": "broad",
+		"date": "2026-09-25",
+		"level": 143.39650480833464,
+		"return_since_rebalance": -0.01739764168887945,
+		"rebalance_date": "2026-08-31",
+		"constituents": 299,
+		"methodology": "0.1",
+		"provisional": 1
+	}
+]
