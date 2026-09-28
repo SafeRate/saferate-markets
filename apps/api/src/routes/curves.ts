@@ -3,7 +3,7 @@ import { snakeKeys } from "@markets/mcp-tools";
 import { getCurvesOn, getLatestCurve } from "@saferate/treasury-client/client";
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
 import type { AppEnv } from "../env";
-import { ZError } from "../lib/errors";
+import { GATE_RESPONSES, ZError } from "../lib/errors";
 import { treasuryErrorResponse, treasuryUnbound } from "../lib/treasury";
 
 /**
@@ -81,6 +81,7 @@ const route = createRoute({
 		}),
 	},
 	responses: {
+		...GATE_RESPONSES,
 		200: {
 			content: { "application/json": { schema: ZZeroCurveOut } },
 			description: "The curve.",

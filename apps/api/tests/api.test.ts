@@ -212,6 +212,32 @@ describe("the public surface", () => {
 		expect(response.headers.get("content-type")).toContain("application/json");
 	});
 
+	// Derived from the published spec, so a /v1 route added without the gate's
+	// responses fails here rather than shipping a reference that omits them.
+	test("every /v1 operation documents the gate's 401, 402 and 429", async () => {
+		const { call } = await setup();
+		const doc = await (await call("/openapi.json")).json();
+		const v1 = Object.entries(doc.paths).filter(([p]) => p.startsWith("/v1/"));
+		expect(v1.length).toBeGreaterThan(0);
+		for (const [path, ops] of v1) {
+			for (const [method, op] of Object.entries(
+				ops as Record<string, { responses: Record<string, unknown> }>,
+			)) {
+				for (const status of ["401", "402", "429"]) {
+					expect({
+						route: `${method} ${path}`,
+						has: status in op.responses,
+					}).toEqual({
+						route: `${method} ${path}`,
+						has: true,
+					});
+				}
+			}
+		}
+		const zero = doc.paths["/v1/curves/zero"].get.responses;
+		expect(Object.keys(zero["429"].headers)).toContain("Retry-After");
+	});
+
 	test("the OpenAPI document declares bearer auth at document level", async () => {
 		const { call } = await setup();
 		const doc = await (await call("/openapi.json")).json();
