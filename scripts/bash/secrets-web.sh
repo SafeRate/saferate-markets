@@ -74,7 +74,7 @@ doppler secrets download \
 			// the Worker runtime — exactly the escalation the comment above says
 			// this filter exists to prevent, defeated by a rename.
 			//
-			// Nothing in this app's runtime reads a CLOUDFLARE_* secret: the Workers
+			// Nothing in the runtime of this app reads a CLOUDFLARE_* secret: the Workers
 			// reach Cloudflare services through BINDINGS. So denying the prefix
 			// costs nothing and fails closed for whatever the next token is called.
 			if (key.startsWith("CLOUDFLARE_") || key.startsWith("DOPPLER_")) {
