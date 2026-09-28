@@ -1,0 +1,21 @@
+{
+	"accruedValue": 122.32,
+	"annualisedYield": 0.012161580390708027,
+	"assumesRateAfterTwenty": false,
+	"cohort": "2005-05",
+	"doublingYears": 20,
+	"finalMaturity": "2040-01-01",
+	"guaranteeApplied": false,
+	"guaranteeDate": "2030-01-01",
+	"guaranteeUplift": 72.88,
+	"matured": false,
+	"on": "2026-09-01",
+	"penaltyAmount": 0,
+	"penaltyMonths": 0,
+	"principal": 100,
+	"purchased": "2010-01-01",
+	"rate": 0.012,
+	"redeemable": true,
+	"redeemableFrom": "2011-01-01",
+	"redemptionValue": 122.32
+}

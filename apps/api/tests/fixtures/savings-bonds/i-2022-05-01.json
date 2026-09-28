@@ -1,0 +1,25 @@
+{
+	"accruedValue": 1197.2,
+	"completedPeriods": 8,
+	"currentPeriod": {
+		"compositeRate": 0.0334,
+		"earningPeriodEnd": "2026-10-31",
+		"earningPeriodStart": "2026-05-01",
+		"fixedRate": 0,
+		"fixedRateSetOn": "2022-05-01",
+		"inflationRateSetOn": "2026-05-01",
+		"semiannualInflationRate": 0.0167
+	},
+	"finalMaturity": "2052-05-01",
+	"matured": false,
+	"monthsIntoCurrentPeriod": 4,
+	"on": "2026-09-01",
+	"penaltyAmount": 10,
+	"penaltyMonths": 3,
+	"principal": 1000,
+	"purchased": "2022-05-01",
+	"redeemable": true,
+	"redeemableFrom": "2023-05-01",
+	"redemptionValue": 1187.2,
+	"valueAtLastCompletedPeriod": 1184
+}

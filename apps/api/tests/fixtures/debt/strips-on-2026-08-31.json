@@ -1,0 +1,92 @@
+[
+	{
+		"cusip": "912810TR9",
+		"maturity_date": "2053-05-15",
+		"outstanding": 62593072800,
+		"reconstituted": 449390000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 19500980600
+	},
+	{
+		"cusip": "912810UC0",
+		"maturity_date": "2054-08-15",
+		"outstanding": 74266805100,
+		"reconstituted": 512204100,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 22588899500
+	},
+	{
+		"cusip": "912810TN8",
+		"maturity_date": "2053-02-15",
+		"outstanding": 65983027700,
+		"reconstituted": 239869000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 20043612900
+	},
+	{
+		"cusip": "912810SH2",
+		"maturity_date": "2049-05-15",
+		"outstanding": 55597368700,
+		"reconstituted": 137000000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 16345079000
+	},
+	{
+		"cusip": "912810SD1",
+		"maturity_date": "2048-08-15",
+		"outstanding": 49977781100,
+		"reconstituted": 116000000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 14653461700
+	},
+	{
+		"cusip": "912810SF6",
+		"maturity_date": "2049-02-15",
+		"outstanding": 54200511800,
+		"reconstituted": 13430000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 15377828500
+	},
+	{
+		"cusip": "912810TX6",
+		"maturity_date": "2054-02-15",
+		"outstanding": 71197791200,
+		"reconstituted": 619680000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 18653587200
+	},
+	{
+		"cusip": "912810TD0",
+		"maturity_date": "2052-02-15",
+		"outstanding": 85019381500,
+		"reconstituted": 851934400,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 21436885700
+	},
+	{
+		"cusip": "912810UG1",
+		"maturity_date": "2055-02-15",
+		"outstanding": 79901328200,
+		"reconstituted": 764320000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 19159485000
+	},
+	{
+		"cusip": "912810SA7",
+		"maturity_date": "2048-02-15",
+		"outstanding": 44124505600,
+		"reconstituted": 276145000,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Bonds",
+		"stripped": 10459898600
+	}
+]

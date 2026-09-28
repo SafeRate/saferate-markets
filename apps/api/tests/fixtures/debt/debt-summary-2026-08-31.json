@@ -1,0 +1,114 @@
+[
+	{
+		"debt_held_public": 7247855589800,
+		"intragovernmental": 214430900,
+		"record_date": "2026-08-31",
+		"security_class": "Bills",
+		"security_type": "Marketable",
+		"total": 7248070020700
+	},
+	{
+		"debt_held_public": 5512728520300,
+		"intragovernmental": 12555574000,
+		"record_date": "2026-08-31",
+		"security_class": "Bonds",
+		"security_type": "Marketable",
+		"total": 5525284094300
+	},
+	{
+		"debt_held_public": 0,
+		"intragovernmental": 3590965500,
+		"record_date": "2026-08-31",
+		"security_class": "Federal Financing Bank",
+		"security_type": "Marketable",
+		"total": 3590965500
+	},
+	{
+		"debt_held_public": 679918001300,
+		"intragovernmental": 57600000,
+		"record_date": "2026-08-31",
+		"security_class": "Floating Rate Notes",
+		"security_type": "Marketable",
+		"total": 679975601300
+	},
+	{
+		"debt_held_public": 16214682012600,
+		"intragovernmental": 3738925100,
+		"record_date": "2026-08-31",
+		"security_class": "Notes",
+		"security_type": "Marketable",
+		"total": 16218420937700
+	},
+	{
+		"debt_held_public": 2151956986348.23,
+		"intragovernmental": 702857764.41,
+		"record_date": "2026-08-31",
+		"security_class": "Treasury Inflation-Protected Securities",
+		"security_type": "Marketable",
+		"total": 2152659844112.64
+	},
+	{
+		"debt_held_public": 10709171342.9,
+		"intragovernmental": 0,
+		"record_date": "2026-08-31",
+		"security_class": "Domestic Series",
+		"security_type": "Nonmarketable",
+		"total": 10709171342.9
+	},
+	{
+		"debt_held_public": 366371279380.87,
+		"intragovernmental": 7739791966214.71,
+		"record_date": "2026-08-31",
+		"security_class": "Government Account Series",
+		"security_type": "Nonmarketable",
+		"total": 8106163245595.58
+	},
+	{
+		"debt_held_public": 4895400304.83,
+		"intragovernmental": 0,
+		"record_date": "2026-08-31",
+		"security_class": "Other",
+		"security_type": "Nonmarketable",
+		"total": 4895400304.83
+	},
+	{
+		"debt_held_public": 78928573633.78,
+		"intragovernmental": 0,
+		"record_date": "2026-08-31",
+		"security_class": "State and Local Government Series",
+		"security_type": "Nonmarketable",
+		"total": 78928573633.78
+	},
+	{
+		"debt_held_public": 146943274943.63,
+		"intragovernmental": 0,
+		"record_date": "2026-08-31",
+		"security_class": "United States Savings Securities",
+		"security_type": "Nonmarketable",
+		"total": 146943274943.63
+	},
+	{
+		"debt_held_public": 32414988809954.2,
+		"intragovernmental": 7760652319479.12,
+		"record_date": "2026-08-31",
+		"security_class": "_",
+		"security_type": "Total Public Debt Outstanding",
+		"total": 40175641129433.3
+	},
+	{
+		"debt_held_public": 31807141110348.2,
+		"intragovernmental": 20860353264.41,
+		"record_date": "2026-08-31",
+		"security_class": "_",
+		"security_type": "Total Marketable",
+		"total": 31828001463612.6
+	},
+	{
+		"debt_held_public": 607847699606.01,
+		"intragovernmental": 7739791966214.71,
+		"record_date": "2026-08-31",
+		"security_class": "_",
+		"security_type": "Total Nonmarketable",
+		"total": 8347639665820.72
+	}
+]

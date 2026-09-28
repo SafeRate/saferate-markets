@@ -1,0 +1,408 @@
+[
+	{
+		"composite_rate": 0.0466108,
+		"fixed_rate": 0.034,
+		"period_start": "1998-09-01",
+		"semiannual_inflation_rate": 0.0062,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.050483799999999995,
+		"fixed_rate": 0.033,
+		"period_start": "1998-11-01",
+		"semiannual_inflation_rate": 0.0086,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.050483799999999995,
+		"fixed_rate": 0.033,
+		"period_start": "1999-05-01",
+		"semiannual_inflation_rate": 0.0086,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.06979840000000001,
+		"fixed_rate": 0.034,
+		"period_start": "1999-11-01",
+		"semiannual_inflation_rate": 0.0176,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0748876,
+		"fixed_rate": 0.036000000000000004,
+		"period_start": "2000-05-01",
+		"semiannual_inflation_rate": 0.0191,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0649168,
+		"fixed_rate": 0.034,
+		"period_start": "2000-11-01",
+		"semiannual_inflation_rate": 0.0152,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.05923199999999999,
+		"fixed_rate": 0.03,
+		"period_start": "2001-05-01",
+		"semiannual_inflation_rate": 0.0144,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.044038,
+		"fixed_rate": 0.02,
+		"period_start": "2001-11-01",
+		"semiannual_inflation_rate": 0.011899999999999999,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.025656,
+		"fixed_rate": 0.02,
+		"period_start": "2002-05-01",
+		"semiannual_inflation_rate": 0.0028000000000000004,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.040796799999999994,
+		"fixed_rate": 0.016,
+		"period_start": "2002-11-01",
+		"semiannual_inflation_rate": 0.0123,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.04659470000000001,
+		"fixed_rate": 0.011000000000000001,
+		"period_start": "2003-05-01",
+		"semiannual_inflation_rate": 0.0177,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0218594,
+		"fixed_rate": 0.011000000000000001,
+		"period_start": "2003-11-01",
+		"semiannual_inflation_rate": 0.0054,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.033919,
+		"fixed_rate": 0.01,
+		"period_start": "2004-05-01",
+		"semiannual_inflation_rate": 0.011899999999999999,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.036733,
+		"fixed_rate": 0.01,
+		"period_start": "2004-11-01",
+		"semiannual_inflation_rate": 0.013300000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.048014799999999996,
+		"fixed_rate": 0.012,
+		"period_start": "2005-05-01",
+		"semiannual_inflation_rate": 0.0179,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.067285,
+		"fixed_rate": 0.01,
+		"period_start": "2005-11-01",
+		"semiannual_inflation_rate": 0.0285,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.02407,
+		"fixed_rate": 0.013999999999999999,
+		"period_start": "2006-05-01",
+		"semiannual_inflation_rate": 0.005,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.045217,
+		"fixed_rate": 0.013999999999999999,
+		"period_start": "2006-11-01",
+		"semiannual_inflation_rate": 0.0155,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.037357299999999996,
+		"fixed_rate": 0.013000000000000001,
+		"period_start": "2007-05-01",
+		"semiannual_inflation_rate": 0.0121,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.042783600000000005,
+		"fixed_rate": 0.012,
+		"period_start": "2007-11-01",
+		"semiannual_inflation_rate": 0.015300000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0484,
+		"fixed_rate": 0,
+		"period_start": "2008-05-01",
+		"semiannual_inflation_rate": 0.0242,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.056372200000000004,
+		"fixed_rate": 0.006999999999999999,
+		"period_start": "2008-11-01",
+		"semiannual_inflation_rate": 0.0246,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0,
+		"fixed_rate": 0.001,
+		"period_start": "2009-05-01",
+		"semiannual_inflation_rate": -0.0278,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.033645900000000006,
+		"fixed_rate": 0.003,
+		"period_start": "2009-11-01",
+		"semiannual_inflation_rate": 0.015300000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.017415399999999998,
+		"fixed_rate": 0.002,
+		"period_start": "2010-05-01",
+		"semiannual_inflation_rate": 0.0077,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0074,
+		"fixed_rate": 0,
+		"period_start": "2010-11-01",
+		"semiannual_inflation_rate": 0.0037,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.046,
+		"fixed_rate": 0,
+		"period_start": "2011-05-01",
+		"semiannual_inflation_rate": 0.023,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.030600000000000002,
+		"fixed_rate": 0,
+		"period_start": "2011-11-01",
+		"semiannual_inflation_rate": 0.015300000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.022000000000000002,
+		"fixed_rate": 0,
+		"period_start": "2012-05-01",
+		"semiannual_inflation_rate": 0.011000000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0176,
+		"fixed_rate": 0,
+		"period_start": "2012-11-01",
+		"semiannual_inflation_rate": 0.0088,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0118,
+		"fixed_rate": 0,
+		"period_start": "2013-05-01",
+		"semiannual_inflation_rate": 0.0059,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.013811799999999999,
+		"fixed_rate": 0.002,
+		"period_start": "2013-11-01",
+		"semiannual_inflation_rate": 0.0059,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0194092,
+		"fixed_rate": 0.001,
+		"period_start": "2014-05-01",
+		"semiannual_inflation_rate": 0.0092,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0148,
+		"fixed_rate": 0,
+		"period_start": "2014-11-01",
+		"semiannual_inflation_rate": 0.0074,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0,
+		"fixed_rate": 0,
+		"period_start": "2015-05-01",
+		"semiannual_inflation_rate": -0.008,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0164077,
+		"fixed_rate": 0.001,
+		"period_start": "2015-11-01",
+		"semiannual_inflation_rate": 0.0077,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0026008,
+		"fixed_rate": 0.001,
+		"period_start": "2016-05-01",
+		"semiannual_inflation_rate": 0.0008,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0276,
+		"fixed_rate": 0,
+		"period_start": "2016-11-01",
+		"semiannual_inflation_rate": 0.0138,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0196,
+		"fixed_rate": 0,
+		"period_start": "2017-05-01",
+		"semiannual_inflation_rate": 0.0098,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0258124,
+		"fixed_rate": 0.001,
+		"period_start": "2017-11-01",
+		"semiannual_inflation_rate": 0.0124,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0252333,
+		"fixed_rate": 0.003,
+		"period_start": "2018-05-01",
+		"semiannual_inflation_rate": 0.0111,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.028257999999999995,
+		"fixed_rate": 0.005,
+		"period_start": "2018-11-01",
+		"semiannual_inflation_rate": 0.0116,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.019035,
+		"fixed_rate": 0.005,
+		"period_start": "2019-05-01",
+		"semiannual_inflation_rate": 0.006999999999999999,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.022220200000000002,
+		"fixed_rate": 0.002,
+		"period_start": "2019-11-01",
+		"semiannual_inflation_rate": 0.0101,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0106,
+		"fixed_rate": 0,
+		"period_start": "2020-05-01",
+		"semiannual_inflation_rate": 0.0053,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0168,
+		"fixed_rate": 0,
+		"period_start": "2020-11-01",
+		"semiannual_inflation_rate": 0.0084,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0354,
+		"fixed_rate": 0,
+		"period_start": "2021-05-01",
+		"semiannual_inflation_rate": 0.0177,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0712,
+		"fixed_rate": 0,
+		"period_start": "2021-11-01",
+		"semiannual_inflation_rate": 0.0356,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0962,
+		"fixed_rate": 0,
+		"period_start": "2022-05-01",
+		"semiannual_inflation_rate": 0.0481,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.06892960000000001,
+		"fixed_rate": 0.004,
+		"period_start": "2022-11-01",
+		"semiannual_inflation_rate": 0.032400000000000005,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0429521,
+		"fixed_rate": 0.009000000000000001,
+		"period_start": "2023-05-01",
+		"semiannual_inflation_rate": 0.0169,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.052656100000000004,
+		"fixed_rate": 0.013000000000000001,
+		"period_start": "2023-11-01",
+		"semiannual_inflation_rate": 0.0197,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.042792399999999994,
+		"fixed_rate": 0.013000000000000001,
+		"period_start": "2024-05-01",
+		"semiannual_inflation_rate": 0.0148,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.031113999999999996,
+		"fixed_rate": 0.012,
+		"period_start": "2024-11-01",
+		"semiannual_inflation_rate": 0.0095,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0397573,
+		"fixed_rate": 0.011000000000000001,
+		"period_start": "2025-05-01",
+		"semiannual_inflation_rate": 0.0143,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0403404,
+		"fixed_rate": 0.009000000000000001,
+		"period_start": "2025-11-01",
+		"semiannual_inflation_rate": 0.015600000000000001,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.0425503,
+		"fixed_rate": 0.009000000000000001,
+		"period_start": "2026-05-01",
+		"semiannual_inflation_rate": 0.0167,
+		"series": "I"
+	},
+	{
+		"composite_rate": 0.024,
+		"fixed_rate": 0.024,
+		"period_start": "2026-05-01",
+		"semiannual_inflation_rate": null,
+		"series": "EE"
+	}
+]

@@ -31,7 +31,13 @@ import {
 	ZRealCurveOut,
 } from "../src/routes/curveFamilies";
 import { ZBillPriceOut, ZCouponPriceOut } from "../src/routes/pricing";
+import { ZDebtOut, ZStripsOut } from "../src/routes/debt";
 import { ZRichCheapOut } from "../src/routes/richCheap";
+import {
+	ZEeBondValueOut,
+	ZIBondValueOut,
+	ZSavingsBondRatesOut,
+} from "../src/routes/savingsBonds";
 import { ZOnTheRunOut, ZSecurityListOut } from "../src/routes/securityLists";
 import { ZZeroCurveOut, ZZeroCurvePointOut } from "../src/routes/curves";
 import {
@@ -351,6 +357,47 @@ if (listed && aBill) {
 			`investment ${priced.investment_rate_percent} vs discount ${priced.discount_rate_percent}`,
 		);
 }
+
+// ── Debt, STRIPS, savings bonds ─────────────────────────────────────────────
+const debt = await check("/v1/debt", ZDebtOut);
+if (debt) {
+	const total = debt.headline?.total ?? 0;
+	const stale = debt.record_date < daysAgo(75);
+	if (total < 1e13 || total > 1e14 || stale)
+		fail("debt", `${debt.record_date}: headline ${total}`);
+	else
+		pass(
+			"debt",
+			`${debt.record_date}: $${(total / 1e12).toFixed(2)}T outstanding`,
+		);
+}
+const strips = await check("/v1/strips", ZStripsOut);
+if (strips) {
+	const share = strips.latest.stripped_share_percent ?? -1;
+	if (share <= 0 || share > 20 || strips.most_stripped.length === 0)
+		fail("strips", `share ${share}, ${strips.most_stripped.length} listed`);
+	else
+		pass("strips", `${strips.latest.record_date}: ${share.toFixed(2)}% stripped`);
+}
+const bondRates = await check("/v1/savings-bonds/rates", ZSavingsBondRatesOut);
+if (bondRates && (!bondRates.series_i || !bondRates.series_ee))
+	fail("savings bond rates", "a series has no rate in force");
+const iValue = await check(
+	"/v1/savings-bonds/i/value?purchased=2022-05-01&denomination=1000",
+	ZIBondValueOut,
+);
+if (
+	iValue &&
+	iValue.redemption_value !== null &&
+	Math.abs(
+		iValue.accrued_value - iValue.penalty_amount - iValue.redemption_value,
+	) > 0.01
+)
+	fail("I bond value", "redemption is not accrued less penalty");
+await check(
+	"/v1/savings-bonds/ee/value?purchased=2010-01-01&denomination=100",
+	ZEeBondValueOut,
+);
 
 await expectStatus(
 	"an unknown CUSIP is a 404",

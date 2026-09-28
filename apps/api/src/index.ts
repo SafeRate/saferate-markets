@@ -8,10 +8,12 @@ import { meterUsage } from "./middleware/meter";
 import { rateLimit } from "./middleware/rateLimit";
 import { registerCurveFamilyRoutes } from "./routes/curveFamilies";
 import { registerCurveRoutes } from "./routes/curves";
+import { registerDebtRoutes } from "./routes/debt";
 import { registerIndexRoutes } from "./routes/indices";
 import { registerMcpRoute } from "./routes/mcp";
 import { registerPricingRoutes } from "./routes/pricing";
 import { registerRichCheapRoutes } from "./routes/richCheap";
+import { registerSavingsBondRoutes } from "./routes/savingsBonds";
 import { registerSecurityRoutes } from "./routes/securities";
 import { registerSecurityListRoutes } from "./routes/securityLists";
 
@@ -98,6 +100,8 @@ registerSecurityRoutes(app);
 registerSecurityListRoutes(app);
 registerRichCheapRoutes(app);
 registerPricingRoutes(app);
+registerDebtRoutes(app);
+registerSavingsBondRoutes(app);
 
 registerMcpRoute(app);
 

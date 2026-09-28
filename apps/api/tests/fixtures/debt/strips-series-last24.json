@@ -1,0 +1,170 @@
+[
+	{
+		"outstanding": 21103421979361.41,
+		"reconstituted": 33065963000,
+		"record_date": "2024-09-30",
+		"securities": 397,
+		"stripped": 525082674157.5
+	},
+	{
+		"outstanding": 21221306635524.6,
+		"reconstituted": 43154281400,
+		"record_date": "2024-10-31",
+		"securities": 397,
+		"stripped": 527803327879
+	},
+	{
+		"outstanding": 21102273635211.67,
+		"reconstituted": 19457700800,
+		"record_date": "2024-11-30",
+		"securities": 394,
+		"stripped": 531887105343
+	},
+	{
+		"outstanding": 21455101911594.05,
+		"reconstituted": 20553173600,
+		"record_date": "2024-12-31",
+		"securities": 398,
+		"stripped": 538162738340
+	},
+	{
+		"outstanding": 21536565826452.07,
+		"reconstituted": 34637153200,
+		"record_date": "2025-01-31",
+		"securities": 397,
+		"stripped": 544950140817.5
+	},
+	{
+		"outstanding": 21627415621365.51,
+		"reconstituted": 28016913000,
+		"record_date": "2025-02-28",
+		"securities": 398,
+		"stripped": 544043625833.5
+	},
+	{
+		"outstanding": 21769917782430.04,
+		"reconstituted": 35893089600,
+		"record_date": "2025-03-31",
+		"securities": 398,
+		"stripped": 545888358830.49994
+	},
+	{
+		"outstanding": 21892803278311.12,
+		"reconstituted": 39384746700,
+		"record_date": "2025-04-30",
+		"securities": 398,
+		"stripped": 549035697458
+	},
+	{
+		"outstanding": 21800827095443.79,
+		"reconstituted": 23919154000,
+		"record_date": "2025-05-31",
+		"securities": 396,
+		"stripped": 560426190644
+	},
+	{
+		"outstanding": 22194722483288.74,
+		"reconstituted": 38364644000,
+		"record_date": "2025-06-30",
+		"securities": 400,
+		"stripped": 559749608018.5
+	},
+	{
+		"outstanding": 22335385817587.97,
+		"reconstituted": 29384148000,
+		"record_date": "2025-07-31",
+		"securities": 400,
+		"stripped": 565383146691.5
+	},
+	{
+		"outstanding": 22236683816474.29,
+		"reconstituted": 30042507100,
+		"record_date": "2025-08-31",
+		"securities": 397,
+		"stripped": 572316689029
+	},
+	{
+		"outstanding": 22623002329045.58,
+		"reconstituted": 32879628200,
+		"record_date": "2025-09-30",
+		"securities": 401,
+		"stripped": 578643270724.5
+	},
+	{
+		"outstanding": 22756981624359.47,
+		"reconstituted": 33710838000,
+		"record_date": "2025-10-31",
+		"securities": 401,
+		"stripped": 582497922632
+	},
+	{
+		"outstanding": 22657750984182.06,
+		"reconstituted": 24939399600,
+		"record_date": "2025-11-30",
+		"securities": 399,
+		"stripped": 587994688647.5
+	},
+	{
+		"outstanding": 23019695296041.72,
+		"reconstituted": 25440723400,
+		"record_date": "2025-12-31",
+		"securities": 403,
+		"stripped": 592568104525.5
+	},
+	{
+		"outstanding": 22887636538830.35,
+		"reconstituted": 32000375600,
+		"record_date": "2026-01-31",
+		"securities": 399,
+		"stripped": 596741860544
+	},
+	{
+		"outstanding": 22963861932092.29,
+		"reconstituted": 31377833000,
+		"record_date": "2026-02-28",
+		"securities": 399,
+		"stripped": 598136903577
+	},
+	{
+		"outstanding": 23318231740338.11,
+		"reconstituted": 34877344500,
+		"record_date": "2026-03-31",
+		"securities": 403,
+		"stripped": 604756860268
+	},
+	{
+		"outstanding": 23400742595251.15,
+		"reconstituted": 34184403300,
+		"record_date": "2026-04-30",
+		"securities": 403,
+		"stripped": 605925501478
+	},
+	{
+		"outstanding": 23312484476621.78,
+		"reconstituted": 24297807200,
+		"record_date": "2026-05-31",
+		"securities": 401,
+		"stripped": 617479626597
+	},
+	{
+		"outstanding": 23685187972238.28,
+		"reconstituted": 32808802600,
+		"record_date": "2026-06-30",
+		"securities": 405,
+		"stripped": 620135526641.5
+	},
+	{
+		"outstanding": 23810558842743.21,
+		"reconstituted": 26024882500,
+		"record_date": "2026-07-31",
+		"securities": 405,
+		"stripped": 626065346215.5
+	},
+	{
+		"outstanding": 23896303334912.64,
+		"reconstituted": 32189565300,
+		"record_date": "2026-08-31",
+		"securities": 406,
+		"stripped": 626493515747
+	}
+]
