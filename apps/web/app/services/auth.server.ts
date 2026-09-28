@@ -31,7 +31,6 @@ import createD1Adapter from "@/services/d1Adapter";
 
 const ZAuthEnv = z.object({
 	BETTER_AUTH_SECRET: z.string().min(1),
-	BETTER_AUTH_URL: z.string().url(),
 	DB: z.custom<D1Database>((v) => v !== null && v !== undefined),
 	// Optional: local dev has no binding and falls back to the console provider,
 	// which prints the link.
@@ -96,6 +95,11 @@ const authCache = new Map<string, TAuthInstance>();
 
 /**
  * One instance per baseURL, cached per isolate.
+ *
+ * There is NO BETTER_AUTH_URL. OKLocate carries one in Doppler; here the origin
+ * is SITE_HOSTS for this MARKETS_ENV, which wrangler bakes per environment, so a
+ * second copy in Doppler could only ever disagree with it (removed 2026-09-28,
+ * before any environment had one set).
  *
  * baseURL comes from the request host when it is one of ours, so a link sent
  * from staging points at staging. A redirect-only host is NOT ours for this

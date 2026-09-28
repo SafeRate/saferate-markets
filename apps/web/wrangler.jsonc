@@ -19,7 +19,7 @@
 	// and `wrangler deploy --env production` would ship the top-level local-dev
 	// bindings below. (OKLocate's rule, and the opposite of apps/api.)
 	//
-	// Secrets (BETTER_AUTH_SECRET, BETTER_AUTH_URL) come from Doppler project
+	// Secrets (BETTER_AUTH_SECRET) come from Doppler project
 	// saferate-markets via secrets-web.sh. Never in vars, never in .dev.vars.
 	// ---------------------------------------------------------------------------
 

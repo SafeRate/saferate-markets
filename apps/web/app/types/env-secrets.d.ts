@@ -9,7 +9,6 @@
 
 interface MarketsSecrets {
 	BETTER_AUTH_SECRET: string;
-	BETTER_AUTH_URL: string;
 	/** Optional: a comma list overriding the non-production email allowlist. */
 	EMAIL_RECIPIENT_ALLOWLIST?: string;
 	/**
