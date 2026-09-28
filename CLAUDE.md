@@ -81,7 +81,19 @@ bash scripts/bash/typecheck.sh         # both Workers, the way each must be chec
 bun test                               # 229 tests at 2026-09-28
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
+
+# AFTER a deploy, as its own step (never chained to the deploy):
+doppler run --project saferate-markets --config stg -- bun apps/api/smoke/smoke.ts
+doppler run --project saferate-markets --config prd -- bun apps/api/smoke/smoke.ts
 ```
+
+**The smoke test is the only authenticated check of a deployed environment.**
+It uses `MARKETS_SMOKE_KEY` (Doppler stg and prd: a key on a subscribed
+monitoring account), calls every REST route and MCP, and parses each body with
+the API's own published schemas. First run 2026-09-28: 37/37 on staging and on
+production; proved red with an unknown key (every authenticated check FAIL,
+exit 1). Before it, the only authenticated calls ever made to a deployed
+environment were Dylan's, to one route. Add each new route to it.
 
 `apps/web` typechecks with `tsc --build`. Its tsconfig.json is a solution file,
 so `tsc --noEmit` there checks nothing and prints 0 errors. `apps/api` is an

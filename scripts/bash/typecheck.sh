@@ -12,8 +12,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 export PATH="$HOME/.bun/bin:$PATH"
 
-( cd apps/api && bunx wrangler types >/dev/null && bunx tsc --noEmit )
-echo "apps/api: ok"
+( cd apps/api && bunx wrangler types >/dev/null && bunx tsc --noEmit && bunx tsc --noEmit -p smoke/tsconfig.json )
+echo "apps/api: ok (and smoke/)"
 ( cd apps/web && bunx react-router typegen >/dev/null && bunx wrangler types >/dev/null && bunx tsc --build )
 echo "apps/web: ok"
 bunx tsc --noEmit -p tsconfig.json
