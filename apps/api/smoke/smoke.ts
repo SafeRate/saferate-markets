@@ -315,8 +315,14 @@ if (onTheRun) {
 await check("/v1/on-the-run?basis=auction", ZOnTheRunOut);
 
 // ── Calculators: price a real note and a real bill at their own closes ─────
-const aNote = listed?.securities.find((s) => s.family === "note");
-const aBill = listed?.securities.find((s) => s.family === "bill");
+// Well inside their lives: the first in the list mature within days, where
+// a yield is a degenerate check.
+const aNote = listed?.securities.find(
+	(s) => s.family === "note" && s.maturity_date > daysAgo(-730),
+);
+const aBill = listed?.securities.find(
+	(s) => s.family === "bill" && s.maturity_date > daysAgo(-90),
+);
 if (listed && aNote) {
 	const priced = await check(
 		`/v1/price/coupon?cusip=${aNote.cusip}&clean_price=${aNote.price}&trade_date=${listed.date}`,
