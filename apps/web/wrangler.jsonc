@@ -68,7 +68,7 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_id": "REPLACE_AT_FIRST_DEPLOY",
+					"database_id": "27098990-06d7-4732-8151-8bd0d0abc755",
 					"database_name": "saferate-markets-production",
 					"migrations_dir": "../../packages/persistence/migrations",
 					"migrations_table": "migrations"

@@ -42,8 +42,8 @@ radius), the TT Norms font, the logo SVG and the header/footer shape are copied
 from `saferate-ai/apps/consumer` @ 48da6e68. Change them there first, then copy.
 Light only, as saferate.com is.
 
-⚠️ **TT Norms is a commercial font.** Its web licence may name domains. Confirm
-it covers saferate.markets before production.
+TT Norms is a commercial font. Dylan confirmed 2026-09-28 that Safe Rate's
+licence covers saferate.markets.
 
 ## Layout
 
@@ -171,6 +171,10 @@ Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
   `we_1UKj1S5aTiygYfqnOei8z6Qf`.
 - Verified on staging: unsigned and forged webhooks 400; a webhook signed with
   the real secret 200.
+- **Live Stripe seeded 2026-09-28** on Safe Rate Inc.: `prod_VLQBvNmXJThfhy`,
+  `price_1UKjLJG4qd65LvbdNG7hrD1D`, coupon `markets_beta_wimbledon`,
+  `promo_1UKjLKG4qd65Lvbdsn1Io6VP` (WIMBLEDON), webhook
+  `we_1UKjLKG4qd65LvbdnWeyp7JO` to https://saferate.markets.
 - **Proven end to end on staging, 2026-09-28**, by Dylan in a browser: a new
   key 402'd, checkout with WIMBLEDON completed at $0 with no card, and the same
   key then returned the 2026-09-25 zero curve (10y 5.145%, matching
@@ -180,9 +184,6 @@ Vendored at `276a2b6` (the `treasury-client` branch, saferate-treasury PR #2).
 
 ## Not built yet, in order
 
-1. Production: confirm the TT Norms licence covers saferate.markets; create the
-   production D1; `stripe-seed.ts` under `prd` with `I_UNDERSTAND_THIS_IS_LIVE=1`;
-   migrate, deploy both Workers, push secrets; verify.
 2. Ending the beta: a script that removes the WIMBLEDON discount from existing
    subscriptions, plus the warning email and dashboard banner (no card is on
    file, so removal leads to past_due and then lost access).
