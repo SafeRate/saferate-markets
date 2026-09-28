@@ -45,6 +45,19 @@ Light only, as saferate.com is.
 TT Norms is a commercial font. Dylan confirmed 2026-09-28 that Safe Rate's
 licence covers saferate.markets.
 
+## Production: live since 2026-09-28 (`0ca0fb9`)
+
+D1 `saferate-markets-production` (27098990…), migrations 0001 and 0002. Both
+Workers deployed; the web Worker claims saferate.markets plus the four redirect
+hosts, all verified 301 with path and query kept. Verified: /health, /v1 401
+without a key, generated spec with production servers, unsigned webhook 400,
+webhook signed with the prd secret 200, docs render in a browser pointing at
+api.saferate.markets. Still `noindex` everywhere by design until launch.
+
+Right after the first deploy the new names did not resolve on the dev machine
+for a while (a cached NXDOMAIN from checking them before they existed) while
+1.1.1.1 already answered. Check with `dig @1.1.1.1` before suspecting a deploy.
+
 ## Layout
 
 ```
