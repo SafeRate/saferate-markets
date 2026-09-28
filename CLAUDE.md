@@ -93,6 +93,23 @@ a fresh checkout shows phantom errors.
   binding" and "no curve that day"; the API checks the binding first and 503s,
   so a misconfiguration can never read as a weekend.
 
+## Stripe — which account each config reaches (checked 2026-09-28)
+
+| Doppler | `STRIPE_SECRET_KEY` | Account |
+|---|---|---|
+| `dev`, `stg` | `sk_test_…` (one key, both configs) | sandbox `acct_1UKir45aTiygYfqn`, created for Markets |
+| `prd` | `rk_live_…` restricted, 9 Write scopes | Safe Rate Inc. `acct_1E3lnOG4qd65Lvbd`, LIVE, shared with saferate-ai and OKLocate |
+
+Checked by reading, not by trusting the prefix: the sandbox key answers
+`/v1/account` with that id; the live key is (correctly) refused `/v1/account`
+and was identified by the `G4qd65Lvbd` fragment in the price ids it can list.
+It can see OKLocate's prices, so every lookup key here is prefixed `markets_`.
+
+dev and stg first held three different `rk_live_` keys, created without test
+mode on. They were replaced the same day. Target an account with the key in
+Doppler, never with the Stripe CLI's remembered profile (OKLocate: two accounts
+were both called "oklocate" and the CLI's was the wrong one).
+
 ## Decisions (2026-09-28, with Dylan)
 
 - One paid plan, **$10/month**, one subscription per organization, **single
