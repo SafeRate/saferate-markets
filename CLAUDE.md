@@ -148,22 +148,24 @@ were both called "oklocate" and the CLI's was the wrong one).
 
 ## Decisions (2026-09-28, with Dylan)
 
-- One paid plan, **$10/month**, one subscription per organization, **single
-  seat** (enforced by unique indexes in migration 0001).
-- **Beta = a 100%-off promotion code on that plan**, no card collected. When the
-  discount ends, access lapses until a card is added; build the warning email and
-  banner with billing.
-- **No quota; rate-limited at 60/min per organization** (confirmed), REST and
-  MCP together, keyed on the organization so more keys do not mean more
-  allowance. Cloudflare's rate-limit binding; the number is in wrangler.jsonc
-  per environment and pinned to `RATE_LIMIT_PER_MINUTE` by
-  `apps/api/tests/rateLimit.test.ts`. A throttled request is a 429, not metered.
-  Fails OPEN if the binding is missing, with a log line. Verified on wrangler dev
-  2026-09-28: 60 requests 200, the next 5 429 with Retry-After: 60.
-- **Licence tiers by who sees the data:** internal use and client reporting are
-  the $10 plan; public display or inside another product is Redistribution;
-  inside a financial product is a Benchmark licence. The last two are
-  contact-us, to team@saferate.com. Counsel writes the actual terms.
+- **Three plans (revised 2026-09-28, first pass): Individual $10, Team $100,
+  Enterprise custom.** Individual is a natural person on their own account,
+  60/min. Team is a firm's internal use, client reporting and its staff's own
+  agents, 300/min, ONE seat until invitations are built. Enterprise is by
+  enquiry: firm-wide, redistribution, and the benchmark licence as an add-on.
+  **Individual's id stays `public`** (existing subscriptions and the lookup key
+  markets_public_monthly carry it); only its display name changed. Not built
+  yet: Team seats, any history cap (copy claims neither).
+- **Beta = WIMBLEDON, 100% off forever, Individual only** (the coupon is
+  restricted to Individual's product), no card collected. Individual -> Team is
+  an in-place upgrade that invoices the proration at once, so it is offered only
+  when a card is on file (billing.server.ts canCharge).
+- **Rate limit per plan**, per organization, REST and MCP together: one
+  Cloudflare binding per plan per environment (RATE_LIMITER 60,
+  RATE_LIMITER_TEAM 300), chosen from the organization's plan; pinned to the
+  schema by apps/api/tests/rateLimit.test.ts. An unknown plan gets the lowest.
+  A throttled request is a 429, not metered, and fails OPEN if a binding is
+  missing. Verified on wrangler dev: 60 requests 200, the next 5 429.
 - **MCP auth is the API key** for now. OAuth for claude.ai / Desktop later,
   targeting Client ID Metadata Documents, not DCR.
 
@@ -196,8 +198,9 @@ Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
   `we_1UKj1S5aTiygYfqnOei8z6Qf`.
 - Verified on staging: unsigned and forged webhooks 400; a webhook signed with
   the real secret 200.
-- **Live Stripe seeded 2026-09-28** on Safe Rate Inc.: `prod_VLQBvNmXJThfhy`,
-  `price_1UKjLJG4qd65LvbdNG7hrD1D`, coupon `markets_beta_wimbledon`,
+- **Live Stripe seeded 2026-09-28** on Safe Rate Inc.: Individual
+  `prod_VLQBvNmXJThfhy` / `price_1UKjLJG4qd65LvbdNG7hrD1D`, Team
+  `prod_VLRDu1CVAIsPWg` / `price_1UKkKeG4qd65LvbdFuAMqdxh`, coupon `markets_beta_wimbledon`,
   `promo_1UKjLKG4qd65Lvbdsn1Io6VP` (WIMBLEDON), webhook
   `we_1UKjLKG4qd65LvbdnWeyp7JO` to https://saferate.markets.
 - **Proven end to end on staging, 2026-09-28**, by Dylan in a browser: a new
