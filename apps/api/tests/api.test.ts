@@ -218,6 +218,15 @@ describe("MCP over /mcp", () => {
 });
 
 describe("the public surface", () => {
+	test("/favicon.ico redirects to the site's icon", async () => {
+		const { call } = await setup();
+		const response = await call("/favicon.ico");
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			"http://localhost:3020/favicon.ico",
+		);
+	});
+
 	test("/health needs no key", async () => {
 		const { call } = await setup();
 		expect((await call("/health")).status).toBe(200);

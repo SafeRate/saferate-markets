@@ -217,7 +217,13 @@ export default function Billing({
 
 	return (
 		<main className="mx-auto max-w-3xl px-6 py-16">
-			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+			<a
+				className="text-sm text-slate-500 transition-colors hover:text-slate-900"
+				href="/dashboard"
+			>
+				← Back to dashboard
+			</a>
+			<p className="mt-6 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				{d.organizationName}
 			</p>
 			<h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">

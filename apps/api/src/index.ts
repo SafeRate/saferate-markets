@@ -66,6 +66,15 @@ app.use("*", async (c, next) => {
 
 app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"));
 
+// The site's icon, not a second copy of it. Every browser tab on /reference
+// asked for this and got a JSON 404 (seen in the production tail, 2026-09-28).
+app.get("/favicon.ico", (c) =>
+	c.redirect(
+		`${SITE_HOSTS[resolveMarketsEnv(c.env.MARKETS_ENV)].web}/favicon.ico`,
+		301,
+	),
+);
+
 /** Liveness only. Unauthenticated, and says nothing about bindings or data. */
 app.get("/health", (c) =>
 	c.json({
