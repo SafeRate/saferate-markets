@@ -175,11 +175,25 @@ export const snakeKeys = (value: unknown): unknown => {
 	if (value instanceof Set) return snakeKeys([...value]);
 	const out: Record<string, unknown> = {};
 	for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
-		out[key.replace(/[A-Z]+/g, (run) => `_${run.toLowerCase()}`)] =
-			snakeKeys(inner);
+		out[toSnake(key)] = snakeKeys(inner);
 	}
 	return out;
 };
+
+/**
+ * camelCase -> snake_case, splitting an acronym run from the word after it.
+ *
+ * The first version lowercased each capital RUN as one piece, so `residualZScore`
+ * became `residual_zscore` and `marginZScore` `margin_zscore`, where upstream's
+ * own columns (and every reader) say `residual_z_score`. Found 2026-09-28 while
+ * pinning the securities schemas. Digits stay attached (`lambda1`, `dv01`,
+ * `krd_10y` are unchanged).
+ */
+export const toSnake = (key: string) =>
+	key
+		.replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+		.replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+		.toLowerCase();
 
 /** Today in UTC as YYYY-MM-DD — the default "on" for every dated lookup. */
 export const todayIso = () => new Date().toISOString().slice(0, 10);
