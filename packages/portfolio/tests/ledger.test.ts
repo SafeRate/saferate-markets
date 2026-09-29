@@ -74,7 +74,15 @@ const run = (
 	trades: TTrade[],
 	marks: Map<string, { date: string; close: number }[]>,
 	asOf: string,
-) => buildLedger({ trades, terms: TERMS, marks, calendar: CALENDAR, asOf });
+) =>
+	buildLedger({
+		trades,
+		terms: TERMS,
+		marks,
+		calendar: CALENDAR,
+		asOf,
+		income: "distribute",
+	});
 
 describe("buy and hold, no coupon in the window", () => {
 	const buy = trade({
@@ -391,5 +399,110 @@ describe("periods", () => {
 		expect(
 			chainReturns(ledger.days, "2026-09-10", "2026-09-25").isFullPeriod,
 		).toBe(true);
+	});
+});
+
+describe("where income goes: the portfolio's setting", () => {
+	const buy = trade({
+		cusip: NOTE.cusip,
+		side: "buy",
+		tradeDate: "2026-08-10",
+		settleDate: "2026-08-11",
+		faceAmount: 1_000_000,
+		cleanPrice: 96,
+	});
+	const marks = new Map([[NOTE.cusip, flat(96)]]);
+	const withPolicy = (
+		income: "cash" | "reinvest" | "distribute",
+		trades: TTrade[] = [buy],
+		cashRate?: (d: string) => number,
+	) =>
+		buildLedger({
+			trades,
+			terms: TERMS,
+			marks,
+			calendar: CALENDAR,
+			asOf: "2026-08-31",
+			income,
+			cashRate,
+		});
+
+	test("held as cash: the coupon stays in the portfolio's value, nothing is paid out", () => {
+		const ledger = withPolicy("cash");
+		expect(ledger.cash).toBeCloseTo(23_125, 8);
+		expect(ledger.days.reduce((s, d) => s + d.distributions, 0)).toBe(0);
+		const s = summarise(ledger, "2026-08-31");
+		expect(s.totalGain).toBeCloseTo(s.marketValue - s.invested, 8);
+	});
+
+	test("cash earns the rate given, actual/365, from the day after it lands", () => {
+		// Coupon booked Fri 14 Aug; 17 days to Mon 31 Aug at 4%.
+		const ledger = withPolicy("cash", [buy], () => 0.04);
+		const interest = ledger.cashflows
+			.filter((f) => f.kind === "interest")
+			.reduce((s, f) => s + f.amount, 0);
+		// Compounded daily over business-day gaps: within a cent of simple interest.
+		expect(interest).toBeCloseTo((23_125 * 0.04 * 17) / 365, 1);
+	});
+
+	test("held as cash: a purchase is met from cash before new money", () => {
+		const sell = trade({
+			cusip: NOTE.cusip,
+			side: "sell",
+			tradeDate: "2026-08-24",
+			settleDate: "2026-08-25",
+			faceAmount: 500_000,
+			cleanPrice: 96,
+		});
+		const rebuy = trade({
+			cusip: BILL.cusip,
+			side: "buy",
+			tradeDate: "2026-08-24",
+			settleDate: "2026-08-25",
+			faceAmount: 100_000,
+			cleanPrice: 99.5,
+		});
+		const ledger = withPolicy("cash", [buy, sell, rebuy]);
+		const day = ledger.days.find((d) => d.date === "2026-08-24");
+		expect(day?.contributions).toBe(0);
+	});
+
+	test("reinvested: the coupon buys more of the note at that day's close", () => {
+		const ledger = withPolicy("reinvest");
+		// Booked Fri 14 Aug, settling Mon 17 Aug: dirty 96 + 2.3125 x 2/184.
+		const dirty = 96 + (2.3125 * 2) / 184;
+		expect(ledger.holdings.get(NOTE.cusip)).toBeCloseTo(
+			1_000_000 + (23_125 / dirty) * 100,
+			6,
+		);
+		expect(ledger.reinvestments).toHaveLength(1);
+		expect(ledger.cash).toBeCloseTo(0, 8);
+	});
+
+	test("reinvested lots carry their own cost into FIFO", () => {
+		const ledger = withPolicy("reinvest");
+		const [position] = positionsAt({
+			ledger,
+			trades: [buy],
+			terms: TERMS,
+			lastMarks: new Map([[NOTE.cusip, { date: "2026-08-31", close: 96 }]]),
+			asOf: "2026-08-31",
+			accrued,
+		});
+		expect(position.averageCleanCost).toBeCloseTo(96, 10);
+		expect(position.faceAmount).toBeCloseTo(
+			ledger.holdings.get(NOTE.cusip) ?? 0,
+			6,
+		);
+	});
+
+	test("cash earning nothing and paying out make the same dollars; reinvesting adds the accrual on what it bought", () => {
+		const [cash, reinvest, distribute] = (
+			["cash", "reinvest", "distribute"] as const
+		).map((p) => summarise(withPolicy(p), "2026-08-31").totalGain);
+		expect(distribute).toBeCloseTo(cash, 6);
+		// The reinvested face accrues from 17 Aug to 1 Sep settlement: 15/184 of a coupon.
+		const face = (23_125 / (96 + (2.3125 * 2) / 184)) * 100;
+		expect(reinvest - cash).toBeCloseTo((face / 100) * ((2.3125 * 15) / 184), 6);
 	});
 });

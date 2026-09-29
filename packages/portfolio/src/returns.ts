@@ -6,13 +6,7 @@ import {
 	toDate,
 	toIso,
 } from "./dates";
-import type {
-	TCashflow,
-	TLedger,
-	TSecurityTerms,
-	TTrade,
-	TValuationDay,
-} from "./ledger";
+import type { TLedger, TSecurityTerms, TTrade, TValuationDay } from "./ledger";
 import { tradeDirtyPer100 } from "./ledger";
 
 /**
@@ -205,7 +199,7 @@ export type TPosition = {
  */
 export const positionsAt = ({
 	ledger,
-	trades,
+	trades: userTrades,
 	terms,
 	lastMarks,
 	asOf,
@@ -218,6 +212,7 @@ export const positionsAt = ({
 	asOf: string;
 	accrued: (security: TSecurityTerms, settlementDate: string) => number;
 }): TPosition[] => {
+	const trades = [...userTrades, ...ledger.reinvestments];
 	const lots = new Map<string, { face: number; clean: number }[]>();
 	const ordered = [...trades]
 		.filter((t) => t.tradeDate <= asOf)
@@ -273,10 +268,12 @@ export const positionsAt = ({
  * (a redemption realises 100 against the lot cost).
  */
 export const realisedPriceGains = (
-	trades: TTrade[],
+	userTrades: TTrade[],
 	ledger: TLedger,
 	asOf: string,
 ) => {
+	// Reinvested coupons are purchases too: they are lots with their own cost.
+	const trades = [...userTrades, ...ledger.reinvestments];
 	const lots = new Map<string, { face: number; clean: number }[]>();
 	const gains = new Map<string, number>();
 	const events = [
@@ -377,33 +374,41 @@ export const projectedIncome = ({
 
 export type TSummary = {
 	asOf: string;
+	/** Securities plus cash. */
 	marketValue: number;
-	/** Every purchase, clean plus accrued paid. */
+	cash: number;
+	/** New money put in: purchases not met from the portfolio's own cash. */
 	invested: number;
-	/** Every sale, coupon and redemption. */
+	/** Money paid out to the holder. */
 	received: number;
 	/** marketValue + received - invested: the dollars made. */
 	totalGain: number;
-	incomeReceived: number;
+	/** Coupons earned, whether paid out, held or reinvested, plus interest on cash. */
+	incomeEarned: number;
 };
 
 export const summarise = (ledger: TLedger, asOf: string): TSummary => {
 	const last = ledger.days.at(-1);
-	const sum = (kinds: TCashflow["kind"][]) =>
-		ledger.cashflows
-			.filter((f) => kinds.includes(f.kind))
-			.reduce((s, f) => s + f.amount, 0);
-	const invested = -sum(["buy"]);
-	const received = sum(["sell", "coupon", "redemption"]);
+	const invested = ledger.days.reduce((s, d) => s + d.contributions, 0);
+	const received = ledger.days.reduce((s, d) => s + d.distributions, 0);
 	const marketValue = last?.marketValue ?? 0;
 	return {
 		asOf: last?.date ?? asOf,
 		marketValue,
+		cash: last?.cash ?? 0,
 		invested,
 		received,
 		totalGain: marketValue + received - invested,
-		incomeReceived: sum(["coupon"]),
+		incomeEarned: ledger.cashflows
+			.filter((f) => f.kind === "coupon" || f.kind === "interest")
+			.reduce((s, f) => s + f.amount, 0),
 	};
 };
+
+/** The dated external cashflows, for the money-weighted return. */
+export const externalFlows = (ledger: TLedger) =>
+	ledger.days
+		.filter((d) => d.contributions !== 0 || d.distributions !== 0)
+		.map((d) => ({ date: d.date, amount: d.distributions - d.contributions }));
 
 export { tradeDirtyPer100 };

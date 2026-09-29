@@ -1,4 +1,10 @@
-import { accruedPer100, couponDates, settlementFor } from "./dates";
+import {
+	accruedPer100,
+	couponDates,
+	daysBetween,
+	settlementFor,
+	toDate,
+} from "./dates";
 
 /**
  * A portfolio's life, day by day, from its trades and the market's closes.
@@ -52,7 +58,33 @@ export type TTrade = {
 
 export type TMark = { date: string; close: number };
 
-export type TCashflowKind = "buy" | "sell" | "coupon" | "redemption";
+export type TCashflowKind =
+	| "buy"
+	| "sell"
+	| "coupon"
+	| "redemption"
+	| "reinvestment"
+	| "interest";
+
+/** The CUSIP a cash line's flows are booked against. */
+export const CASH = "CASH";
+
+/**
+ * Where coupons, redemptions and sale proceeds go. A portfolio setting, because
+ * each is right for a different holder:
+ *  - "cash": into a cash line earning the bill rate; purchases draw on it.
+ *    How a fund's books run, and close to the index's held-as-cash.
+ *  - "reinvest": each coupon buys more of the security that paid it, at that
+ *    day's close; principal and sale proceeds go to cash as above.
+ *  - "distribute": everything is paid out to the holder; nothing is kept.
+ */
+export type TIncomePolicy = "cash" | "reinvest" | "distribute";
+
+export const INCOME_POLICY_LABEL: Record<TIncomePolicy, string> = {
+	cash: "Held as cash, earning the 1-month bill rate",
+	reinvest: "Coupons reinvested in the paying security",
+	distribute: "Paid out",
+};
 
 export type TCashflow = {
 	/** The date the cash moves: settlement for a trade, the coupon date for income. */
@@ -68,10 +100,12 @@ export type TCashflow = {
 
 export type TValuationDay = {
 	date: string;
+	/** Securities at the close, plus cash. */
 	marketValue: number;
-	/** Cost of the day's purchases, including accrued interest paid. */
+	cash: number;
+	/** New money: purchases not met from cash, including accrued interest paid. */
 	contributions: number;
-	/** Sale proceeds, coupons and redemptions credited that day. */
+	/** Money paid out to the holder: everything, under "distribute"; nothing otherwise. */
 	distributions: number;
 	/** Null when nothing was held going in and nothing was bought. */
 	dailyReturn: number | null;
@@ -97,6 +131,11 @@ export type TLedger = {
 	holdings: Map<string, number>;
 	/** Days a held security had no close and was marked at its previous one. */
 	staleMarks: { cusip: string; date: string }[];
+	/** Cash held after the last day. */
+	cash: number;
+	/** Coupons bought back into their security, as buys, under "reinvest". */
+	reinvestments: TTrade[];
+	income: TIncomePolicy;
 };
 
 const dirtyPer100 = (terms: TSecurityTerms, close: number, markDate: string) =>
@@ -184,8 +223,13 @@ export const buildLedger = ({
 	marks,
 	calendar,
 	asOf,
+	income,
+	cashRate = () => 0,
 }: {
 	trades: TTrade[];
+	income: TIncomePolicy;
+	/** Annual rate, decimal, that cash earns on a date. */
+	cashRate?: (date: string) => number;
 	terms: Map<string, TSecurityTerms>;
 	/** Closes per CUSIP, oldest first. */
 	marks: Map<string, TMark[]>;
@@ -200,11 +244,20 @@ export const buildLedger = ({
 	const cashflows: TCashflow[] = [];
 	const staleMarks: { cusip: string; date: string }[] = [];
 	const holdings = new Map<string, number>();
-	if (firstTrade === null) return { days, cashflows, holdings, staleMarks };
+	const empty = {
+		days,
+		cashflows,
+		holdings,
+		staleMarks,
+		cash: 0,
+		reinvestments: [],
+		income,
+	};
+	if (firstTrade === null) return empty;
 
 	const valuationDays = calendar.filter((d) => d <= asOf);
 	const firstDay = valuationDays.findIndex((d) => d >= firstTrade);
-	if (firstDay === -1) return { days, cashflows, holdings, staleMarks };
+	if (firstDay === -1) return empty;
 
 	// Trades booked on the first calendar day at or after their trade date.
 	const bookedOn = new Map<string, TTrade[]>();
@@ -245,6 +298,9 @@ export const buildLedger = ({
 	}
 
 	let previousValue = 0;
+	let previousDate: string | null = null;
+	let cash = 0;
+	const reinvestments: TTrade[] = [];
 	// Nothing is held going into the first day, so its window is never read.
 	let previousSettlement = settlementFor(valuationDays[firstDay]);
 
@@ -253,8 +309,31 @@ export const buildLedger = ({
 		let distributions = 0;
 		let contributions = 0;
 
+		// 0. Interest on cash held overnight: actual/365 at the previous day's
+		//    rate, the bill curve's bond-equivalent convention.
+		if (cash > 1e-9 && previousDate !== null) {
+			const interest =
+				(cash *
+					cashRate(previousDate) *
+					daysBetween(toDate(previousDate), toDate(date))) /
+				365;
+			if (interest !== 0) {
+				cash += interest;
+				cashflows.push({
+					date,
+					bookedOn: date,
+					cusip: CASH,
+					kind: "interest",
+					amount: interest,
+					faceAmount: 0,
+				});
+			}
+		}
+
 		// 1. Income on the holdings carried in: coupons and redemptions whose
 		//    date falls in (previous settlement, this settlement].
+		const couponsToday: { cusip: string; amount: number }[] = [];
+		let principal = 0;
 		for (const [cusip, face] of holdings) {
 			const security = terms.get(cusip);
 			if (security === undefined || face <= 0) continue;
@@ -264,7 +343,7 @@ export const buildLedger = ({
 					if (couponDate > previousSettlement) {
 						const amount =
 							(face / 100) * ((security.couponRate * 100) / security.frequency);
-						distributions += amount;
+						couponsToday.push({ cusip, amount });
 						cashflows.push({
 							date: couponDate,
 							bookedOn: date,
@@ -280,7 +359,7 @@ export const buildLedger = ({
 				security.maturityDate > previousSettlement &&
 				security.maturityDate <= settlement
 			) {
-				distributions += face;
+				principal += face;
 				cashflows.push({
 					date: security.maturityDate,
 					bookedOn: date,
@@ -293,42 +372,81 @@ export const buildLedger = ({
 			}
 		}
 
-		// 2. The day's trades: buys first, so a same-day round trip nets.
+		// 2. The day's trades. Sales are proceeds; purchases are costs, met from
+		//    cash first under the cash and reinvest policies.
 		const todays = [...(bookedOn.get(date) ?? [])].sort((a, b) =>
 			a.side === b.side ? 0 : a.side === "buy" ? -1 : 1,
 		);
+		let purchases = 0;
 		for (const trade of todays) {
 			const security = terms.get(trade.cusip);
 			if (security === undefined) continue;
-			const cash = (trade.faceAmount / 100) * tradeDirtyPer100(security, trade);
+			const amount = (trade.faceAmount / 100) * tradeDirtyPer100(security, trade);
 			const face = holdings.get(trade.cusip) ?? 0;
 			if (trade.side === "buy") {
-				contributions += cash;
+				purchases += amount;
 				holdings.set(trade.cusip, face + trade.faceAmount);
-				cashflows.push({
-					date: trade.settleDate,
-					bookedOn: date,
-					cusip: trade.cusip,
-					kind: "buy",
-					amount: -cash,
-					faceAmount: trade.faceAmount,
-				});
 			} else {
-				distributions += cash;
+				principal += amount;
 				holdings.set(trade.cusip, face - trade.faceAmount);
-				cashflows.push({
-					date: trade.settleDate,
-					bookedOn: date,
-					cusip: trade.cusip,
-					kind: "sell",
-					amount: cash,
-					faceAmount: trade.faceAmount,
-				});
 			}
+			cashflows.push({
+				date: trade.settleDate,
+				bookedOn: date,
+				cusip: trade.cusip,
+				kind: trade.side,
+				amount: trade.side === "buy" ? -amount : amount,
+				faceAmount: trade.faceAmount,
+			});
 		}
 
-		// 3. Mark what is held at the close.
-		let marketValue = 0;
+		// 3. Where the income goes.
+		const couponCash = couponsToday.reduce((sum, c) => sum + c.amount, 0);
+		if (income === "distribute") {
+			distributions += couponCash + principal;
+			contributions += purchases;
+		} else {
+			cash += principal;
+			if (income === "cash") cash += couponCash;
+			else {
+				// Each coupon buys more of the security that paid it, at the
+				// day's close, if it is still outstanding after settlement.
+				for (const coupon of couponsToday) {
+					const security = terms.get(coupon.cusip) as TSecurityTerms;
+					const { close } = closeOn(coupon.cusip, date);
+					if (close === undefined || security.maturityDate <= settlement) {
+						cash += coupon.amount;
+						continue;
+					}
+					const dirty = dirtyPer100(security, close, date);
+					const face = (coupon.amount / dirty) * 100;
+					holdings.set(coupon.cusip, (holdings.get(coupon.cusip) ?? 0) + face);
+					reinvestments.push({
+						idTransaction: `reinvest:${coupon.cusip}:${date}`,
+						cusip: coupon.cusip,
+						side: "buy",
+						tradeDate: date,
+						settleDate: settlement,
+						faceAmount: face,
+						cleanPrice: close,
+					});
+					cashflows.push({
+						date,
+						bookedOn: date,
+						cusip: coupon.cusip,
+						kind: "reinvestment",
+						amount: -coupon.amount,
+						faceAmount: face,
+					});
+				}
+			}
+			const fromCash = Math.min(cash, purchases);
+			cash -= fromCash;
+			contributions += purchases - fromCash;
+		}
+
+		// 4. Mark what is held at the close.
+		let marketValue = cash;
 		for (const [cusip, face] of holdings) {
 			if (face <= 1e-9) {
 				holdings.delete(cusip);
@@ -349,6 +467,7 @@ export const buildLedger = ({
 		days.push({
 			date,
 			marketValue,
+			cash,
 			contributions,
 			distributions,
 			dailyReturn:
@@ -356,7 +475,8 @@ export const buildLedger = ({
 		});
 		previousValue = marketValue;
 		previousSettlement = settlement;
+		previousDate = date;
 	}
 
-	return { days, cashflows, holdings, staleMarks };
+	return { days, cashflows, holdings, staleMarks, cash, reinvestments, income };
 };
