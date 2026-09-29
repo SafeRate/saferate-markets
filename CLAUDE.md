@@ -78,7 +78,7 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 337 tests at 2026-09-28
+bun test                               # 377 tests at 2026-09-29
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 
@@ -285,6 +285,67 @@ and history (routes/curveFamilies.ts), `/v1/securities` and `/v1/on-the-run`
   ~1 minute, 20 failures; clean on rerun). The 503 said "outage", as designed.
 - `/v1/on-the-run` is NOT under `/v1/securities/`: that segment is the CUSIP
   route's, and "on-the-run" would fail its 9-character validation.
+
+## PRODUCTION IS FROZEN until the dashboard build is finished (Dylan, 2026-09-29)
+
+A fund of funds may be onboarding onto the API. Until Dylan says the build is
+done: deploy STAGING only (web and API), apply migrations to staging only, and
+make no treasury-api deploy (Markets staging binds production treasury-api, so
+any new TreasuryService method would be a production change). Hence the
+portfolio maths runs in Markets (packages/portfolio) over existing RPC methods.
+Pending for the final production deploy: migration 0003 on
+saferate-markets-production, then web and API.
+
+## The dashboard (2026-09-29): menu, Portfolio Tracking, Treasury Rates
+
+`routes/dashboard.layout.tsx` + `components/DashboardNav.tsx`. Unbuilt menu
+items are listed as "Soon", not stub routes. apps/web has its own read-only
+TREASURY binding now.
+
+**packages/portfolio** is the engine: a daily ledger from trades and closes,
+on the INDEX's conventions (END OF DAY close + accrual to T+1 settlement;
+coupons in the half-open settlement window; trade-date holdings). Accrual is
+ported from saferate-treasury treasuryYtm.ts and held to production analytics
+to 12 places. Per-portfolio `policyIncome`: cash (default, earns the 1M bill
+rate, purchases draw on it), reinvest (coupons buy the paying bond at the
+close) or distribute. TWR chained daily; MWR; FIFO cost, realised/unrealised;
+projected income. CSV import matches columns BY NAME with custodian aliases,
+32nds, ISINs, US dates; all or nothing; undoable by idImport.
+
+- **Measured end to end on production data:** 91282CMM0 bought at the 1 Sep
+  close returned -2.83% to 28 Sep; its own 7-10 Year index -2.82%.
+- **A period the portfolio did not span opens at the close of its FIRST DAY**,
+  portfolio and benchmark alike. Found the hard way: a test buy entered 3
+  points under the close showed as +3% of "performance". The trade-to-close
+  gap now lives in the dollar gain and MWR, and trades >1 point from the
+  close are flagged on the page (refused at 5).
+- **Supported: bills, notes, bonds.** TIPS and FRNs are REFUSED, not
+  mispriced. Next: value them from tipsAnalytics / frnAnalytics as the index
+  does (never recompute a second answer); project their future coupons from
+  the breakeven curve and money-market forwards, labelled as estimates.
+- **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
+  link; sign in with curl and a cookie jar. The dev server's HMR can blow its
+  stack after many edits ("Maximum call stack size exceeded" in
+  getParentClientNodes) - restart it; it is not the code.
+
+### Next, in order (agreed with Dylan 2026-09-29)
+1. TIPS and FRN valuation; custom-period attribution (MTD/YTD/1Y/SI/custom)
+   using saferate-treasury's attribution libraries against the indices.
+2. Stress testing and VaR/ES: portfolioStress.ts and historicalSimulation.ts
+   (filtered historical simulation from 2008; Monte Carlo was rejected on
+   purpose, slope kurtosis 79.8), plus user curve shocks on the Diebold-Li
+   level/slope/curvature.
+3. Portfolio Builder: starting amount + liabilities -> recommended portfolio
+   (cashflowMatching.ts, immunisation.ts) and strategy templates with pros and
+   cons (bill roll, short end, ladder, bullet, barbell, duration targets,
+   roll-down, rich/cheap switches, index tracking), each BACKTESTED through the
+   engine on real closes. Order sheets split TreasuryDirect-eligible (new issue
+   at an upcoming auction, non-competitive, <= $10M, buy only) from secondary
+   (any CUSIP, buy or sell; IBKR, Apex, custodian).
+4. Treasury Auctions page: needs the upcoming schedule STORED (fetched daily in
+   treasury-worker auctionsUpdate but discarded): a worker change + production
+   D1 migration, both for the final deploy.
+5. Trade Execution: order-sheet history now, IBKR later.
 
 ## Rich/cheap — built 2026-09-28 (`/v1/rich-cheap`, `get_treasury_rich_cheap`)
 
