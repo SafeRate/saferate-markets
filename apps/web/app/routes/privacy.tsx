@@ -114,6 +114,18 @@ const CATEGORIES: TCategory[] = [
 		basis: "Performance of our contract with you",
 		kept: USAGE_RETENTION,
 	},
+	{
+		title: "Portfolio holdings",
+		tables: "portfolios · portfolioTransactions",
+		items: [
+			"The portfolios you create: a name, a benchmark index and how income is treated",
+			"The trades you enter or upload: CUSIP, buy or sell, dates, face amount, price, and an account label if you give one",
+			"Which of your team entered each trade, and whether it came from a file",
+		],
+		why: "To value your portfolios and compute their returns, income and risk. Nothing else: holdings are not used to price, rank or recommend anything for anyone else, and are not shared or sold.",
+		basis: "Performance of our contract with you",
+		kept: `Until you delete the trade or the portfolio, which removes it permanently, or ${ACCOUNT_DELETION_DAYS} days after a request to delete your account.`,
+	},
 ];
 
 export default function Privacy() {
@@ -146,6 +158,10 @@ export default function Privacy() {
 					<li>
 						Our usage records note which route or tool you called, not the securities
 						or dates you asked about.
+					</li>
+					<li>
+						Portfolios and trades you enter are yours: kept only to compute your
+						analytics, never shared or sold, and deleted when you delete them.
 					</li>
 					<li>We do not train models on your queries, and we do not sell them.</li>
 				</ul>
@@ -199,6 +215,9 @@ export default function Privacy() {
 						<code className="font-mono">/v1/securities/:cusip</code>, and for MCP the
 						tool name, not the CUSIPs, dates or arguments you sent. Which securities
 						you look at is commercially revealing, so it is not kept in our records.
+						Looking a security up, in the dashboard or the API, is not recorded;
+						trades you enter in a portfolio are, because you asked us to keep them
+						(Portfolio holdings, above).
 					</p>
 					<p>
 						Our hosting provider's request logs do contain full request URLs, as any

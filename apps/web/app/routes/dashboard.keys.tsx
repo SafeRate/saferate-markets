@@ -102,7 +102,7 @@ const DashboardKeys = ({ loaderData, actionData }: Route.ComponentProps) => {
 	const isSubmitting = navigation.state === "submitting";
 
 	return (
-		<main className="mx-auto max-w-3xl px-6 py-16">
+		<main className="max-w-3xl">
 			<a
 				className="text-sm text-slate-500 transition-colors hover:text-slate-900"
 				href="/dashboard"

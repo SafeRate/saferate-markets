@@ -39,6 +39,18 @@
 	// not secrets, so they live here, committed: a reviewable diff, as OKLocate
 	// settled. EMPTY outside production, so test traffic never reaches the
 	// production properties. Present = the tool may run (lib/analytics.ts).
+	// The treasury data service, READ-ONLY, for the dashboard's portfolio and
+	// rates pages (added 2026-09-29). The same binding the API Worker has; the
+	// TreasuryService entrypoint cannot write. Staging binds production
+	// treasury-api, as the API's staging does: see CLAUDE.md.
+	"services": [
+		{
+			"binding": "TREASURY",
+			"service": "treasury-api",
+			"entrypoint": "TreasuryService",
+			"remote": true
+		}
+	],
 	"vars": {
 		"MARKETS_ENV": "development",
 		"GA_MEASUREMENT_ID": "",
@@ -59,6 +71,13 @@
 				}
 			],
 			"send_email": [{ "name": "EMAIL" }],
+			"services": [
+				{
+					"binding": "TREASURY",
+					"service": "treasury-api",
+					"entrypoint": "TreasuryService"
+				}
+			],
 			"vars": {
 				"MARKETS_ENV": "staging",
 				"GA_MEASUREMENT_ID": "",
@@ -89,6 +108,13 @@
 			"send_email": [{ "name": "EMAIL" }],
 			// GA stream "Safe Rate Markets" (15861881678), and the saferate.markets
 			// Clarity project; both given by Dylan 2026-09-28.
+			"services": [
+				{
+					"binding": "TREASURY",
+					"service": "treasury-api",
+					"entrypoint": "TreasuryService"
+				}
+			],
 			"vars": {
 				"MARKETS_ENV": "production",
 				"GA_MEASUREMENT_ID": "G-GXT251RBGJ",

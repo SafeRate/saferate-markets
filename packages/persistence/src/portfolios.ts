@@ -6,7 +6,6 @@ import { z } from "zod";
  * customer finds nothing rather than relying on a check the caller might skip.
  */
 
-const ZDb = z.custom<D1Database>((v) => v !== null && v !== undefined);
 const zIsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const ZPolicyIncome = z.enum(["cash", "reinvest", "distribute"]);

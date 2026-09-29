@@ -1,5 +1,5 @@
 import type { RouteConfig } from "@react-router/dev/routes";
-import { index, route } from "@react-router/dev/routes";
+import { index, layout, route } from "@react-router/dev/routes";
 
 /**
  * Pages are added as they are built rather than stubbed, so a route that exists
@@ -17,7 +17,24 @@ export default [
 	route("terms", "./routes/terms.tsx"),
 	route("sign-in", "./routes/sign-in.tsx"),
 	route("sign-out", "./routes/sign-out.tsx"),
-	route("dashboard", "./routes/dashboard.tsx"),
-	route("dashboard/billing", "./routes/dashboard.billing.tsx"),
-	route("dashboard/keys", "./routes/dashboard.keys.tsx"),
+	layout("./routes/dashboard.layout.tsx", [
+		route("dashboard", "./routes/dashboard.tsx"),
+		route("dashboard/billing", "./routes/dashboard.billing.tsx"),
+		route("dashboard/keys", "./routes/dashboard.keys.tsx"),
+		route("dashboard/rates", "./routes/dashboard.rates.tsx"),
+		route("dashboard/portfolios", "./routes/dashboard.portfolios.tsx"),
+		route(
+			"dashboard/portfolios/:idPortfolio",
+			"./routes/dashboard.portfolios.$idPortfolio.tsx",
+		),
+		route(
+			"dashboard/portfolios/:idPortfolio/transactions",
+			"./routes/dashboard.portfolios.$idPortfolio.transactions.tsx",
+		),
+	]),
+	// JSON for the trade form's CUSIP search; outside the layout (no page).
+	route(
+		"dashboard/securities/search",
+		"./routes/dashboard.securities.search.ts",
+	),
 ] satisfies RouteConfig;

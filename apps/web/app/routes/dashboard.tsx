@@ -67,7 +67,7 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
 export default function Dashboard({ loaderData }: Route.ComponentProps) {
 	const d = loaderData;
 	return (
-		<main className="mx-auto max-w-3xl px-6 py-16">
+		<main className="max-w-3xl">
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				{d.organizationName}
 			</p>

@@ -4,8 +4,11 @@
 	"type": "module",
 	"dependencies": {
 		"@markets/email": "workspace:*",
+		"@markets/mcp-tools": "workspace:*",
 		"@markets/persistence": "workspace:*",
+		"@markets/portfolio": "workspace:*",
 		"@markets/schema": "workspace:*",
-		"@saferate/treasury-client": "workspace:*"
+		"@saferate/treasury-client": "workspace:*",
+		"zod": "^4.6.5"
 	}
 }
