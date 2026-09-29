@@ -13,3 +13,4 @@ export * from "./build/cashflowMatching";
 export * from "./build/immunisation";
 export * from "./builder";
 export * from "./risk/tsay";
+export * from "./backtest";

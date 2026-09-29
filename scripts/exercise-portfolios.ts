@@ -1248,6 +1248,61 @@ const exerciseMarkets = async () => {
 	await expectPage("rates", "/dashboard/rates", "Treasury Rates");
 };
 
+const exerciseBacktests = async () => {
+	heading("Strategy backtests");
+	const q = (params: Record<string, string>) =>
+		`/dashboard/backtest?${new URLSearchParams({ run: "1", initial: "1000000", cost: "0.5", horizon: "10", ...params })}`;
+	await expectPage(
+		"backtest: all seven, five years quarterly",
+		q({
+			strategy: "all",
+			start: "2021-09-28",
+			end: "2026-09-28",
+			frequency: "quarterly",
+		}),
+		"Growth of $1",
+	);
+	await expectPage(
+		"backtest: a ladder, monthly over two years",
+		q({
+			strategy: "ladder",
+			start: "2024-09-27",
+			end: "2026-09-28",
+			frequency: "monthly",
+		}),
+		"Rebalanced",
+	);
+	await expectPage(
+		"backtest: long duration through 2008-2012, yearly",
+		q({
+			strategy: "long",
+			start: "2008-10-01",
+			end: "2012-12-31",
+			frequency: "annual",
+		}),
+		"Worst drawdown",
+	);
+	await expectPage(
+		"backtest: the Builder's link (no dates) runs five years",
+		`/dashboard/backtest?${new URLSearchParams({ run: "1", strategy: "bullet", horizon: "7" })}`,
+		"Rungs filled",
+	);
+	const refused = await get(
+		q({
+			strategy: "all",
+			start: "2008-10-01",
+			end: "2026-09-28",
+			frequency: "monthly",
+		}),
+	);
+	problems(refused.text).some((p) => /at most 5 years/.test(p))
+		? pass("backtest: too long a monthly run is refused, and says why")
+		: fail(
+				"backtest: too long a monthly run is refused",
+				problems(refused.text).join(" | ") || `HTTP ${refused.status}`,
+			);
+};
+
 const PAYOUTS = Array.from(
 	{ length: 10 },
 	(_, i) => `${2027 + i}-06-30, 1,000,000, Year ${i + 1} payout`,
@@ -1517,6 +1572,7 @@ if (!flag("seed-only")) {
 		console.info(`    ${f.periods.join(" · ")}`);
 	}
 	await exerciseMarkets();
+	await exerciseBacktests();
 	if (flag("testing")) await breakTests();
 	const created = await exerciseBuilder();
 	if (!flag("keep")) await cleanUp(created);

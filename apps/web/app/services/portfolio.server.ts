@@ -175,16 +175,21 @@ const loadSecurity = async (
  * only changes when a new close lands, which changes the key. Bounded: a
  * long-held bond's history is a few thousand closes.
  */
+// The PROMISE is cached, so two valuations (or backtests) side by side
+// share one read of a security.
 const securityCache = new Map<
 	string,
-	{ asOf: string; loaded: TLoadedSecurity }
+	{ asOf: string; loaded: Promise<TLoadedSecurity> }
 >();
 const SECURITY_CACHE_LIMIT = 400;
 
-const cachedSecurity = async (env: TEnv, cusip: string, asOf: string) => {
+const cachedSecurity = (env: TEnv, cusip: string, asOf: string) => {
 	const hit = securityCache.get(cusip);
 	if (hit !== undefined && hit.asOf === asOf) return hit.loaded;
-	const loaded = await loadSecurity(env, cusip);
+	const loaded = loadSecurity(env, cusip).catch((error) => {
+		securityCache.delete(cusip);
+		throw error;
+	});
 	securityCache.delete(cusip);
 	securityCache.set(cusip, { asOf, loaded });
 	while (securityCache.size > SECURITY_CACHE_LIMIT) {
@@ -276,7 +281,7 @@ export const loadCurveParams = async (env: TEnv, from: string, to: string) => {
 };
 
 /** The bill curve over a window: the market's calendar, and what cash earns. */
-const loadMoneyMarket = async (env: TEnv, from: string, to: string) => {
+export const loadMoneyMarket = async (env: TEnv, from: string, to: string) => {
 	const reply = await call(
 		env,
 		"curveSeries",

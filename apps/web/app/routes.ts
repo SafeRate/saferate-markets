@@ -22,6 +22,7 @@ export default [
 		route("dashboard/billing", "./routes/dashboard.billing.tsx"),
 		route("dashboard/keys", "./routes/dashboard.keys.tsx"),
 		route("dashboard/auctions", "./routes/dashboard.auctions.tsx"),
+		route("dashboard/backtest", "./routes/dashboard.backtest.tsx"),
 		route("dashboard/rates", "./routes/dashboard.rates.tsx"),
 		route("dashboard/stress", "./routes/dashboard.stress.tsx"),
 		route("dashboard/builder", "./routes/dashboard.builder.tsx"),

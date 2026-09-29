@@ -579,6 +579,18 @@ export default function Builder({
 									Edit these positions yourself
 								</Link>
 							) : null}
+							{inputs.mode === "strategy" ? (
+								<Link
+									className="text-sm text-primary underline underline-offset-4"
+									to={`/dashboard/backtest?${new URLSearchParams({
+										run: "1",
+										strategy: inputs.strategy,
+										horizon: String(inputs.horizonYears),
+									})}`}
+								>
+									Backtest this strategy
+								</Link>
+							) : null}
 						</div>
 						<div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
 							<table className="w-full text-sm">

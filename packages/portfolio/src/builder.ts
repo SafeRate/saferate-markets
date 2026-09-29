@@ -882,6 +882,51 @@ const buy = (
 			};
 };
 
+/**
+ * A template's rungs: a target maturity in years from settlement, the
+ * families that may fill it, and its share of the money. The Builder buys one
+ * security per rung; a backtest also manages the book by them.
+ */
+export const strategyRungs = (
+	strategy: TStrategyKey,
+	horizonYears = 10,
+): { years: number; families: TFamily[]; weight: number }[] => {
+	const coupon: TFamily[] = ["note", "bond"];
+	const equal = (years: number[], families: TFamily[]) =>
+		years.map((y) => ({ years: y, families, weight: 1 / years.length }));
+	switch (strategy) {
+		case "billRoll":
+			return equal([4 / 52, 13 / 52, 26 / 52, 1], ["bill"]);
+		case "shortEnd":
+			return equal([1, 2, 3], coupon);
+		case "intermediate":
+			return equal([3, 4, 5, 6, 7], coupon);
+		case "long":
+			return equal([10, 15, 20, 25, 30], coupon);
+		case "ladder": {
+			const n = Math.max(2, Math.min(30, Math.round(horizonYears)));
+			return equal(
+				Array.from({ length: n }, (_, i) => i + 1),
+				coupon,
+			);
+		}
+		case "bullet":
+			return [
+				{ years: horizonYears - 0.5, families: coupon, weight: 1 / 3 },
+				{ years: horizonYears, families: coupon, weight: 1 / 3 },
+				{ years: horizonYears + 0.5, families: coupon, weight: 1 / 3 },
+			];
+		case "barbell":
+			return [
+				...equal([13 / 52, 26 / 52, 1], ["bill"]).map((t) => ({
+					...t,
+					weight: 0.5 / 3,
+				})),
+				...equal([20, 25, 30], ["bond"]).map((t) => ({ ...t, weight: 0.5 / 3 })),
+			];
+	}
+};
+
 /** Build a strategy's portfolio for a budget. Each rung gets an equal share. */
 export const buildStrategy = ({
 	strategy,
@@ -905,43 +950,7 @@ export const buildStrategy = ({
 	const floor = smallestPosition(rules);
 	const skipped: string[] = [];
 	const at = (years: number) => addYears(settlementDate, years);
-	const targets: { years: number; families: TFamily[]; weight: number }[] =
-		(() => {
-			const coupon: TFamily[] = ["note", "bond"];
-			const equal = (years: number[], families: TFamily[]) =>
-				years.map((y) => ({ years: y, families, weight: 1 / years.length }));
-			switch (strategy) {
-				case "billRoll":
-					return equal([4 / 52, 13 / 52, 26 / 52, 1], ["bill"]);
-				case "shortEnd":
-					return equal([1, 2, 3], coupon);
-				case "intermediate":
-					return equal([3, 4, 5, 6, 7], coupon);
-				case "long":
-					return equal([10, 15, 20, 25, 30], coupon);
-				case "ladder": {
-					const n = Math.max(2, Math.min(30, Math.round(horizonYears)));
-					return equal(
-						Array.from({ length: n }, (_, i) => i + 1),
-						coupon,
-					);
-				}
-				case "bullet":
-					return [
-						{ years: horizonYears - 0.5, families: coupon, weight: 1 / 3 },
-						{ years: horizonYears, families: coupon, weight: 1 / 3 },
-						{ years: horizonYears + 0.5, families: coupon, weight: 1 / 3 },
-					];
-				case "barbell":
-					return [
-						...equal([13 / 52, 26 / 52, 1], ["bill"]).map((t) => ({
-							...t,
-							weight: 0.5 / 3,
-						})),
-						...equal([20, 25, 30], ["bond"]).map((t) => ({ ...t, weight: 0.5 / 3 })),
-					];
-			}
-		})();
+	const targets = strategyRungs(strategy, horizonYears);
 	const chosen = new Map<string, TPlanPosition>();
 	for (const t of targets) {
 		const security = nearest(universe, at(t.years), t.families);

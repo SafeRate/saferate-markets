@@ -91,7 +91,7 @@ export const LineChart = ({
 					/>
 				))}
 			</svg>
-			<div className="mt-2 flex gap-4 text-xs text-slate-600">
+			<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
 				{series.map((s) => (
 					<span className="flex items-center gap-1.5" key={s.label}>
 						<svg aria-hidden="true" height="4" width="16">

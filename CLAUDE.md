@@ -307,8 +307,9 @@ done: deploy STAGING only (web and API), apply migrations to staging only, and
 make no treasury-api deploy (Markets staging binds production treasury-api, so
 any new TreasuryService method would be a production change). Hence the
 portfolio maths runs in Markets (packages/portfolio) over existing RPC methods.
-Pending for the final production deploy: migration 0003 on
-saferate-markets-production, then web and API.
+Pending for the final production deploy: migrations 0003, 0004 and 0005 on
+saferate-markets-production, then web and API. After it, re-pin the vendored
+client to treasury main once PR #10 merges (sync-treasury-client.sh main).
 
 ## The dashboard (2026-09-29): menu, Portfolio Tracking, Treasury Rates
 
@@ -449,7 +450,7 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
 ### Next, in order (agreed with Dylan 2026-09-29)
 1. (done) Attribution: see above.
 2. (done) Stress testing: see below.
-3. Portfolio Builder: starting amount + liabilities -> recommended portfolio
+3. (done, backtests 2026-09-29) Portfolio Builder: starting amount + liabilities -> recommended portfolio
    (cashflowMatching.ts, immunisation.ts) and strategy templates with pros and
    cons (bill roll, short end, ladder, bullet, barbell, duration targets,
    roll-down, rich/cheap switches, index tracking), each BACKTESTED through the
@@ -486,6 +487,38 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   through, so its answers gain the new fields when the API deploys.
 - Shares are of the competitive award (dealers + direct + indirect). "High
   less median" is NOT the tail (that needs the when-issued yield).
+
+## Strategy backtests (2026-09-29, `/dashboard/backtest`)
+
+- **Engine: packages/portfolio backtest.ts**, pure, data injected. The whole
+  starting amount is in the book from day one (`openingCash` on buildLedger);
+  everything between rebalances is the ledger (coupons, maturities, cash at
+  the bill curve's 1M rate), the same code that values a customer portfolio.
+- **Managed by maturity SLOTS (`slotsFor`), not rebuilt.** The first version
+  rebuilt the template from scratch each quarter; "one year from now" names
+  a new bond every quarter, so real runs turned over 300-400% a year. Now a
+  position in one of the template's rungs is held (ladders, short end, bullet
+  and bills to maturity; intermediate, long and barbell bonds sold when they
+  age out of their sector) and cash fills the rungs short of their equal
+  share. Self-financing by construction; `externalCash` reports any leak. The
+  bullet's target dates are fixed at the start.
+- **Tests** (tests/backtest.test.ts): a par market with cash at 4% must return
+  4%, need no outside money and show no drawdown; a 10% one-day fall must show
+  as the drawdown; a ladder's turnover must stay low. Proved against an engine
+  that overspends by 5% (five tests fail).
+- **Speed.** The cost is reading securities: comparing all seven over five
+  years loads about 300 securities' FULL price histories (the RPC takes no
+  range): about 20 s cold, 9.6 s of it CPU. Results are cached by engine
+  version, latest price date and request, in the edge cache (per data centre:
+  staging alternates YYZ and ATL) and in D1 `backtestResults` (migration 0005,
+  shared): repeats 0.2-0.4 s. **Bump `ENGINE_VERSION` in backtest.server.ts**
+  whenever the engine or its inputs change, or old results are served for two
+  weeks. Windows are capped by frequency (monthly 5 years, quarterly 10, yearly
+  18). The real fix for cold runs is a ranged securityPrices RPC (frozen).
+- Five years to 2026-09-28, quarterly, $1M, half a 32nd a side: bill roll
+  +3.53% a year, short end +2.40%, ladder +0.23%, intermediate +0.11%, bullet
+  -1.47%, barbell -2.03%, long -6.03% (worst drawdown -36%); Aggregate index
+  +0.47%.
 
 ## Rich/cheap — built 2026-09-28 (`/v1/rich-cheap`, `get_treasury_rich_cheap`)
 

@@ -222,7 +222,16 @@ export const buildLedger = ({
 	income,
 	cashRate = () => 0,
 	pricers: supplied,
+	openingCash = 0,
 }: {
+	/**
+	 * Cash deposited on the first day, before its trades: a book funded with
+	 * money it has not all spent. Counted as that day's contribution, so
+	 * returns are on the whole amount; purchases draw on it first. Added
+	 * 2026-09-29 for backtests, whose unspent money otherwise was not in the
+	 * book at all (a bullet with an unfillable rung showed $619k from $1M).
+	 */
+	openingCash?: number;
 	trades: TTrade[];
 	/** TIPS and FRN pricers, from their stored analytics. Nominals need none. */
 	pricers?: Map<string, TPricer>;
@@ -298,6 +307,10 @@ export const buildLedger = ({
 		const settlement = settlementFor(date);
 		let distributions = 0;
 		let contributions = 0;
+		if (date === valuationDays[firstDay] && openingCash > 0) {
+			cash += openingCash;
+			contributions += openingCash;
+		}
 
 		// 0. Interest on cash held overnight: actual/365 at the previous day's
 		//    rate, the bill curve's bond-equivalent convention.
