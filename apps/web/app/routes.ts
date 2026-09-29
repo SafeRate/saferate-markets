@@ -23,6 +23,14 @@ export default [
 		route("dashboard/keys", "./routes/dashboard.keys.tsx"),
 		route("dashboard/rates", "./routes/dashboard.rates.tsx"),
 		route("dashboard/stress", "./routes/dashboard.stress.tsx"),
+		route("dashboard/builder", "./routes/dashboard.builder.tsx"),
+		route("dashboard/liabilities", "./routes/dashboard.liabilities.tsx"),
+		route(
+			"dashboard/liabilities/:idLiabilityStream",
+			"./routes/dashboard.liabilities.$idLiabilityStream.tsx",
+		),
+		route("dashboard/plans/:idPlan", "./routes/dashboard.plans.$idPlan.tsx"),
+		route("dashboard/execution", "./routes/dashboard.execution.tsx"),
 		route("dashboard/portfolios", "./routes/dashboard.portfolios.tsx"),
 		route(
 			"dashboard/portfolios/:idPortfolio",
@@ -37,5 +45,10 @@ export default [
 	route(
 		"dashboard/securities/search",
 		"./routes/dashboard.securities.search.ts",
+	),
+	// The order sheet download: a CSV, not a page.
+	route(
+		"dashboard/plans/:idPlan/orders.csv",
+		"./routes/dashboard.plans.$idPlan.orders.csv.ts",
 	),
 ] satisfies RouteConfig;

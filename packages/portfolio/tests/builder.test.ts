@@ -173,7 +173,13 @@ describe("TreasuryDirect", () => {
 			p.security.maturityDate.startsWith("2028"),
 		);
 		if (!twoYear) throw new Error("no 2-year rung");
-		const alt = treasuryDirectAlternative(twoYear, SETTLE);
+		const alt = treasuryDirectAlternative(
+			{
+				faceAmount: twoYear.faceAmount,
+				maturityDate: twoYear.security.maturityDate,
+			},
+			SETTLE,
+		);
 		expect(alt.term).toBe("2-year note");
 		expect(alt.overLimit).toBe(twoYear.faceAmount > TREASURY_DIRECT_LIMIT);
 		expect(alt.overLimit).toBe(true);

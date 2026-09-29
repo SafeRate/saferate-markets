@@ -331,3 +331,149 @@ export const parseTradesCsv = (text: string): TCsvResult => {
 		};
 	return { ok: true, trades, mapping, skippedMaturities };
 };
+
+/* ─── Liability streams ──────────────────────────────────────────────────── */
+
+export const LIABILITY_FIELDS = {
+	dueDate: [
+		"date",
+		"duedate",
+		"paymentdate",
+		"paydate",
+		"cashflowdate",
+		"liabilitydate",
+		"when",
+	],
+	amount: [
+		"amount",
+		"payment",
+		"cashflow",
+		"liability",
+		"due",
+		"value",
+		"dollars",
+		"usd",
+	],
+	label: ["label", "description", "note", "notes", "memo", "name"],
+} as const;
+
+export type TParsedLiability = {
+	line: number;
+	dueDate: string;
+	amount: number;
+	label: string | null;
+};
+
+/**
+ * Liabilities from a CSV or from pasted lines. With a header row, columns are
+ * matched by name as trades are; without one, each line is read as
+ * "date, amount[, label]". All or nothing, with line numbers.
+ */
+/**
+ * A pasted line: "date, amount[, label]", where the amount may carry thousands
+ * commas unquoted ("2027-06-30, $1,000,000, payout"). Splitting on commas would
+ * read that as $1 labelled "000", so the amount is matched as a whole number
+ * with correctly grouped commas instead; a comma directly followed by a digit
+ * after it (1,00,000) is a mis-grouped number, never a label, and is refused.
+ */
+const PASTED_LINE =
+	/^\s*([0-9/-]+)\s*[,;\t]\s*(\$?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?!,\d)\s*(?:[,;\t]\s*(.*?))?\s*$/;
+
+export const parseLiabilities = (
+	text: string,
+):
+	| { ok: true; rows: TParsedLiability[] }
+	| { ok: false; errors: { line: number | null; message: string }[] } => {
+	const rows = splitCsv(text);
+	if (rows.length === 0)
+		return { ok: false, errors: [{ line: null, message: "Nothing to read." }] };
+	const headers = rows[0].map(normalise);
+	const hasHeader = headers.some((h) =>
+		(LIABILITY_FIELDS.dueDate as readonly string[]).includes(h),
+	);
+	const out: TParsedLiability[] = [];
+	const errors: { line: number; message: string }[] = [];
+
+	const accept = (
+		line: number,
+		rawDate: string,
+		rawAmount: string,
+		rawLabel: string,
+	) => {
+		const dueDate = parseDate(rawDate);
+		const amount = parseAmount(rawAmount);
+		const problems: string[] = [];
+		if (dueDate === null)
+			problems.push(`date "${rawDate}" is not YYYY-MM-DD or MM/DD/YYYY`);
+		if (amount === null || !(amount > 0))
+			problems.push(`amount "${rawAmount}" is not a positive number`);
+		if (problems.length > 0 || dueDate === null || amount === null) {
+			errors.push({ line, message: problems.join("; ") });
+			return;
+		}
+		const label = rawLabel.trim();
+		out.push({ line, dueDate, amount, label: label === "" ? null : label });
+	};
+
+	if (hasHeader) {
+		const column = (field: keyof typeof LIABILITY_FIELDS) => {
+			for (const alias of LIABILITY_FIELDS[field]) {
+				const i = headers.indexOf(alias);
+				if (i !== -1) return i;
+			}
+			return -1;
+		};
+		const dateAt = column("dueDate");
+		const amountAt = column("amount");
+		const labelAt = column("label");
+		if (dateAt === -1 || amountAt === -1)
+			return {
+				ok: false,
+				errors: [{ line: 1, message: "Need a date column and an amount column." }],
+			};
+		rows.slice(1).forEach((row, i) => {
+			const line = i + 2;
+			// More fields than headers is an unquoted comma inside a value, most
+			// often an amount like 1,000,000: refuse it rather than read it shifted.
+			if (row.length > rows[0].length) {
+				errors.push({
+					line,
+					message: `${row.length} fields under ${rows[0].length} headers: put quotes round amounts with commas ("1,000,000").`,
+				});
+				return;
+			}
+			accept(
+				line,
+				row[dateAt] ?? "",
+				row[amountAt] ?? "",
+				labelAt === -1 ? "" : (row[labelAt] ?? ""),
+			);
+		});
+	} else {
+		text
+			.replace(/^\uFEFF/, "")
+			.split(/\r?\n/)
+			.forEach((raw, i) => {
+				if (raw.trim() === "") return;
+				const m = PASTED_LINE.exec(raw);
+				if (m === null) {
+					errors.push({
+						line: i + 1,
+						message: `"${raw.trim()}" is not "date, amount[, label]"`,
+					});
+					return;
+				}
+				accept(i + 1, m[1], m[2], m[3] ?? "");
+			});
+	}
+	if (errors.length > 0) return { ok: false, errors };
+	if (out.length === 0)
+		return {
+			ok: false,
+			errors: [{ line: null, message: "No liabilities in the input." }],
+		};
+	return {
+		ok: true,
+		rows: out.sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
+	};
+};

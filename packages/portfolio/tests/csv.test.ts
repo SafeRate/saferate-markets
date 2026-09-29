@@ -108,3 +108,52 @@ describe("the pieces", () => {
 		]);
 	});
 });
+
+import { parseLiabilities } from "../src/csv";
+
+describe("liabilities", () => {
+	test("pasted lines with no header: date, amount, label", () => {
+		const r = parseLiabilities(
+			"2027-06-30, $1,000,000, Year 1 payout\n6/30/2028,1000000\n",
+		);
+		expect(r.ok && r.rows).toEqual([
+			{
+				line: 1,
+				dueDate: "2027-06-30",
+				amount: 1_000_000,
+				label: "Year 1 payout",
+			},
+			{ line: 2, dueDate: "2028-06-30", amount: 1_000_000, label: null },
+		]);
+	});
+
+	test("a CSV with its own column names, in any order", () => {
+		const r = parseLiabilities(
+			"Description,Payment,Payment Date\nBenefits,250000,2027-12-31\n",
+		);
+		expect(r.ok && r.rows[0]).toEqual({
+			line: 2,
+			dueDate: "2027-12-31",
+			amount: 250_000,
+			label: "Benefits",
+		});
+	});
+
+	test("a header CSV with an unquoted thousands comma is refused, not read shifted", () => {
+		const r = parseLiabilities(
+			"date,amount,label\n2027-06-30,1,000,000,payout\n",
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.errors[0].message).toContain("quotes");
+	});
+
+	test("misgrouped commas in a pasted amount are refused", () => {
+		expect(parseLiabilities("2027-06-30, 1,00,000").ok).toBe(false);
+	});
+
+	test("bad rows are all reported, and nothing is kept", () => {
+		const r = parseLiabilities("2027-06-30,abc\n2027-13-01,100\n");
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.errors.map((e) => e.line)).toEqual([1, 2]);
+	});
+});

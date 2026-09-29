@@ -115,12 +115,15 @@ const CATEGORIES: TCategory[] = [
 		kept: USAGE_RETENTION,
 	},
 	{
-		title: "Portfolio holdings",
-		tables: "portfolios · portfolioTransactions",
+		title: "Portfolio holdings, liabilities and plans",
+		tables:
+			"portfolios · portfolioTransactions · liabilityStreams · liabilityCashflows · builderPlans",
 		items: [
 			"The portfolios you create: a name, a benchmark index and how income is treated",
 			"The trades you enter or upload: CUSIP, buy or sell, dates, face amount, price, and an account label if you give one",
 			"Which of your team entered each trade, and whether it came from a file",
+			"Liability streams you save: a name, and the dates, amounts and labels of the payments",
+			"Plans you save in the Portfolio Builder: the inputs used and the recommended positions at the prices then",
 		],
 		why: "To value your portfolios and compute their returns, income and risk. Nothing else: holdings are not used to price, rank or recommend anything for anyone else, and are not shared or sold.",
 		basis: "Performance of our contract with you",

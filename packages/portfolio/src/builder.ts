@@ -309,11 +309,30 @@ export const immuniseTarget = ({
 		method,
 		positions,
 		cost: positions.reduce((s, p) => s + p.cost, 0),
-		notes: solved.converged
-			? []
-			: [
-					"The solver did not meet its optimality conditions; check the residual risk.",
-				],
+		notes: [
+			...(solved.converged
+				? []
+				: [
+						"The solver did not meet its optimality conditions; check the residual risk.",
+					]),
+			...(() => {
+				// Measured 2026-09-29 on ten $1m liabilities from 2032 to 2041:
+				// duration matched exactly but $353/bp left at 7 years and $183/bp
+				// at 25, offsetting. Single-payment liabilities are shaped like
+				// zero-coupon bonds and coupon securities cannot fully reproduce
+				// that shape; STRIPS could. Said on the page rather than implied away.
+				const total =
+					solved.keyRateDurations.reduce((sum, d) => sum + d, 0) *
+					target.presentValue *
+					1e-4;
+				const worst = Math.max(...solved.residualDv01.map(Math.abs));
+				return total > 0 && worst > 0.02 * total
+					? [
+							`Duration is matched, but up to $${worst.toFixed(0)} per basis point is left unhedged at single key rates (offsetting across the curve). Coupon-paying bonds cannot fully reproduce single-payment liabilities; zero-coupon STRIPS would close it.`,
+						]
+					: [];
+			})(),
+		],
 		risk: {
 			targetPresentValue: target.presentValue,
 			targetKeyRateDurations: target.keyRateDurations,
@@ -856,10 +875,10 @@ export const TREASURY_DIRECT_LIMIT = 10_000_000;
  * its next auction; its date and rate are not known until then.
  */
 export const treasuryDirectAlternative = (
-	position: TPlanPosition,
+	position: { faceAmount: number; maturityDate: string },
 	settlementDate: string,
 ) => {
-	const years = yearFraction(settlementDate, position.security.maturityDate);
+	const years = yearFraction(settlementDate, position.maturityDate);
 	let best = AUCTION_TERMS[0];
 	for (const term of AUCTION_TERMS)
 		if (Math.abs(term.years - years) < Math.abs(best.years - years)) best = term;

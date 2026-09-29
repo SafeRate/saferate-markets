@@ -166,9 +166,16 @@ export async function deleteLiabilityStream(
 export const ZPlanPositionStored = z.object({
 	cusip: z.string(),
 	faceAmount: z.number(),
+	/** Clean per 100: the close plus the markup. The order's limit. */
 	planPrice: z.number(),
 	dirtyPrice: z.number(),
 	cost: z.number(),
+	/** Terms at planning time, so the sheet reads without a lookup. */
+	family: z.string().nullable(),
+	couponPercent: z.number(),
+	maturityDate: z.string(),
+	/** The close the plan price was built on. */
+	close: z.number(),
 });
 
 export const ZBuilderPlan = z.object({

@@ -2,7 +2,7 @@
 --
 -- Like portfolios (0003), these are customer data and live only here, scoped
 -- to an organization in every statement. The privacy policy's "Portfolio
--- holdings" category describes them; change it with them.
+-- holdings, liabilities and plans" category describes them; change it with them.
 
 -- A named schedule of amounts owed: a fund's payouts, a pension's benefits.
 create table if not exists liabilityStreams (

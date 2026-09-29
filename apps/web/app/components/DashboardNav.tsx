@@ -19,7 +19,8 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 		title: "Portfolios",
 		items: [
 			{ kind: "link", label: "Portfolio Tracking", to: "/dashboard/portfolios" },
-			{ kind: "soon", label: "Portfolio Builder" },
+			{ kind: "link", label: "Portfolio Builder", to: "/dashboard/builder" },
+			{ kind: "link", label: "Liabilities", to: "/dashboard/liabilities" },
 			{ kind: "link", label: "Stress Testing", to: "/dashboard/stress" },
 		],
 	},
@@ -30,7 +31,12 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 			{ kind: "link", label: "Treasury Rates", to: "/dashboard/rates" },
 		],
 	},
-	{ title: "Trading", items: [{ kind: "soon", label: "Trade Execution" }] },
+	{
+		title: "Trading",
+		items: [
+			{ kind: "link", label: "Trade Execution", to: "/dashboard/execution" },
+		],
+	},
 	{
 		title: "Account",
 		items: [
