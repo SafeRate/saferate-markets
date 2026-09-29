@@ -855,6 +855,8 @@ type TBreak = {
 	what: string;
 	expect: "accept" | "refuse" | "report";
 	csv: () => Promise<string>;
+	/** Import once first; the outcome judged is the second import, with these fields. */
+	again?: Record<string, string>;
 };
 
 const breakTests = async () => {
@@ -998,8 +1000,15 @@ const breakTests = async () => {
 		},
 		{
 			what: "the same file imported twice",
-			expect: "report",
+			expect: "refuse",
 			csv: async () => `${header}\n${row("2026-09-01")}`,
+			again: {},
+		},
+		{
+			what: "the same file again, with Import anyway",
+			expect: "accept",
+			csv: async () => `${header}\n${row("2026-09-01")}`,
+			again: { allowDuplicates: "yes" },
 		},
 	];
 	for (const c of cases) {
@@ -1010,8 +1019,8 @@ const breakTests = async () => {
 		}
 		const csv = await c.csv();
 		let result = await importCsv(id, csv);
-		if (c.what === "the same file imported twice")
-			result = await importCsv(id, csv);
+		if (c.again !== undefined)
+			result = await importCsv(id, csv, "trades.csv", c.again);
 		const refused = problems(result.text);
 		const accepted = refused.length === 0 && /trades? added/.test(result.text);
 		const outcome =
@@ -1032,6 +1041,11 @@ const breakTests = async () => {
 				c.what,
 				`expected ${c.expect}, got ${outcome} (HTTP ${result.status})${said ? `: ${said}` : ""}`,
 			);
+		// A duplicate warning must offer the way through it.
+		if (c.again !== undefined && outcome === "refuse")
+			result.text.includes('name="allowDuplicates"')
+				? pass(`${c.what}: offers "Import anyway"`)
+				: fail(`${c.what}: offers "Import anyway"`, "no checkbox on the page");
 		// Whatever was accepted must still value.
 		if (outcome === "accept") {
 			const page = await get(`/dashboard/portfolios/${id}`);
@@ -1058,10 +1072,16 @@ const tradesCsv = async (trades: TSeedTrade[]) => {
 	return lines.join("\n");
 };
 
-const importCsv = (idPortfolio: string, csv: string, name = "trades.csv") =>
+const importCsv = (
+	idPortfolio: string,
+	csv: string,
+	name = "trades.csv",
+	extra: Record<string, string> = {},
+) =>
 	post(`/dashboard/portfolios/${idPortfolio}/transactions`, {
 		intent: "import",
 		file: new File([csv], name, { type: "text/csv" }),
+		...extra,
 	});
 
 const existingPortfolios = async () => {

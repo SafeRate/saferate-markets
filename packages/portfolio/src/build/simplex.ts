@@ -112,8 +112,9 @@ export type TSimplexSolution = {
 };
 
 type TTableau = {
-	rows: number[][];
-	objective: number[];
+	// Typed arrays: allocated zeroed by the engine, and the same doubles.
+	rows: Float64Array[];
+	objective: Float64Array;
 	basis: number[];
 	columns: number;
 };
@@ -122,23 +123,29 @@ type TTableau = {
 const pivot = (tableau: TTableau, row: number, column: number): void => {
 	const pivotRow = tableau.rows[row];
 	const pivotValue = pivotRow[column];
-	for (let j = 0; j < pivotRow.length; j++) pivotRow[j] /= pivotValue;
+	// Only the pivot row's non-zero columns can change anything: subtracting
+	// factor x 0 is a no-op. The matcher's tableaus are mostly zeros (each
+	// indicator row touches two columns), so this is the same arithmetic in a
+	// fraction of the time. Measured 2026-09-29 on the capped real-universe
+	// match: see saferate-markets packages/portfolio/tests/builder.test.ts.
+	const nonZero: number[] = [];
+	for (let j = 0; j < pivotRow.length; j++) {
+		pivotRow[j] /= pivotValue;
+		if (pivotRow[j] !== 0) nonZero.push(j);
+	}
 
 	for (let i = 0; i < tableau.rows.length; i++) {
 		if (i === row) continue;
 		const factor = tableau.rows[i][column];
 		if (factor === 0) continue;
 		const target = tableau.rows[i];
-		for (let j = 0; j < target.length; j++) {
-			target[j] -= factor * pivotRow[j];
-		}
+		for (const j of nonZero) target[j] -= factor * pivotRow[j];
 	}
 
 	const objectiveFactor = tableau.objective[column];
 	if (objectiveFactor !== 0) {
-		for (let j = 0; j < tableau.objective.length; j++) {
+		for (const j of nonZero)
 			tableau.objective[j] -= objectiveFactor * pivotRow[j];
-		}
 	}
 	tableau.basis[row] = column;
 };
@@ -248,10 +255,11 @@ export const solveLinearProgram = ({
 	// the bound decides which slack the row needs and flipping it afterwards is
 	// where sign errors live.
 	const normalised = constraints.map(({ coefficients, relation, bound }) => {
-		const padded = Array.from(
-			{ length: variables },
-			(_, j) => coefficients[j] ?? 0,
-		);
+		// Already full length (the matcher's rows are), it is read, never written.
+		const padded =
+			coefficients.length === variables
+				? coefficients
+				: Array.from({ length: variables }, (_, j) => coefficients[j] ?? 0);
 		if (bound < 0) {
 			return {
 				coefficients: padded.map((value) => -value),
@@ -278,8 +286,8 @@ export const solveLinearProgram = ({
 	}
 	const columns = column;
 
-	const rows: number[][] = normalised.map((row, i) => {
-		const line = new Array<number>(columns + 1).fill(0);
+	const rows: Float64Array[] = normalised.map((row, i) => {
+		const line = new Float64Array(columns + 1);
 		for (let j = 0; j < variables; j++) line[j] = row.coefficients[j];
 		if (slackOf[i] >= 0) {
 			line[slackOf[i]] = row.relation === "<=" ? 1 : -1;
@@ -294,7 +302,7 @@ export const solveLinearProgram = ({
 	);
 	const tableau: TTableau = {
 		rows,
-		objective: new Array<number>(columns + 1).fill(0),
+		objective: new Float64Array(columns + 1),
 		basis,
 		columns,
 	};
@@ -359,7 +367,7 @@ export const solveLinearProgram = ({
 	}
 
 	// Phase two on the real objective, with the artificials frozen.
-	tableau.objective = new Array<number>(columns + 1).fill(0);
+	tableau.objective = new Float64Array(columns + 1);
 	for (let j = 0; j < variables; j++) tableau.objective[j] = objective[j];
 	for (let i = 0; i < rows.length; i++) {
 		const basic = tableau.basis[i];

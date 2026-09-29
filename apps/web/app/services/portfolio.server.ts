@@ -66,103 +66,161 @@ export type TSecurityInfo = {
 	spreadPercent: number | null;
 };
 
+type TLinkerRisk = { date: string; realDuration: number; indexRatio: number };
+type TFloaterRisk = {
+	date: string;
+	spreadDuration: number;
+	rateDuration: number;
+};
+
+/** One security, loaded and reduced to what valuation needs. */
+type TLoadedSecurity =
+	| { cusip: string; known: false }
+	| {
+			cusip: string;
+			known: true;
+			info: TSecurityInfo;
+			terms: TSecurityTerms | null;
+			marks: TMark[];
+			pricer: TPricer | null;
+			linkerRisk: TLinkerRisk | null;
+			floaterRisk: TFloaterRisk | null;
+	  };
+
+const loadSecurity = async (
+	env: TEnv,
+	cusip: string,
+): Promise<TLoadedSecurity> => {
+	const [detail, prices] = await Promise.all([
+		readSecurityDetail(env, cusip),
+		readSecurityPrices(env, { cusip }),
+	]);
+	if (detail === null) return { cusip, known: false };
+	const family = familyOf(prices);
+	const info: TSecurityInfo = {
+		cusip,
+		family,
+		couponPercent: detail.couponPercent ?? 0,
+		maturityDate: detail.maturityDate,
+		originalSecurityTerm: detail.originalSecurityTerm,
+		detailSecurityType: detail.detailSecurityType,
+		spreadPercent: detail.spread,
+	};
+	const terms: TSecurityTerms | null =
+		family === null
+			? null
+			: {
+					cusip,
+					family,
+					// The detail stores the coupon in PERCENT (4.625), unlike prices.
+					couponRate: (detail.couponPercent ?? 0) / 100,
+					maturityDate: detail.maturityDate,
+					// A floater pays quarterly; everything else coupon-bearing, semiannually.
+					frequency: family === "frn" ? 4 : 2,
+				};
+	let pricer: TPricer | null = null;
+	let linkerRisk: TLinkerRisk | null = null;
+	let floaterRisk: TFloaterRisk | null = null;
+	// TIPS and FRNs are valued from their stored analytics, as the index does.
+	if (terms !== null && (family === "tips" || family === "frn")) {
+		const analytics = await readAnalyticsFor(env, { cusip, basis: family });
+		if (analytics.basis === "tips") {
+			pricer = tipsPricer(
+				terms,
+				analytics.rows.map((r) => ({ date: r.date, indexRatio: r.indexRatio })),
+			);
+			const last = analytics.rows.at(-1);
+			if (last)
+				linkerRisk = {
+					date: last.date,
+					realDuration: last.modifiedDuration,
+					indexRatio: last.indexRatio,
+				};
+		} else if (analytics.basis === "frn") {
+			pricer = frnPricer(
+				terms,
+				analytics.rows.map((r) => ({
+					date: r.date,
+					accrued: r.accruedInterest,
+					indexRate: r.indexRatePercent / 100,
+					spread: r.quotedSpreadBp / 10_000,
+				})),
+			);
+			const last = analytics.rows.at(-1);
+			if (last)
+				floaterRisk = {
+					date: last.date,
+					spreadDuration: last.spreadDurationYears,
+					rateDuration: last.rateDurationYears,
+				};
+		}
+	}
+	return {
+		cusip,
+		known: true,
+		info,
+		terms,
+		marks: prices.map((p) => ({ date: p.date, close: p.close })),
+		pricer,
+		linkerRisk,
+		floaterRisk,
+	};
+};
+
+/**
+ * Loaded securities, per Worker isolate, for the latest price date. Measured
+ * 2026-09-29 on staging: loading 100 securities (a detail, a full price
+ * history and, for TIPS and FRNs, analytics each) was 3.7 to 4.1 s of a
+ * 5 s valuation, and every tab of the same portfolio paid it again. The data
+ * only changes when a new close lands, which changes the key. Bounded: a
+ * long-held bond's history is a few thousand closes.
+ */
+const securityCache = new Map<
+	string,
+	{ asOf: string; loaded: TLoadedSecurity }
+>();
+const SECURITY_CACHE_LIMIT = 400;
+
+const cachedSecurity = async (env: TEnv, cusip: string, asOf: string) => {
+	const hit = securityCache.get(cusip);
+	if (hit !== undefined && hit.asOf === asOf) return hit.loaded;
+	const loaded = await loadSecurity(env, cusip);
+	securityCache.delete(cusip);
+	securityCache.set(cusip, { asOf, loaded });
+	while (securityCache.size > SECURITY_CACHE_LIMIT) {
+		const oldest = securityCache.keys().next().value;
+		if (oldest === undefined) break;
+		securityCache.delete(oldest);
+	}
+	return loaded;
+};
+
 /** Terms and closes for each CUSIP, from its detail and price history. */
 export const loadSecurities = async (env: TEnv, cusips: string[]) => {
 	const unique = [...new Set(cusips)];
+	const asOf = await readLatestPriceDate(env);
 	const loaded = await Promise.all(
-		unique.map(async (cusip) => {
-			const [detail, prices] = await Promise.all([
-				readSecurityDetail(env, cusip),
-				readSecurityPrices(env, { cusip }),
-			]);
-			return { cusip, detail, prices };
-		}),
+		unique.map((cusip) => cachedSecurity(env, cusip, asOf)),
 	);
 	const info = new Map<string, TSecurityInfo>();
 	const terms = new Map<string, TSecurityTerms>();
 	const marks = new Map<string, TMark[]>();
 	const pricers = new Map<string, TPricer>();
 	/** The latest stored TIPS / FRN analytics row, for their own risk measures. */
-	const linkerRisk = new Map<
-		string,
-		{ date: string; realDuration: number; indexRatio: number }
-	>();
-	const floaterRisk = new Map<
-		string,
-		{ date: string; spreadDuration: number; rateDuration: number }
-	>();
+	const linkerRisk = new Map<string, TLinkerRisk>();
+	const floaterRisk = new Map<string, TFloaterRisk>();
 	const unknown: string[] = [];
-	for (const { cusip, detail, prices } of loaded) {
-		if (detail === null) {
-			unknown.push(cusip);
+	for (const one of loaded) {
+		if (!one.known) {
+			unknown.push(one.cusip);
 			continue;
 		}
-		const family = familyOf(prices);
-		info.set(cusip, {
-			cusip,
-			family,
-			couponPercent: detail.couponPercent ?? 0,
-			maturityDate: detail.maturityDate,
-			originalSecurityTerm: detail.originalSecurityTerm,
-			detailSecurityType: detail.detailSecurityType,
-			spreadPercent: detail.spread,
-		});
-		if (family !== null) {
-			terms.set(cusip, {
-				cusip,
-				family,
-				// The detail stores the coupon in PERCENT (4.625), unlike prices.
-				couponRate: (detail.couponPercent ?? 0) / 100,
-				maturityDate: detail.maturityDate,
-				// A floater pays quarterly; everything else coupon-bearing, semiannually.
-				frequency: family === "frn" ? 4 : 2,
-			});
-		}
-		// TIPS and FRNs are valued from their stored analytics, as the index does.
-		if (family === "tips" || family === "frn") {
-			const analytics = await readAnalyticsFor(env, { cusip, basis: family });
-			const security = terms.get(cusip) as TSecurityTerms;
-			if (analytics.basis === "tips") {
-				pricers.set(
-					cusip,
-					tipsPricer(
-						security,
-						analytics.rows.map((r) => ({ date: r.date, indexRatio: r.indexRatio })),
-					),
-				);
-				const last = analytics.rows.at(-1);
-				if (last)
-					linkerRisk.set(cusip, {
-						date: last.date,
-						realDuration: last.modifiedDuration,
-						indexRatio: last.indexRatio,
-					});
-			} else if (analytics.basis === "frn") {
-				pricers.set(
-					cusip,
-					frnPricer(
-						security,
-						analytics.rows.map((r) => ({
-							date: r.date,
-							accrued: r.accruedInterest,
-							indexRate: r.indexRatePercent / 100,
-							spread: r.quotedSpreadBp / 10_000,
-						})),
-					),
-				);
-				const last = analytics.rows.at(-1);
-				if (last)
-					floaterRisk.set(cusip, {
-						date: last.date,
-						spreadDuration: last.spreadDurationYears,
-						rateDuration: last.rateDurationYears,
-					});
-			}
-		}
-		marks.set(
-			cusip,
-			prices.map((p) => ({ date: p.date, close: p.close })),
-		);
+		info.set(one.cusip, one.info);
+		if (one.terms !== null) terms.set(one.cusip, one.terms);
+		if (one.pricer !== null) pricers.set(one.cusip, one.pricer);
+		if (one.linkerRisk !== null) linkerRisk.set(one.cusip, one.linkerRisk);
+		if (one.floaterRisk !== null) floaterRisk.set(one.cusip, one.floaterRisk);
+		marks.set(one.cusip, one.marks);
 	}
 	return { info, terms, marks, pricers, linkerRisk, floaterRisk, unknown };
 };

@@ -91,7 +91,13 @@ export const loader = async ({
 
 type TActionResult =
 	| { intent: string; ok: true; message: string }
-	| { intent: string; ok: false; errors: string[] };
+	| {
+			intent: string;
+			ok: false;
+			errors: string[];
+			/** Trades already in the portfolio: the import form then offers "Import anyway". */
+			duplicates?: number;
+	  };
 
 export const action = async ({
 	request,
@@ -208,6 +214,29 @@ export const action = async ({
 					e.line === null ? e.message : `Line ${e.line}: ${e.message}`,
 				),
 			};
+		// The same file imported twice doubles every position, silently. Found
+		// 2026-09-29 by the break tests. Identical trades can be real (two
+		// tickets, same day, same price), so this asks rather than refuses.
+		const same = (t: {
+			cusip: string;
+			side: string;
+			tradeDate: string;
+			faceAmount: number;
+			cleanPrice: number;
+		}) => `${t.cusip}|${t.side}|${t.tradeDate}|${t.faceAmount}|${t.cleanPrice}`;
+		const held = new Set((await listTransactions(scope)).map(same));
+		const repeated = parsed.trades.filter((t) => held.has(same(t)));
+		if (repeated.length > 0 && form.get("allowDuplicates") !== "yes") {
+			const first = repeated[0];
+			return {
+				intent,
+				ok: false,
+				duplicates: repeated.length,
+				errors: [
+					`${repeated.length.toLocaleString("en-US")} of this file's ${parsed.trades.length.toLocaleString("en-US")} trades ${repeated.length === 1 ? "is" : "are"} already in this portfolio, with the same CUSIP, side, trade date, face and price (line ${first.line}: ${first.side} ${first.faceAmount.toLocaleString("en-US")} ${first.cusip} on ${first.tradeDate}). Nothing was imported. If the file was imported before, there is nothing to do; if these are new trades, tick "Import anyway" and import it again.`,
+				],
+			};
+		}
 		if (parsed.trades.length > MAX_TRANSACTIONS_PER_ADD)
 			return {
 				intent,
@@ -490,6 +519,15 @@ export default function Transactions({
 						required
 						type="file"
 					/>
+					{actionData?.intent === "import" &&
+					!actionData.ok &&
+					"duplicates" in actionData &&
+					actionData.duplicates ? (
+						<label className="flex items-center gap-1 text-sm text-slate-700">
+							<input name="allowDuplicates" type="checkbox" value="yes" />
+							Import anyway
+						</label>
+					) : null}
 					<button className={button} disabled={busy} type="submit">
 						Import
 					</button>

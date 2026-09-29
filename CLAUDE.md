@@ -426,7 +426,21 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   - More than 5,000 rows in one import was a 500 (the persistence cap, never
     checked by the page); now a message. `MAX_TRANSACTIONS_PER_ADD`.
   - The overview added cash to a market value that already includes it.
-  Open, for Dylan: re-importing the same file is accepted silently.
+  - Re-importing the same file doubled every position silently. An import
+    containing trades identical to stored ones (CUSIP, side, trade date,
+    face, price) now stops and offers "Import anyway" (`allowDuplicates`),
+    since two identical tickets can be real.
+- **Speed, measured on staging (2026-09-29, second pass).** A 100-security
+  valuation spent 3.7-4.1 s of its 5 s loading securities (a detail and a
+  FULL price history each over the service binding: the RPC takes no range),
+  CPU only 1-2 s. Loaded securities are now cached per isolate, keyed by the
+  latest price date, 400 at most (`securityCache` in portfolio.server.ts):
+  other tabs of the same portfolio 8 s to 1.1-1.6 s, the overview 5.9 s to
+  0.8 s; a cold first view is still 4-5 s. The cached marks are shared, so
+  never sort or push them in place. The real fix for the cold view is a
+  batch or ranged securityPrices RPC in treasury-api (frozen). The simplex
+  pivots only non-zero columns on Float64Arrays: the capped match 13.6 s to
+  about 4 s, identical plans (also on treasury PR #9).
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in
