@@ -44,12 +44,31 @@ export const loader = async ({
 		idOrganization: org.idOrganization,
 		idPortfolio: portfolio.idPortfolio,
 	});
+	const ATTRIBUTION_PERIODS = [
+		"mtd",
+		"qtd",
+		"ytd",
+		"1y",
+		"inception",
+		"custom",
+	] as const;
+	const askedAttr = url.searchParams.get("attr") ?? "ytd";
+	const attributionPeriod = (ATTRIBUTION_PERIODS as readonly string[]).includes(
+		askedAttr,
+	)
+		? (askedAttr as (typeof ATTRIBUTION_PERIODS)[number])
+		: "ytd";
 	const valued = await valuePortfolio({
 		env,
 		transactions,
 		codeBenchmark: portfolio.codeBenchmark,
 		policyIncome: portfolio.policyIncome,
 		custom: from !== null && to !== null && from < to ? { from, to } : null,
+		attributionPeriod:
+			attributionPeriod === "custom" &&
+			!(from !== null && to !== null && from < to)
+				? "ytd"
+				: attributionPeriod,
 	});
 	return { portfolio, valued, from, to };
 };
@@ -96,6 +115,200 @@ const Section = ({
 
 const th = "px-3 py-2 font-semibold";
 const td = "tabular px-3 py-2";
+
+const ATTRIBUTION_GROUPS: { title: string; keys: string[] }[] = [
+	{ title: "Carry and roll-down", keys: ["carry", "rolldown"] },
+	{
+		title: "Curve",
+		keys: ["curveShift", "curveTwist", "curveButterfly", "curveShape"],
+	},
+	{ title: "Selection", keys: ["selection"] },
+	{ title: "Bills, TIPS and FRNs", keys: ["otherIncome", "otherPrice"] },
+	{ title: "Trading and cash", keys: ["trading", "cash"] },
+];
+
+const PERIOD_LINKS = [
+	["mtd", "MTD"],
+	["qtd", "QTD"],
+	["ytd", "YTD"],
+	["1y", "1 year"],
+	["inception", "Since inception"],
+] as const;
+
+const bp = (value: number | null | undefined) =>
+	value === null || value === undefined
+		? "—"
+		: `${value >= 0 ? "+" : ""}${(value * 10_000).toFixed(1)} bp`;
+
+type TAttribution = {
+	key: string;
+	label: string;
+	start: string | null;
+	end: string;
+	totalReturn: number | null;
+	components: {
+		key: string;
+		label: string;
+		dollars: number;
+		contribution: number;
+	}[];
+	residual: number;
+	benchmark: { cumulative: number; annualised: number } | null;
+};
+
+const AttributionSection = ({
+	attribution: a,
+	benchmarkName,
+	from,
+	to,
+}: {
+	attribution: TAttribution;
+	benchmarkName: string | null;
+	from: string | null;
+	to: string | null;
+}) => {
+	const byKey = new Map(a.components.map((c) => [c.key, c]));
+	const active =
+		a.totalReturn === null || a.benchmark === null
+			? null
+			: a.totalReturn - a.benchmark.cumulative;
+	return (
+		<Section
+			aside={
+				<nav className="flex flex-wrap gap-1 text-xs">
+					{PERIOD_LINKS.map(([key, label]) => (
+						<Link
+							className={`rounded-full border px-3 py-1 font-semibold ${a.key === key ? "border-primary bg-primary/10 text-primary" : "border-slate-300 text-slate-600 hover:border-primary/40"}`}
+							key={key}
+							preventScrollReset
+							to={`?attr=${key}${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`}
+						>
+							{label}
+						</Link>
+					))}
+					{from && to ? (
+						<Link
+							className={`rounded-full border px-3 py-1 font-semibold ${a.key === "custom" ? "border-primary bg-primary/10 text-primary" : "border-slate-300 text-slate-600"}`}
+							preventScrollReset
+							to={`?attr=custom&from=${from}&to=${to}`}
+						>
+							{from} to {to}
+						</Link>
+					) : null}
+				</nav>
+			}
+			title={`Attribution: ${a.label.toLowerCase()}`}
+		>
+			{a.totalReturn === null ? (
+				<p className="rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-600">
+					Nothing was held in this period.
+				</p>
+			) : (
+				<div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+					<table className="w-full text-sm">
+						<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+							<tr>
+								<th className={th}>Source</th>
+								<th className={`${th} text-right`}>Dollars</th>
+								<th className={`${th} text-right`}>Contribution</th>
+							</tr>
+						</thead>
+						<tbody>
+							{ATTRIBUTION_GROUPS.map((group) => {
+								const rows = group.keys
+									.map((k) => byKey.get(k))
+									.filter((c) => c !== undefined);
+								const shown = rows.filter((c) => Math.abs(c.dollars) >= 0.005);
+								if (shown.length === 0) return null;
+								const sumDollars = rows.reduce((s, c) => s + c.dollars, 0);
+								const sumShare = rows.reduce((s, c) => s + c.contribution, 0);
+								return [
+									<tr
+										className="border-t border-slate-200 bg-slate-50/60"
+										key={group.title}
+									>
+										<td className="px-3 py-2 font-semibold text-neutral-900">
+											{group.title}
+										</td>
+										<td
+											className={`${td} text-right font-semibold ${signClass(sumDollars)}`}
+										>
+											{money(sumDollars)}
+										</td>
+										<td
+											className={`${td} text-right font-semibold ${signClass(sumShare)}`}
+										>
+											{bp(sumShare)}
+										</td>
+									</tr>,
+									...(shown.length > 1
+										? shown.map((c) => (
+												<tr className="border-t border-slate-100" key={c.key}>
+													<td className="px-3 py-1.5 pl-8 text-slate-600">{c.label}</td>
+													<td className={`${td} py-1.5 text-right ${signClass(c.dollars)}`}>
+														{money(c.dollars)}
+													</td>
+													<td
+														className={`${td} py-1.5 text-right ${signClass(c.contribution)}`}
+													>
+														{bp(c.contribution)}
+													</td>
+												</tr>
+											))
+										: []),
+								];
+							})}
+							<tr className="border-t-2 border-slate-300">
+								<td className="px-3 py-2 font-semibold text-neutral-900">
+									Portfolio return ({a.start} to {a.end})
+								</td>
+								<td className={`${td} text-right font-semibold`}>
+									{money(a.components.reduce((s, c) => s + c.dollars, 0))}
+								</td>
+								<td
+									className={`${td} text-right font-semibold ${signClass(a.totalReturn)}`}
+								>
+									{percent(a.totalReturn)}
+								</td>
+							</tr>
+							{a.benchmark ? (
+								<>
+									<tr className="border-t border-slate-100">
+										<td className="px-3 py-2 text-slate-600">
+											{benchmarkName ?? "Benchmark"}
+										</td>
+										<td />
+										<td className={`${td} text-right`}>
+											{percent(a.benchmark.cumulative)}
+										</td>
+									</tr>
+									<tr className="border-t border-slate-100">
+										<td className="px-3 py-2 font-semibold">Active return</td>
+										<td />
+										<td className={`${td} text-right font-semibold ${signClass(active)}`}>
+											{bp(active)}
+										</td>
+									</tr>
+								</>
+							) : null}
+						</tbody>
+					</table>
+				</div>
+			)}
+			<p className="mt-2 text-xs text-slate-500">
+				Notes and bonds are decomposed each day by exact repricing on Safe Rate's
+				fitted zero curve: carry (the curve's forwards realised, the same per dollar
+				for every bond), roll-down (ageing down an unchanged curve), the curve's
+				move split into level, slope and curvature on Diebold-Li loadings, and
+				selection (the change in the bond's own cheapness to the curve). Bills sit
+				below the curve's fitted range and TIPS and FRNs are priced off other
+				curves, so they are split into income and price only. Days are linked with
+				Carino's method, so contributions add to the time-weighted return
+				{Math.abs(a.residual) > 1e-6 ? ` (unexplained: ${bp(a.residual)})` : ""}.
+			</p>
+		</Section>
+	);
+};
 
 export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 	const { portfolio, valued, from, to } = loaderData;
@@ -312,6 +525,13 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 					portfolio did.
 				</p>
 			</Section>
+
+			<AttributionSection
+				attribution={v.attribution}
+				benchmarkName={v.benchmark?.name ?? null}
+				from={from}
+				to={to}
+			/>
 
 			<Section title="Growth of $1">
 				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

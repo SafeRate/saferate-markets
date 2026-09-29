@@ -3,3 +3,5 @@ export * from "./ledger";
 export * from "./returns";
 export * from "./csv";
 export * from "./pricers";
+export * from "./attribution";
+export * from "./curve";

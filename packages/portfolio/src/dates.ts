@@ -114,3 +114,27 @@ export const accruedPer100 = ({
 		(daysBetween(previous, settle) / daysBetween(previous, next))
 	);
 };
+
+const isLeapYear = (year: number) =>
+	(year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+/**
+ * Years between two ISO dates, actual/actual (ISDA): each calendar year's days
+ * over that year's length. The basis the treasury repo's cashflow times and
+ * attribution periods are measured on (treasuryYtm.ts yearFraction).
+ */
+export const yearFraction = (fromIso: string, toIso: string) => {
+	const from = toDate(fromIso);
+	const to = toDate(toIso);
+	if (to <= from) return 0;
+	let total = 0;
+	let cursor = from;
+	while (cursor < to) {
+		const year = cursor.getUTCFullYear();
+		const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+		const segmentEnd = yearEnd < to ? yearEnd : to;
+		total += daysBetween(cursor, segmentEnd) / (isLeapYear(year) ? 366 : 365);
+		cursor = segmentEnd;
+	}
+	return total;
+};

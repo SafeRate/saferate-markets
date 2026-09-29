@@ -9,7 +9,11 @@ import {
 	type TEnv,
 } from "@markets/mcp-tools";
 import {
+	attributeLedger,
+	attributionOver,
 	buildLedger,
+	pricersFor,
+	type TCurveParams,
 	chainReturns,
 	checkTrades,
 	externalFlows,
@@ -161,6 +165,56 @@ export const loadSecurities = async (env: TEnv, cusips: string[]) => {
 	return { info, terms, marks, pricers, linkerRisk, floaterRisk, unknown };
 };
 
+/**
+ * The fitted zero curve's parameters for every day in a window, from the raw
+ * curve rows (each tenor row repeats its day's fit). In five-year pieces: the
+ * zero family stores ten rows a day and upstream caps a reply at 20,000.
+ */
+const loadCurveParams = async (env: TEnv, from: string, to: string) => {
+	const params = new Map<string, TCurveParams>();
+	const ZRow = z
+		.object({
+			date: z.string(),
+			theta_0: z.number(),
+			theta_1: z.number(),
+			theta_2: z.number(),
+			theta_3: z.number(),
+			lambda_1: z.number(),
+			lambda_2: z.number(),
+		})
+		.passthrough();
+	let cursor = from;
+	while (cursor <= to) {
+		const pieceEnd = new Date(`${cursor}T00:00:00Z`);
+		pieceEnd.setUTCFullYear(pieceEnd.getUTCFullYear() + 5);
+		const until =
+			pieceEnd.toISOString().slice(0, 10) < to
+				? pieceEnd.toISOString().slice(0, 10)
+				: to;
+		const reply = await call(
+			env,
+			"curveSeries",
+		)({ family: "zero", from: cursor, to: until });
+		const rows = Array.isArray(reply)
+			? reply
+			: ((reply as { rows?: unknown[] } | null)?.rows ?? []);
+		for (const row of z.array(ZRow).parse(rows))
+			if (!params.has(row.date))
+				params.set(row.date, {
+					theta0: row.theta_0,
+					theta1: row.theta_1,
+					theta2: row.theta_2,
+					theta3: row.theta_3,
+					lambda1: row.lambda_1,
+					lambda2: row.lambda_2,
+				});
+		const next = new Date(`${until}T00:00:00Z`);
+		next.setUTCDate(next.getUTCDate() + 1);
+		cursor = next.toISOString().slice(0, 10);
+	}
+	return params;
+};
+
 /** The bill curve over a window: the market's calendar, and what cash earns. */
 const loadMoneyMarket = async (env: TEnv, from: string, to: string) => {
 	const reply = await call(
@@ -224,7 +278,10 @@ export const valuePortfolio = async ({
 	codeBenchmark,
 	policyIncome,
 	custom,
+	attributionPeriod = "ytd",
 }: {
+	/** Which period to attribute: one at a time, it is the costly part. */
+	attributionPeriod?: TPeriodKey;
 	env: TEnv;
 	transactions: TPortfolioTransaction[];
 	codeBenchmark: string | null;
@@ -512,8 +569,52 @@ export const valuePortfolio = async ({
 		];
 	});
 
+	// Attribution over one period, on the day's fitted curves.
+	const attrStart =
+		attributionPeriod === "custom"
+			? (custom?.from ?? null)
+			: attributionPeriod === "inception"
+				? null
+				: periodStart(attributionPeriod, end);
+	const attrEnd =
+		attributionPeriod === "custom" && custom
+			? custom.to < end
+				? custom.to
+				: end
+			: end;
+	const attrOpen =
+		attrStart !== null && firstDay !== null && firstDay <= attrStart
+			? attrStart
+			: firstDay;
+	const curveFrom = new Date(`${attrOpen ?? firstTrade}T00:00:00Z`);
+	curveFrom.setUTCDate(curveFrom.getUTCDate() - 7);
+	const curves = await loadCurveParams(
+		env,
+		curveFrom.toISOString().slice(0, 10),
+		attrEnd,
+	);
+	const attributionDays = attributeLedger({
+		ledger,
+		trades,
+		terms,
+		pricers: pricersFor(terms, pricers),
+		marks,
+		curves,
+		window: { start: attrOpen, end: attrEnd },
+	});
+	const attribution = {
+		key: attributionPeriod,
+		label: PERIOD_LABEL[attributionPeriod],
+		...attributionOver(attributionDays, attrOpen, attrEnd),
+		benchmark:
+			benchmark === null || attrOpen === null
+				? null
+				: levelReturn(benchmarkLevels, attrOpen, attrEnd),
+	};
+
 	return {
 		status: "valued" as const,
+		attribution,
 		awayFromClose,
 		asOf: end,
 		policyIncome,

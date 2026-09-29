@@ -330,6 +330,16 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   duration against a 7-year index). Future TIPS/FRN coupons hold today's ratio
   or rate flat and are marked "estimate"; breakeven- and forward-implied
   projections are a later refinement.
+- **Attribution** (packages/portfolio attribution.ts): the treasury repo's
+  exact-repricing decomposition (returnAttribution.ts), ported and run DAILY on
+  the ledger's own holdings, Carino-linked over any period (one period per page
+  view: it is the costly part). Carry, roll-down, curve split into Diebold-Li
+  level / slope / curvature (fixed loadings, decay 1/1.3684y) plus other shape,
+  selection; bills/TIPS/FRNs as income and price; trading (trade vs close);
+  cash interest. NOT split on the NSS thetas: measured 25 to 28 Sep, theta0
+  moved +152bp in a day against theta3, so theta splits are offsetting
+  fiction. Components add to the TWR (residual < 1e-9 in tests; nil on the
+  four live test portfolios).
 - TIPS and FRN risk is shown APART from nominal duration (real duration;
   spread and rate duration), never blended.
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
@@ -338,8 +348,7 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   getParentClientNodes) - restart it; it is not the code.
 
 ### Next, in order (agreed with Dylan 2026-09-29)
-1. Custom-period attribution (MTD/YTD/1Y/SI/custom)
-   using saferate-treasury's attribution libraries against the indices.
+1. (done) Attribution: see above.
 2. Stress testing and VaR/ES: portfolioStress.ts and historicalSimulation.ts
    (filtered historical simulation from 2008; Monte Carlo was rejected on
    purpose, slope kurtosis 79.8), plus user curve shocks on the Diebold-Li

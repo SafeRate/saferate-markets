@@ -1,0 +1,161 @@
+[
+	{
+		"date": "2026-09-24",
+		"params": {
+			"theta0": -0.039303920244612926,
+			"theta1": 0.0794819034917499,
+			"theta2": 0.078028284555595,
+			"theta3": 0.2732704008093541,
+			"lambda1": 2.2663473114408585,
+			"lambda2": 16.203741869908157
+		},
+		"zero": [
+			{
+				"tenorYears": 1,
+				"zeroRate": 4.595242586638242
+			},
+			{
+				"tenorYears": 2,
+				"zeroRate": 4.858692206072225
+			},
+			{
+				"tenorYears": 3,
+				"zeroRate": 4.963251916946177
+			},
+			{
+				"tenorYears": 5,
+				"zeroRate": 5.005079973934847
+			},
+			{
+				"tenorYears": 7,
+				"zeroRate": 5.030349267544555
+			},
+			{
+				"tenorYears": 10,
+				"zeroRate": 5.150562585874771
+			},
+			{
+				"tenorYears": 15,
+				"zeroRate": 5.430250476017326
+			},
+			{
+				"tenorYears": 20,
+				"zeroRate": 5.596016257774686
+			},
+			{
+				"tenorYears": 25,
+				"zeroRate": 5.581353034746205
+			},
+			{
+				"tenorYears": 30,
+				"zeroRate": 5.411281067558983
+			}
+		]
+	},
+	{
+		"date": "2026-09-25",
+		"params": {
+			"theta0": -0.03386665674698439,
+			"theta1": 0.07427125827887311,
+			"theta2": 0.07138237864394081,
+			"theta3": 0.2601779483585648,
+			"lambda1": 2.2182953837160464,
+			"lambda2": 16.024980634606724
+		},
+		"zero": [
+			{
+				"tenorYears": 1,
+				"zeroRate": 4.568951707532539
+			},
+			{
+				"tenorYears": 2,
+				"zeroRate": 4.8077767682600125
+			},
+			{
+				"tenorYears": 3,
+				"zeroRate": 4.903681089665338
+			},
+			{
+				"tenorYears": 5,
+				"zeroRate": 4.9533502143779735
+			},
+			{
+				"tenorYears": 7,
+				"zeroRate": 4.998074205713791
+			},
+			{
+				"tenorYears": 10,
+				"zeroRate": 5.14499534732667
+			},
+			{
+				"tenorYears": 15,
+				"zeroRate": 5.447780425162943
+			},
+			{
+				"tenorYears": 20,
+				"zeroRate": 5.621417186427671
+			},
+			{
+				"tenorYears": 25,
+				"zeroRate": 5.611803452738968
+			},
+			{
+				"tenorYears": 30,
+				"zeroRate": 5.448978767603038
+			}
+		]
+	},
+	{
+		"date": "2026-09-28",
+		"params": {
+			"theta0": -0.0186547954236841,
+			"theta1": 0.058773165765902184,
+			"theta2": 0.06584081117263989,
+			"theta3": 0.21999415011529905,
+			"lambda1": 2.024566146574622,
+			"lambda2": 15.763241021707701
+		},
+		"zero": [
+			{
+				"tenorYears": 1,
+				"zeroRate": 4.619444950894789
+			},
+			{
+				"tenorYears": 2,
+				"zeroRate": 4.883009856656462
+			},
+			{
+				"tenorYears": 3,
+				"zeroRate": 4.983005291635638
+			},
+			{
+				"tenorYears": 5,
+				"zeroRate": 5.028303558440945
+			},
+			{
+				"tenorYears": 7,
+				"zeroRate": 5.070956675270319
+			},
+			{
+				"tenorYears": 10,
+				"zeroRate": 5.216528448579202
+			},
+			{
+				"tenorYears": 15,
+				"zeroRate": 5.508744463877225
+			},
+			{
+				"tenorYears": 20,
+				"zeroRate": 5.673622685311535
+			},
+			{
+				"tenorYears": 25,
+				"zeroRate": 5.670422148203611
+			},
+			{
+				"tenorYears": 30,
+				"zeroRate": 5.5313842306139245
+			}
+		]
+	}
+]
