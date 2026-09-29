@@ -144,6 +144,128 @@ const ScenarioTable = ({
 	</div>
 );
 
+type TTsay = NonNullable<
+	Extract<
+		Awaited<ReturnType<typeof analyseStress>>,
+		{ status: "analysed" }
+	>["tsay"]
+>;
+
+const pValue = (p: number) => (p < 0.0001 ? "< 0.0001" : p.toFixed(4));
+
+const TsaySection = ({
+	tsay,
+	sigmaNote,
+}: {
+	tsay: TTsay;
+	sigmaNote: number;
+}) => {
+	const rows: {
+		label: string;
+		raw: string;
+		filtered: string;
+		reading: string;
+	}[] = [
+		{
+			label: "Excess kurtosis",
+			raw: number(tsay.raw.excessKurtosis, 2),
+			filtered: number(tsay.filtered.excessKurtosis, 2),
+			reading:
+				"0 for a normal distribution; above 0, more big days than a normal allows",
+		},
+		{
+			label: "Skewness",
+			raw: number(tsay.raw.skewness, 2),
+			filtered: number(tsay.filtered.skewness, 2),
+			reading: "below 0, the big days are losses more often than gains",
+		},
+		{
+			label: "Jarque-Bera p-value",
+			raw: pValue(tsay.raw.jarqueBeraPValue),
+			filtered: pValue(tsay.filtered.jarqueBeraPValue),
+			reading: "below 0.05 rejects a normal distribution",
+		},
+		{
+			label: "Ljung-Box Q(10), squared",
+			raw: `${number(tsay.raw.ljungBoxSquared, 0)} (p ${pValue(tsay.raw.ljungBoxSquaredPValue)})`,
+			filtered: `${number(tsay.filtered.ljungBoxSquared, 0)} (p ${pValue(tsay.filtered.ljungBoxSquaredPValue)})`,
+			reading:
+				"a small p on the raw series means volatility clusters; after filtering it should not",
+		},
+		{
+			label: "Hill tail index (losses)",
+			raw: tsay.raw.hillAlpha === null ? "—" : number(tsay.raw.hillAlpha, 2),
+			filtered:
+				tsay.filtered.hillAlpha === null ? "—" : number(tsay.filtered.hillAlpha, 2),
+			reading: "the smaller, the heavier the tail; a normal has no finite index",
+		},
+	];
+	return (
+		<section className="mt-8">
+			<h2 className="font-semibold text-neutral-900">
+				Fat tails and clustering (Tsay)
+			</h2>
+			<div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+				<table className="w-full text-sm">
+					<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+						<tr>
+							<th className={th}>Test</th>
+							<th className={`${th} text-right`}>Daily P&amp;L</th>
+							<th className={`${th} text-right`}>GARCH-filtered</th>
+							<th className={th}>How to read it</th>
+						</tr>
+					</thead>
+					<tbody>
+						{rows.map((r) => (
+							<tr className="border-t border-slate-100" key={r.label}>
+								<td className="px-3 py-2">{r.label}</td>
+								<td className={`${td} text-right`}>{r.raw}</td>
+								<td className={`${td} text-right`}>{r.filtered}</td>
+								<td className="px-3 py-2 text-xs text-slate-500">{r.reading}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+			<div className="mt-3 grid gap-3 sm:grid-cols-3">
+				<div className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+					<p className="text-xs uppercase tracking-wide text-slate-500">
+						GARCH(1,1)
+					</p>
+					<p className="mt-1">
+						Persistence {number(tsay.garch.persistence, 4)}; today's daily volatility{" "}
+						{money(tsay.garch.todayVolatility)} against a long-run{" "}
+						{money(tsay.garch.longRunDailyVolatility)}.
+					</p>
+				</div>
+				<div className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:col-span-2">
+					<p className="text-xs uppercase tracking-wide text-slate-500">
+						Student-t, {number(tsay.studentT.degreesOfFreedom, 1)} degrees of freedom
+					</p>
+					<p className="mt-1">
+						{tsay.studentT.oneDay
+							.map(
+								(r) =>
+									`1-day ${Math.round(r.confidence * 100)}%: VaR ${money(r.valueAtRisk)} (${percent(r.valueAtRisk / sigmaNote)}), shortfall ${money(r.expectedShortfall)}`,
+							)
+							.join(" · ")}
+					</p>
+				</div>
+			</div>
+			<p className="mt-2 text-xs text-slate-500">
+				Tsay's diagnostics on this book's history: what today's key-rate DV01 would
+				have made or lost on each of {tsay.days.toLocaleString("en-US")} days since
+				2008. GARCH divides each day by the volatility of its time; what is left is
+				the shape of the shocks, fitted with a Student-t by maximum likelihood
+				(fewer degrees of freedom, fatter tails; a normal is the limit as they
+				grow). The t view is a third estimate beside the historical and
+				extreme-value figures above; where they disagree, the tail is the uncertain
+				part.
+			</p>
+		</section>
+	);
+};
+
 export default function Stress({ loaderData }: Route.ComponentProps) {
 	const { portfolios, portfolio, custom, analysis } = loaderData;
 	const header = (
@@ -310,6 +432,8 @@ export default function Stress({ loaderData }: Route.ComponentProps) {
 					in DV01; TIPS and FRNs are excluded.
 				</p>
 			</section>
+
+			{a.tsay ? <TsaySection sigmaNote={a.marketValue} tsay={a.tsay} /> : null}
 
 			<section className="mt-8">
 				<h2 className="font-semibold text-neutral-900">Key-rate DV01</h2>

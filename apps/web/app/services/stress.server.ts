@@ -2,6 +2,13 @@ import { call, type TEnv } from "@markets/mcp-tools";
 import type { TPortfolioTransaction } from "@markets/persistence";
 import {
 	buildScenarios,
+	describe,
+	fitGarch,
+	fitStudentT,
+	garchVariance,
+	hillTailIndex,
+	ljungBox,
+	studentTRisk,
 	KEY_RATES,
 	pricersFor,
 	type TCurveParams,
@@ -40,6 +47,74 @@ import { loadCurveParams, loadPortfolioState } from "./portfolio.server";
  */
 
 const HISTORY_START = "2008-09-02";
+
+/**
+ * Fat tails, clustering and a Student-t view of one book's daily P&L history
+ * (packages/portfolio risk/tsay.ts). Days more than five calendar days apart
+ * are skipped, as the scenario builder skips them.
+ */
+const tailDiagnostics = (
+	history: { dates: string[]; levels: number[][] },
+	keyRateDv01: number[],
+) => {
+	const pnl: number[] = [];
+	for (let i = 1; i < history.levels.length; i++) {
+		const gap =
+			(Date.parse(history.dates[i]) - Date.parse(history.dates[i - 1])) /
+			86_400_000;
+		if (!(gap > 0) || gap > 5) continue;
+		pnl.push(
+			-history.levels[i].reduce(
+				(s, level, k) =>
+					s + (level - history.levels[i - 1][k]) * (keyRateDv01[k] ?? 0),
+				0,
+			),
+		);
+	}
+	const fitted = fitGarch(pnl);
+	const variance = garchVariance(pnl, fitted);
+	const standardised = pnl.map((x, i) => x / Math.sqrt(variance[i]));
+	const last = pnl[pnl.length - 1];
+	const sigmaNext = Math.sqrt(
+		fitted.omega +
+			fitted.alpha * last * last +
+			fitted.beta * variance[variance.length - 1],
+	);
+	const t = fitStudentT(standardised);
+	const side = (xs: number[]) => {
+		const d = describe(xs);
+		const lb = ljungBox(
+			xs.map((x) => x * x),
+			10,
+		);
+		const hill = hillTailIndex(xs);
+		return {
+			skewness: d.skewness,
+			excessKurtosis: d.excessKurtosis,
+			jarqueBeraPValue: d.jarqueBeraPValue,
+			ljungBoxSquared: lb.statistic,
+			ljungBoxSquaredPValue: lb.pValue,
+			hillAlpha: hill?.alpha ?? null,
+		};
+	};
+	return {
+		days: pnl.length,
+		raw: side(pnl),
+		filtered: side(standardised),
+		garch: {
+			persistence: fitted.persistence,
+			longRunDailyVolatility: Math.sqrt(fitted.longRunVariance),
+			todayVolatility: sigmaNext,
+		},
+		studentT: {
+			degreesOfFreedom: t.degreesOfFreedom,
+			oneDay: [0.95, 0.99].map((c) => ({
+				confidence: c,
+				...studentTRisk(sigmaNext, t.degreesOfFreedom, c),
+			})),
+		},
+	};
+};
 
 /** Scenario sets per as-of date, per isolate: the GARCH fit is the costly part. */
 const scenarioCache = new Map<
@@ -308,6 +383,12 @@ export const analyseStress = async ({
 	);
 	const dv01 = keyRateDv01.reduce((s, v) => s + v, 0);
 
+	// Tsay's diagnostics on this book's own history: what today's key-rate
+	// DV01 would have made or lost on every day since 2008, before and after
+	// GARCH filtering. Linear in DV01, like the simulation.
+	const tsay =
+		nominal.length === 0 ? null : tailDiagnostics(history, keyRateDv01);
+
 	const risk =
 		nominal.length === 0
 			? null
@@ -358,6 +439,7 @@ export const analyseStress = async ({
 		standard,
 		replayed,
 		risk,
+		tsay,
 		historyDays: history.set.dates.length,
 		historyFrom: history.set.dates[0] ?? null,
 		others: others.map((o) => ({ ...o, info: info.get(o.cusip) ?? null })),

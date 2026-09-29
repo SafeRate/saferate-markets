@@ -353,6 +353,13 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   as-of date: first view ~7s, then ~1.5s. Checked on the live single-note
   book: DV01 $675/bp, +100bp -6.72%, 1-day 99% VaR $11,457 (1.19%).
   Veronesi is not cited anywhere in the treasury repo (asked 2026-09-29).
+  Tsay diagnostics (risk/tsay.ts, tailDiagnostics): on the book's history of
+  daily P&L (today's key-rate DV01 times each day's curve move), raw and
+  GARCH-filtered: skew, excess kurtosis, Jarque-Bera, Ljung-Box(10) on the
+  squares, and Hill alpha on losses (k = 2.5%); a Student-t fitted by ML on
+  the filtered series gives a third VaR/ES. The proof the filter works is
+  Ljung-Box on the squares: 692 raw falling to 7 (p 0.68) filtered on a
+  $1.5M test book, with kurtosis 3.2 falling to 1.25 and nu about 10.
 - TIPS and FRN risk is shown APART from nominal duration (real duration;
   spread and rate duration), never blended.
 - **Run `build-web.sh staging` before calling a page done.** The dev server
