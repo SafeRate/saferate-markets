@@ -108,6 +108,15 @@ export type TMatchingOptions = {
 	denomination?: number;
 	/** Give up after this many branch and bound nodes. */
 	maxNodes?: number;
+	/**
+	 * Simplex pivots allowed across the whole search, relaxation included.
+	 * Default 25,000. Nodes are what maxNodes counts, but one node can cost a
+	 * thousand times another (see solveLinearProgram's maxIterations), and a
+	 * Worker has no clock that moves during computation, so pivots are the
+	 * budget that bounds the time. A search that runs out stops like one that
+	 * hits maxNodes: its best portfolio so far, not proven optimal.
+	 */
+	maxPivots?: number;
 };
 
 export type TMatchingPosition = {
@@ -123,7 +132,7 @@ export type TMatchingFailure =
 	| { kind: "uncoverable"; date: string; message: string }
 	/** Coverable, but not within the position cap. */
 	| { kind: "position-cap"; needed: number; message: string }
-	/** The search hit its node budget without proving anything. */
+	/** The search hit its node or pivot budget without proving anything. */
 	| { kind: "node-limit"; message: string };
 
 export type TMatchingResult = {
@@ -253,10 +262,25 @@ const surplusPath = ({
 /**
  * Build the relaxed programme, optionally with the integer machinery.
  *
- * Variables are the `n` face amounts followed by the `n` indicators. When
- * `withIndicators` is false the second block is absent entirely, which is the
- * pure linear dedication used both for the lower bound and for telling the two
- * kinds of infeasibility apart.
+ * Variables are the face amounts of the securities still in play, followed by
+ * the indicators of those still FREE. When `withIndicators` is false there are
+ * no indicators at all, which is the pure linear dedication used both for the
+ * lower bound and for telling the two kinds of infeasibility apart.
+ *
+ * PINNED INDICATORS ARE NOT VARIABLES. A security branched to 0 is left out;
+ * one branched to 1 keeps its face with a plain bound (and the minimum lot),
+ * and uses up one of the cap. Until 2026-09-29 a pin was an equality row on a
+ * full-width indicator, so every node carried one artificial variable per
+ * security for phase one to drive out: the seeds of a 6-position cap on the
+ * real universe (609 rows, 1,217 columns) exhausted their pivot budget
+ * without a basis, and one node diverged past 100,000 pivots with its
+ * objective at -1e16. A fully pinned seed is now a ten-variable programme.
+ *
+ * SCALED. Faces are in units of `unit` (the largest accumulated liability),
+ * so bounds, big-M caps and lots are divided by it; the objective's
+ * coefficients are unchanged, so its value is in units too and the duals are
+ * exactly the unscaled ones. `expand` returns x in the full dollar layout
+ * (n faces, then n indicators when withIndicators).
  */
 const buildProgram = ({
 	securities,
@@ -275,22 +299,38 @@ const buildProgram = ({
 	fixed: (0 | 1 | undefined)[];
 }) => {
 	const n = securities.length;
-	const variables = withIndicators ? 2 * n : n;
+	const active = securities
+		.map((_, i) => i)
+		.filter((i) => !withIndicators || fixed[i] !== 0);
+	const free = withIndicators
+		? active.filter((i) => fixed[i] === undefined)
+		: [];
+	const held = withIndicators ? active.filter((i) => fixed[i] === 1) : [];
+	const m = active.length;
+	const variables = m + free.length;
+	/** Column of each free security's indicator. */
+	const indicatorOf = new Map(free.map((i, k) => [i, m + k]));
 
 	const objective = new Array<number>(variables).fill(0);
-	for (let i = 0; i < n; i++) objective[i] = securities[i].askPrice / 100;
+	active.forEach((i, j) => {
+		objective[j] = securities[i].askPrice / 100;
+	});
 
 	const constraints: TLinearConstraint[] = [];
 
 	// One row per liability date: accumulated inflow must cover accumulated
 	// liability. This is the unrolled surplus recursion.
-	const accumulated = accumulatedLiability(liabilities, rate);
+	const dollars = accumulatedLiability(liabilities, rate);
+	const unit = Math.max(1, ...dollars);
+	const accumulated = dollars.map((amount) => amount / unit);
 	const perSecurity = securities.map((security) =>
 		accumulatedCashflows(security, liabilities.length, rate),
 	);
 	for (let t = 0; t < liabilities.length; t++) {
 		const coefficients = new Array<number>(variables).fill(0);
-		for (let i = 0; i < n; i++) coefficients[i] = perSecurity[i][t] / 100;
+		active.forEach((i, j) => {
+			coefficients[j] = perSecurity[i][t] / 100;
+		});
 		constraints.push({
 			coefficients,
 			relation: ">=",
@@ -298,59 +338,85 @@ const buildProgram = ({
 		});
 	}
 
+	const expand = (x: number[]) => {
+		const full = new Array<number>(withIndicators ? 2 * n : n).fill(0);
+		active.forEach((i, j) => {
+			full[i] = x[j] * unit;
+		});
+		if (withIndicators) {
+			for (const i of held) full[n + i] = 1;
+			for (const [i, column] of indicatorOf) full[n + i] = x[column];
+		}
+		return full;
+	};
+
 	if (!withIndicators) {
-		for (let i = 0; i < n; i++) {
+		active.forEach((_, j) => {
 			const coefficients = new Array<number>(variables).fill(0);
-			coefficients[i] = 1;
+			coefficients[j] = 1;
 			constraints.push({
 				coefficients,
 				relation: "<=",
-				bound: limits.maxPosition,
+				bound: limits.maxPosition / unit,
 			});
-		}
-		return { objective, constraints, variables };
+		});
+		return { objective, constraints, unit, expand };
 	}
 
-	for (let i = 0; i < n; i++) {
+	active.forEach((i, j) => {
 		const cap = bigM({
 			accumulatedCashflow: perSecurity[i],
 			accumulatedLiabilities: accumulated,
-			maxPosition: limits.maxPosition,
+			maxPosition: limits.maxPosition / unit,
 		});
+		const indicator = indicatorOf.get(i);
+		if (indicator === undefined) {
+			// Held: x_i <= M_i, and x_i >= minLot.
+			const upper = new Array<number>(variables).fill(0);
+			upper[j] = 1;
+			constraints.push({ coefficients: upper, relation: "<=", bound: cap });
+			if (limits.minLot > 0) {
+				const lower = new Array<number>(variables).fill(0);
+				lower[j] = 1;
+				constraints.push({
+					coefficients: lower,
+					relation: ">=",
+					bound: limits.minLot / unit,
+				});
+			}
+			return;
+		}
 
 		// x_i - M_i y_i <= 0
 		const upper = new Array<number>(variables).fill(0);
-		upper[i] = 1;
-		upper[n + i] = -cap;
+		upper[j] = 1;
+		upper[indicator] = -cap;
 		constraints.push({ coefficients: upper, relation: "<=", bound: 0 });
 
 		if (limits.minLot > 0) {
 			// x_i - minLot y_i >= 0
 			const lower = new Array<number>(variables).fill(0);
-			lower[i] = 1;
-			lower[n + i] = -limits.minLot;
+			lower[j] = 1;
+			lower[indicator] = -limits.minLot / unit;
 			constraints.push({ coefficients: lower, relation: ">=", bound: 0 });
 		}
 
-		const indicator = new Array<number>(variables).fill(0);
-		indicator[n + i] = 1;
-		const pinned = fixed[i];
-		constraints.push({
-			coefficients: indicator,
-			relation: pinned === undefined ? "<=" : "=",
-			bound: pinned === undefined ? 1 : pinned,
-		});
-	}
+		const bound = new Array<number>(variables).fill(0);
+		bound[indicator] = 1;
+		constraints.push({ coefficients: bound, relation: "<=", bound: 1 });
+	});
 
+	// The cap, less what is already held. Negative means this node is
+	// infeasible, which the programme reports on its own.
 	const cardinality = new Array<number>(variables).fill(0);
-	for (let i = 0; i < n; i++) cardinality[n + i] = 1;
+	for (const column of indicatorOf.values()) cardinality[column] = 1;
 	constraints.push({
 		coefficients: cardinality,
 		relation: "<=",
-		bound: limits.maxPositions,
+		bound: limits.maxPositions - held.length,
 	});
 
-	return { objective, constraints, variables };
+	return { objective, constraints, unit, expand };
 };
 
 /**
@@ -373,6 +439,34 @@ export const matchCashflows = ({
 	const rate = options.reinvestmentRate ?? 0;
 	const denomination = options.denomination ?? 0;
 	const maxNodes = options.maxNodes ?? 5000;
+	let pivotsLeft = options.maxPivots ?? 25_000;
+	/** Solves that gave up numerically: their subtrees were not searched. */
+	let unsound = 0;
+	/**
+	 * Every solve goes through here: capped at three pivots per row (healthy
+	 * solves of the 609-row programme take 50 to 300) and at what is left of
+	 * the search's budget.
+	 */
+	const solve = (program: ReturnType<typeof buildProgram>) => {
+		const perSolve = Math.max(1_000, 3 * program.constraints.length);
+		const allowed = Math.max(0, Math.min(pivotsLeft, perSolve));
+		const solution = solveLinearProgram({
+			objective: program.objective,
+			constraints: program.constraints,
+			maxIterations: allowed,
+		});
+		pivotsLeft -= solution.iterations;
+		// Stopped by its own cap, the solve was numerically unsound; stopped by
+		// what was left of the search's budget, the search is simply over.
+		if (solution.status === "iteration-limit" && allowed === perSolve) unsound++;
+		// Back to dollars and the full layout: faces and cost scale; indicators
+		// and duals do not.
+		return {
+			...solution,
+			x: program.expand(solution.x),
+			objectiveValue: solution.objectiveValue * program.unit,
+		};
+	};
 	const limits = {
 		maxPositions: options.maxPositions ?? securities.length,
 		minLot: options.minLot ?? 0,
@@ -427,10 +521,14 @@ export const matchCashflows = ({
 		withIndicators: false,
 		fixed: [],
 	});
-	const linear = solveLinearProgram({
-		objective: relaxed.objective,
-		constraints: relaxed.constraints,
-	});
+	const linear = solve(relaxed);
+
+	if (linear.status === "iteration-limit") {
+		return {
+			kind: "node-limit",
+			message: `The linear relaxation did not converge within ${linear.iterations} pivots, so nothing was searched. Fewer securities or fewer dates will help.`,
+		};
+	}
 
 	if (linear.status !== "optimal") {
 		// Name the first date nothing can reach, which is the actionable half of
@@ -491,10 +589,7 @@ export const matchCashflows = ({
 			withIndicators: true,
 			fixed: rounded,
 		});
-		const candidate = solveLinearProgram({
-			objective: program.objective,
-			constraints: program.constraints,
-		});
+		const candidate = solve(program);
 		if (
 			candidate.status === "optimal" &&
 			candidate.objectiveValue < incumbentCost - 1e-9
@@ -522,8 +617,22 @@ export const matchCashflows = ({
 		.slice(0, n)
 		.map((face, i) => ({ face, i }))
 		.sort((a, b) => b.face - a.face);
-	for (const take of [limits.maxPositions, Math.ceil(limits.maxPositions / 2)]) {
-		if (take < 1) continue;
+	// Several sizes, not just the cap and half of it: measured 2026-09-29 on the
+	// real universe and ten $1M annual payouts, a cap of 4 found nothing in its
+	// budget while a cap of 2 found a 2-position plan that a cap of 4 allows.
+	// The smaller seeds are the ones that survive a tight cap.
+	const cap = limits.maxPositions;
+	const takes = [
+		...new Set([
+			cap,
+			Math.ceil((cap * 3) / 4),
+			Math.ceil(cap / 2),
+			Math.ceil(cap / 4),
+			2,
+			1,
+		]),
+	].filter((take) => take >= 1 && take <= cap);
+	for (const take of takes) {
 		const seed = new Array<0 | 1 | undefined>(n).fill(0);
 		for (const { face, i } of ranked.slice(0, take)) {
 			if (face > 0) seed[i] = 1;
@@ -533,7 +642,7 @@ export const matchCashflows = ({
 
 	const stack: (0 | 1 | undefined)[][] = [new Array(n).fill(undefined)];
 	while (stack.length > 0) {
-		if (nodes >= maxNodes) {
+		if (nodes >= maxNodes || pivotsLeft <= 0) {
 			hitLimit = true;
 			break;
 		}
@@ -548,10 +657,7 @@ export const matchCashflows = ({
 			withIndicators: true,
 			fixed,
 		});
-		const node = solveLinearProgram({
-			objective: program.objective,
-			constraints: program.constraints,
-		});
+		const node = solve(program);
 		if (node.status !== "optimal") continue;
 		// Prune on the bound. An integer solution below its own relaxation is
 		// impossible, so a node that cannot beat the incumbent cannot contain one.
@@ -594,10 +700,10 @@ export const matchCashflows = ({
 	}
 
 	if (incumbentFaces === null) {
-		if (hitLimit) {
+		if (hitLimit || unsound > 0) {
 			return {
 				kind: "node-limit",
-				message: `Explored ${nodes} nodes without finding a portfolio inside the limits. Raise maxNodes, or relax maxPositions above ${limits.maxPositions}.`,
+				message: `Explored ${nodes} nodes${pivotsLeft <= 0 ? " and used the pivot budget" : ""} without finding a portfolio inside the limits. Relax maxPositions above ${limits.maxPositions}.`,
 			};
 		}
 		return {
@@ -617,7 +723,7 @@ export const matchCashflows = ({
 		relaxationCost,
 		marginalCostByDate,
 		nodesExplored: nodes,
-		provenOptimal: !hitLimit,
+		provenOptimal: !hitLimit && unsound === 0 && pivotsLeft > 0,
 	});
 };
 

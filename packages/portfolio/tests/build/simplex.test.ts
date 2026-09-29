@@ -272,3 +272,20 @@ describe("solveLinearProgram", () => {
 		}
 	});
 });
+
+describe("the iteration limit", () => {
+	test("a solve that runs out says so, and offers no answer", () => {
+		// Needs two pivots from the slack basis; one is allowed.
+		const program = {
+			objective: [-1, -1],
+			constraints: [
+				{ coefficients: [1, 0], relation: "<=" as const, bound: 1 },
+				{ coefficients: [0, 1], relation: "<=" as const, bound: 1 },
+			],
+		};
+		expect(solveLinearProgram(program).status).toBe("optimal");
+		const cut = solveLinearProgram({ ...program, maxIterations: 1 });
+		expect(cut.status).toBe("iteration-limit");
+		expect(Number.isNaN(cut.objectiveValue)).toBe(true);
+	});
+});

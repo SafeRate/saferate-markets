@@ -374,3 +374,43 @@ describe("lot sizes", () => {
 		expect(plan.notes[0]).toContain("left in cash");
 	});
 });
+
+describe("cash-flow matching under a position cap, on the real universe", () => {
+	/**
+	 * Found 2026-09-29 by scripts/exercise-portfolios.ts: this exact request (ten
+	 * $1M payouts, retail lots, at most 6 positions) returned HTTP 503 on
+	 * staging. A node's simplex diverged and never returned, because pinned
+	 * indicators were equality rows on the full programme. It must now finish,
+	 * respect the cap, and cover every date.
+	 */
+	const payouts = Array.from({ length: 10 }, (_, i) => ({
+		date: `${2027 + i}-06-30`,
+		amount: 1_000_000,
+	}));
+	const uncapped = matchLiabilities({
+		universe,
+		liabilities: payouts,
+		denomination: 1000,
+		lots: LOT_PRESETS.retail,
+	});
+
+	for (const cap of [6, 4, 2, 1]) {
+		test(`at most ${cap}: finishes, holds no more, and covers every payout`, () => {
+			const plan = matchLiabilities({
+				universe,
+				liabilities: payouts,
+				denomination: 1000,
+				maxPositions: cap,
+				lots: LOT_PRESETS.retail,
+			});
+			if ("kind" in plan || "kind" in uncapped) throw new Error("no plan");
+			expect(plan.positions.length).toBeLessThanOrEqual(cap);
+			expect(plan.cost).toBeGreaterThanOrEqual(uncapped.cost - 1);
+			for (const d of plan.matching?.surplusByDate ?? [])
+				expect(d.surplus).toBeGreaterThanOrEqual(-0.01);
+			// Measured: $8.0M at 6, $8.2M at 4, $8.5M at 2, $9.7M at 1, against
+			// $7.79M uncapped. The divergent search settled for $21.8M in one bond.
+			expect(plan.cost).toBeLessThan(uncapped.cost * 1.3);
+		}, 20_000);
+	}
+});

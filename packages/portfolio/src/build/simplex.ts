@@ -71,9 +71,27 @@ export type TLinearProgram = {
 	/** Coefficients of the objective, which is always MINIMISED. */
 	objective: number[];
 	constraints: TLinearConstraint[];
+	/**
+	 * Pivots allowed across both phases before giving up with status
+	 * "iteration-limit". Default 10 x (rows + columns).
+	 *
+	 * Bland's rule guarantees termination in exact arithmetic, not in floating
+	 * point. Measured 2026-09-29 in saferate-markets: a branch-and-bound node of
+	 * the cash-flow matcher (609 rows, 1,217 columns, face amounts beside 0-1
+	 * indicators) switched to Bland's rule and was still pivoting after 100,000
+	 * iterations with its objective swinging between -1e10 and -1e16, while
+	 * healthy nodes of the same programme finish in 50 to 300. With no limit the
+	 * solve never returned and the Worker serving it was killed.
+	 */
+	maxIterations?: number;
 };
 
-export type TSimplexStatus = "optimal" | "infeasible" | "unbounded";
+export type TSimplexStatus =
+	| "optimal"
+	| "infeasible"
+	| "unbounded"
+	/** Gave up after maxIterations: numerically unsound, not an answer. */
+	| "iteration-limit";
 
 export type TSimplexSolution = {
 	status: TSimplexStatus;
@@ -126,7 +144,8 @@ const pivot = (tableau: TTableau, row: number, column: number): void => {
 };
 
 /**
- * One simplex phase. Returns false only if the problem is unbounded.
+ * One simplex phase: "done" at an optimum, "unbounded", or "limit" when the
+ * iteration budget in `state` runs out.
  *
  * `allowed` gates which columns may enter, which is how artificial variables
  * are frozen out of phase two while their columns stay in the tableau for the
@@ -135,8 +154,8 @@ const pivot = (tableau: TTableau, row: number, column: number): void => {
 const runPhase = (
 	tableau: TTableau,
 	allowed: (column: number) => boolean,
-	state: { iterations: number; usedBlandRule: boolean },
-): boolean => {
+	state: { iterations: number; usedBlandRule: boolean; maxIterations: number },
+): "done" | "unbounded" | "limit" => {
 	let stalls = 0;
 	let previousObjective = tableau.objective[tableau.columns];
 	let bland = false;
@@ -160,7 +179,7 @@ const runPhase = (
 				}
 			}
 		}
-		if (entering === -1) return true;
+		if (entering === -1) return "done";
 
 		// Leaving row, by the minimum ratio test. Ties broken on the lowest
 		// basis index under Bland's rule, which is the half of the rule that is
@@ -178,7 +197,8 @@ const runPhase = (
 				if (bland && tableau.basis[i] < tableau.basis[leaving]) leaving = i;
 			}
 		}
-		if (leaving === -1) return false;
+		if (leaving === -1) return "unbounded";
+		if (state.iterations >= state.maxIterations) return "limit";
 
 		pivot(tableau, leaving, entering);
 		state.iterations++;
@@ -210,6 +230,7 @@ const runPhase = (
 export const solveLinearProgram = ({
 	objective,
 	constraints,
+	maxIterations,
 }: TLinearProgram): TSimplexSolution => {
 	const variables = objective.length;
 	if (variables === 0) {
@@ -277,7 +298,19 @@ export const solveLinearProgram = ({
 		basis,
 		columns,
 	};
-	const state = { iterations: 0, usedBlandRule: false };
+	const state = {
+		iterations: 0,
+		usedBlandRule: false,
+		maxIterations: maxIterations ?? 10 * (rows.length + columns),
+	};
+	const exhausted = (): TSimplexSolution => ({
+		status: "iteration-limit",
+		x: new Array<number>(variables).fill(0),
+		objectiveValue: Number.NaN,
+		duals: constraints.map(() => 0),
+		iterations: state.iterations,
+		usedBlandRule: state.usedBlandRule,
+	});
 	const failed: TSimplexSolution = {
 		status: "infeasible",
 		x: new Array<number>(variables).fill(0),
@@ -299,7 +332,9 @@ export const solveLinearProgram = ({
 				tableau.objective[j] -= rows[i][j];
 			}
 		}
-		if (!runPhase(tableau, () => true, state)) {
+		const phaseOne = runPhase(tableau, () => true, state);
+		if (phaseOne === "limit") return exhausted();
+		if (phaseOne === "unbounded") {
 			return { ...failed, iterations: state.iterations };
 		}
 		if (-tableau.objective[columns] > 1e-7) {
@@ -337,7 +372,9 @@ export const solveLinearProgram = ({
 	}
 
 	const allowed = (j: number) => j < firstArtificial;
-	if (!runPhase(tableau, allowed, state)) {
+	const phaseTwo = runPhase(tableau, allowed, state);
+	if (phaseTwo === "limit") return exhausted();
+	if (phaseTwo === "unbounded") {
 		return {
 			status: "unbounded",
 			x: new Array<number>(variables).fill(0),

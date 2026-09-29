@@ -78,14 +78,28 @@ bash scripts/bash/migrate-local.sh     # the ONE local D1 both Workers share
 bash scripts/bash/dev-api.sh           # :5320, needs CLOUDFLARE_API_TOKEN (remote TREASURY binding)
 bash scripts/bash/dev-web.sh           # :3020, magic link is PRINTED to this terminal
 bash scripts/bash/typecheck.sh         # both Workers, the way each must be checked
-bun test                               # 377 tests at 2026-09-29
+bun test                               # 590 tests at 2026-09-29
 bunx biome check .
 bash scripts/bash/sync-treasury-client.sh <ref>   # re-vendor the client
 
 # AFTER a deploy, as its own step (never chained to the deploy):
 doppler run --project saferate-markets --config stg -- bun apps/api/smoke/smoke.ts
 doppler run --project saferate-markets --config prd -- bun apps/api/smoke/smoke.ts
+# The dashboard, as a signed-in user, through the real pages (staging or dev only):
+doppler run --project saferate-markets --config stg -- bun scripts/exercise-portfolios.ts --env staging
 ```
+
+**`scripts/exercise-portfolios.ts` is the dashboard's end-to-end check.** It
+signs in as `--email` (default dylan@saferate.com) by writing a one-time
+magic-link token to `verification` and letting the app's own verify endpoint
+spend it (no email sent, no forged cookie), seeds four example portfolios
+through create and CSV import at real closes (skipped when the name exists),
+then drives tracking and every attribution period, stress, the overview, a
+liability stream, every Builder method and lot preset, save, order CSV, track
+as portfolio, and three refusals (bad CSV, off-market price, oversell), and
+deletes its own "Script test" records unless `--keep`. It prints each
+portfolio's overview figures. First run 2026-09-29 found the capped-match 503
+below. Refuses `--env production`.
 
 **The smoke test is the only authenticated check of a deployed environment.**
 It uses `MARKETS_SMOKE_KEY` (Doppler stg and prd: a key on a subscribed
@@ -372,6 +386,18 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   "internal error; reference = ..." lines come from the remote binding proxy
   in `dev-web.sh`; pages still return correct data, and the deployed Workers
   make the same calls without them.
+- **The matcher's LPs are bounded and scaled (2026-09-29).** A cash-flow match
+  capped at 6 positions returned 503 on staging: one branch-and-bound node's
+  simplex diverged (objective at -1e16 after 100,000 Bland pivots) and never
+  returned. Three fixes in packages/portfolio, all measured: simplex has
+  `maxIterations` and an "iteration-limit" status; the search has a 25,000
+  pivot budget (a Worker's clock does not move during computation, so time
+  cannot be the budget); and pinned indicators are no longer equality rows
+  but dropped or bounded, so a seed is a ten-variable programme instead of a
+  1,217-column one, with faces scaled to the liability. Cost now rises
+  steadily as the cap tightens ($7.79M uncapped, $8.0M at 6, $9.7M at 1)
+  where before a cap of 4 settled for $21.8M in one bond. The treasury repo's
+  copy has the same flaw (not yet fixed there).
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in

@@ -337,7 +337,9 @@ const matchOnce = ({
 		notes: r.provenOptimal
 			? []
 			: [
-					"The position cap stopped the search before it proved this is the cheapest; it is the best found.",
+					// The relaxation is a lower bound on every plan, so the distance to it
+					// bounds what a longer search could still save.
+					`The search stopped at its computing budget before proving this the cheapest plan within the position cap. It is the best found, and at most ${(((r.cost - r.relaxationCost) / r.relaxationCost) * 100).toFixed(1)}% above the cost of an unconstrained match, so a longer search could save no more than that.`,
 				],
 		matching: {
 			surplusByDate: sorted.map((l, t) => ({
