@@ -1,4 +1,4 @@
-// PORTED from saferate-treasury packages/utils/src/functions/simplex.ts at 191d25a (2026-09-29), plus its PR #9
+// PORTED from saferate-treasury packages/utils/src/functions/simplex.ts at 191d25a (2026-09-29), plus its PR #11
 // (maxIterations, made here first). Change it there first, then here; tests/build/simplex.test.ts is ported with it.
 /**
  * A linear programme solver, by the two-phase tableau simplex.

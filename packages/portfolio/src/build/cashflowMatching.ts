@@ -1,5 +1,5 @@
 // PORTED from saferate-treasury packages/utils/src/functions/cashflowMatching.ts at 191d25a (2026-09-29), plus
-// its PRs #8 (empty universe) and #9 (bounded, pinned-free LPs), which were made here first. Change it there first, then here;
+// its PRs #8 (empty universe) and #11 (bounded, pinned-free LPs, first opened as #9), which were made here first. Change it there first, then here;
 // tests/build/cashflowMatching.test.ts is ported with it.
 /**
  * Cash flow matching: the cheapest operable portfolio that covers a liability

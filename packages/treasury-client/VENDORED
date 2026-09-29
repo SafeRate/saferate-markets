@@ -1,5 +1,5 @@
 repo:   SafeRate/saferate-treasury
 path:   packages/client
-ref:    client-auction-results
-commit: c217c172f8de12d1d444cef660ff255e5d96f0c6
-synced: 2026-09-29T19:29:56Z
+ref:    main
+commit: 9101f2a36013cfb83ed7b66c69716cb9821681a8
+synced: 2026-09-29T21:07:29Z

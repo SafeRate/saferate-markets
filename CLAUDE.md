@@ -308,8 +308,9 @@ make no treasury-api deploy (Markets staging binds production treasury-api, so
 any new TreasuryService method would be a production change). Hence the
 portfolio maths runs in Markets (packages/portfolio) over existing RPC methods.
 Pending for the final production deploy: migrations 0003, 0004 and 0005 on
-saferate-markets-production, then web and API. After it, re-pin the vendored
-client to treasury main once PR #10 merges (sync-treasury-client.sh main).
+saferate-markets-production, then web and API. Treasury PRs #8, #10 and #11
+(#9 rebased) merged 2026-09-29; the vendored client is on treasury main
+9101f2a.
 
 ## The dashboard (2026-09-29): menu, Portfolio Tracking, Treasury Rates
 
@@ -441,7 +442,7 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   never sort or push them in place. The real fix for the cold view is a
   batch or ranged securityPrices RPC in treasury-api (frozen). The simplex
   pivots only non-zero columns on Float64Arrays: the capped match 13.6 s to
-  about 4 s, identical plans (also on treasury PR #9).
+  about 4 s, identical plans (also in treasury, merged as #11).
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in
@@ -478,9 +479,8 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   it is held (a reopening shows once announced), and a short bill that is not
   a reopening. Both want a dated auctions read in treasury-api.
 - **The client keeps the full auction row** (treasury PR #10: bidder classes,
-  allocation, low/median/high rates, discount rate / margin, price). Vendored
-  from the PR branch `client-auction-results` at c217c17 until it merges;
-  re-run `sync-treasury-client.sh main` then. The REST route
+  allocation, low/median/high rates, discount rate / margin, price). Merged
+  2026-09-29; vendored from treasury main 9101f2a. The REST route
   /v1/securities/{cusip} pins its eight published auction fields
   (`publishedAuction`): passing the new ones through its strict schema made
   every lookup a 500 in tests. MCP's get_treasury_security passes the record
