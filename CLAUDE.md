@@ -300,7 +300,14 @@ and history (routes/curveFamilies.ts), `/v1/securities` and `/v1/on-the-run`
 - `/v1/on-the-run` is NOT under `/v1/securities/`: that segment is the CUSIP
   route's, and "on-the-run" would fail its 9-character validation.
 
-## PRODUCTION IS FROZEN until the dashboard build is finished (Dylan, 2026-09-29)
+## The production freeze (2026-09-29): ENDED the same day
+
+Lifted when the dashboard shipped: Dylan applied migrations 0003-0005 to
+saferate-markets-production and deployed web and API at 73952c1; the production
+smoke test passed 77/77. Production builds and deploys are run by Dylan (they
+are blocked for Claude); the history below is kept for why.
+
+### What the freeze was
 
 A fund of funds may be onboarding onto the API. Until Dylan says the build is
 done: deploy STAGING only (web and API), apply migrations to staging only, and
