@@ -22,9 +22,12 @@ import {
 import { requireOrganization } from "@/lib/session.server";
 import {
 	BUILDER_MODES,
+	LOT_PRESET_OPTIONS,
+	lotsFrom,
 	strategyByKey,
 	type TBuilderInputs,
 	type TBuilderMode,
+	type TLotPreset,
 	TRACKABLE_INDICES,
 } from "@/lib/builderOptions";
 import {
@@ -53,6 +56,15 @@ const readInputs = (
 	const strategy = (STRATEGIES.find((s) => s.key === params.get("strategy"))
 		?.key ?? "ladder") as TStrategyKey;
 	const index = params.get("index") ?? "broad";
+	const lotPreset = (LOT_PRESET_OPTIONS.find((o) => o.key === params.get("lots"))
+		?.key ?? "retail") as TLotPreset;
+	const lots = lotsFrom(lotPreset, {
+		increment:
+			lotPreset === "custom" ? numberFrom(params.get("increment"), null) : null,
+		minimumOrder:
+			lotPreset === "custom" ? numberFrom(params.get("minorder"), null) : null,
+		minimumPosition: numberFrom(params.get("minpos"), null),
+	});
 	const rows = (params.get("rows") ?? "")
 		.split(/\r?\n/)
 		.map((line) => line.trim())
@@ -73,7 +85,7 @@ const readInputs = (
 			0,
 			Math.min(64, numberFrom(params.get("ticks"), 4) ?? 4),
 		),
-		denomination: Math.max(100, numberFrom(params.get("denom"), 1000) ?? 1000),
+		denomination: lots.increment,
 		horizonYears: Math.max(
 			1,
 			Math.min(30, numberFrom(params.get("horizon"), 10) ?? 10),
@@ -84,6 +96,8 @@ const readInputs = (
 			: "broad") as TIndexCode,
 		maxPositions: numberFrom(params.get("maxpos"), null),
 		rows,
+		lotPreset,
+		lots,
 	};
 };
 
@@ -136,6 +150,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 							liabilities: built.liabilities,
 							market,
 							budget: inputs.budget,
+							roundLot: inputs.lots.roundLot,
 						}),
 					}
 				: built.status === "failed"
@@ -243,7 +258,8 @@ export default function Builder({
 			? `?${new URLSearchParams({
 					mode: "custom",
 					ticks: String(inputs.markupTicks),
-					denom: String(inputs.denomination),
+					lots: inputs.lotPreset,
+					minpos: String(inputs.lots.minimumPosition),
 					...(inputs.stream ? { stream: inputs.stream } : {}),
 					rows: result.positions
 						.map((p) => `${p.cusip}, ${p.faceAmount}`)
@@ -412,18 +428,47 @@ export default function Builder({
 					/>
 				</label>
 				<label className={label}>
-					Round face to ($)
-					<select
-						className={field}
-						defaultValue={String(inputs.denomination)}
-						name="denom"
-					>
-						<option value="100">$100 (TreasuryDirect minimum)</option>
-						<option value="1000">$1,000 (typical secondary)</option>
-						<option value="5000">$5,000</option>
-						<option value="100000">$100,000 (round lot)</option>
+					Where it will trade
+					<select className={field} defaultValue={inputs.lotPreset} name="lots">
+						{LOT_PRESET_OPTIONS.map((o) => (
+							<option key={o.key} value={o.key}>
+								{o.label}
+							</option>
+						))}
 					</select>
 				</label>
+				<label className={label}>
+					Smallest position ($ face)
+					<input
+						className={field}
+						defaultValue={inputs.lots.minimumPosition || ""}
+						inputMode="decimal"
+						name="minpos"
+						placeholder={String(inputs.lots.minimumOrder)}
+					/>
+				</label>
+				{inputs.lotPreset === "custom" ? (
+					<>
+						<label className={label}>
+							Minimum order ($)
+							<input
+								className={field}
+								defaultValue={inputs.lots.minimumOrder}
+								inputMode="decimal"
+								name="minorder"
+							/>
+						</label>
+						<label className={label}>
+							Increment ($)
+							<input
+								className={field}
+								defaultValue={inputs.lots.increment}
+								inputMode="decimal"
+								name="increment"
+							/>
+						</label>
+					</>
+				) : null}
 				{inputs.mode === "match" ? (
 					<label className={label}>
 						At most this many positions (optional)
@@ -445,7 +490,9 @@ export default function Builder({
 					</button>
 					<span className="ml-3 text-xs text-slate-500">
 						Costed at the latest close plus the markup, standing in for the offer;
-						accrued interest to settlement included.
+						accrued interest to settlement included. Positions under $1 million are
+						odd lots: they trade, but institutional prices are quoted for $1 million
+						blocks, so allow a wider markup.
 					</span>
 				</div>
 			</Form>
@@ -552,7 +599,12 @@ export default function Builder({
 												<span className="font-mono text-xs">{p.cusip}</span>{" "}
 												{describeSecurity(p)}
 											</td>
-											<td className={`${td} text-right`}>{face(p.faceAmount)}</td>
+											<td className={`${td} text-right`}>
+												{face(p.faceAmount)}
+												{p.isOddLot ? (
+													<span className="block text-[10px] text-amber-700">odd lot</span>
+												) : null}
+											</td>
 											<td className={`${td} text-right text-slate-500`}>
 												{price(p.close)}
 											</td>

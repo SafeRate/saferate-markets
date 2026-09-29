@@ -161,7 +161,12 @@ export default function PlanPage({
 									<td className="px-3 py-2 font-semibold text-emerald-700">BUY</td>
 									<td className="px-3 py-2 font-mono text-xs">{l.cusip}</td>
 									<td className="px-3 py-2">{describeSecurity(l)}</td>
-									<td className={`${td} text-right`}>{face(l.faceAmount)}</td>
+									<td className={`${td} text-right`}>
+										{face(l.faceAmount)}
+										{l.faceAmount < 1_000_000 ? (
+											<span className="block text-[10px] text-amber-700">odd lot</span>
+										) : null}
+									</td>
 									<td className={`${td} text-right`}>{price(l.planPrice)}</td>
 									<td className={`${td} text-right`}>{money(l.cost)}</td>
 								</tr>
@@ -171,7 +176,9 @@ export default function PlanPage({
 				</div>
 				<p className="mt-2 text-xs text-slate-500">
 					Limit prices are the close plus the plan's markup; estimated cost includes
-					accrued interest to settlement. Day orders, prices per 100 of face.
+					accrued interest to settlement. Day orders, prices per 100 of face. Odd
+					lots (under $1 million face) trade, but dealers quote institutional prices
+					for $1 million blocks, so expect a wider spread on them.
 				</p>
 			</section>
 

@@ -100,7 +100,7 @@ export const runBuilder = async ({
 	market: Awaited<ReturnType<typeof loadMarket>>;
 }): Promise<TBuilt> => {
 	const { universe, curve, settlementDate } = market;
-	const denomination = inputs.denomination;
+	const denomination = inputs.lots.increment;
 	const needsLiabilities =
 		inputs.mode === "match" ||
 		inputs.mode === "immunise" ||
@@ -128,10 +128,12 @@ export const runBuilder = async ({
 				liabilities,
 				denomination,
 				maxPositions: inputs.maxPositions ?? undefined,
+				lots: inputs.lots,
 			});
 			break;
 		case "immunise":
 			plan = immuniseLiabilities({
+				lots: inputs.lots,
 				universe,
 				liabilities,
 				curve,
@@ -141,6 +143,7 @@ export const runBuilder = async ({
 			break;
 		case "horizon":
 			plan = horizonMatch({
+				lots: inputs.lots,
 				universe,
 				liabilities,
 				curve,
@@ -151,6 +154,7 @@ export const runBuilder = async ({
 			break;
 		case "strategy":
 			plan = buildStrategy({
+				lots: inputs.lots,
 				strategy: inputs.strategy,
 				universe,
 				budget: inputs.budget as number,
@@ -170,6 +174,7 @@ export const runBuilder = async ({
 					message: `No analytics for the ${inputs.indexCode} index.`,
 				};
 			plan = trackIndex({
+				lots: inputs.lots,
 				universe,
 				indexKeyRateDurations: basis.keyRateDurations.map((k) => k.value),
 				budget: inputs.budget as number,
@@ -183,7 +188,7 @@ export const runBuilder = async ({
 		case "custom":
 			if (inputs.rows.length === 0)
 				return { status: "failed", message: "Add at least one security." };
-			plan = customPlan({ universe, rows: inputs.rows });
+			plan = customPlan({ universe, rows: inputs.rows, lots: inputs.lots });
 			break;
 	}
 	if ("kind" in plan) return { status: "failed", message: plan.message };
@@ -202,11 +207,13 @@ export const describePlan = ({
 	liabilities,
 	market,
 	budget,
+	roundLot = 1_000_000,
 }: {
 	plan: TPlan & { risk?: unknown };
 	liabilities: TLiabilityInput[];
 	market: Awaited<ReturnType<typeof loadMarket>>;
 	budget: number | null;
+	roundLot?: number;
 }) => {
 	const { settlementDate, curve, asOf } = market;
 	const risk = planRisk(plan, curve, settlementDate);
@@ -237,6 +244,7 @@ export const describePlan = ({
 		planPrice: p.security.planPrice,
 		dirtyPrice: p.security.dirtyPrice,
 		cost: p.cost,
+		isOddLot: p.faceAmount < roundLot,
 		treasuryDirect: treasuryDirectAlternative(
 			{ faceAmount: p.faceAmount, maturityDate: p.security.maturityDate },
 			settlementDate,

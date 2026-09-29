@@ -106,6 +106,111 @@ export const planUniverse = ({
 
 export type TLiabilityInput = { date: string; amount: number };
 
+/**
+ * What a venue will trade, and what the holder is willing to hold.
+ *  - minimumOrder: the smallest face a venue accepts ($1,000 at most retail
+ *    brokers; $100 at TreasuryDirect and some, such as Apex).
+ *  - increment: the step face amounts come in (usually the same).
+ *  - minimumPosition: the smallest holding worth having, so a solver does not
+ *    hand back $37,000 positions: for an institution, often $250k or more.
+ *  - roundLot: the institutional block, $1 million face. Smaller "odd lots"
+ *    trade, at a worse price; they are flagged, not refused.
+ */
+export type TLotRules = {
+	minimumOrder: number;
+	increment: number;
+	minimumPosition: number;
+	roundLot: number;
+};
+
+export const LOT_PRESETS = {
+	retail: {
+		minimumOrder: 1_000,
+		increment: 1_000,
+		minimumPosition: 0,
+		roundLot: 1_000_000,
+	},
+	apex: {
+		minimumOrder: 100,
+		increment: 100,
+		minimumPosition: 0,
+		roundLot: 1_000_000,
+	},
+	institutional: {
+		minimumOrder: 1_000,
+		increment: 1_000,
+		minimumPosition: 250_000,
+		roundLot: 1_000_000,
+	},
+} as const satisfies Record<string, TLotRules>;
+
+const lotsFor = (
+	lots: TLotRules | undefined,
+	denomination: number,
+): TLotRules =>
+	lots ?? {
+		minimumOrder: denomination,
+		increment: denomination,
+		minimumPosition: 0,
+		roundLot: 1_000_000,
+	};
+
+/** The smallest face a position may have under these rules. */
+export const smallestPosition = (lots: TLotRules) =>
+	Math.max(lots.minimumOrder, lots.minimumPosition);
+
+/**
+ * Enforce a minimum position the fast way: solve, drop what falls below it,
+ * solve again without those securities, until nothing does. The exact route,
+ * branch and bound on indicator variables, costs about 260ms a node on this
+ * universe (saferate-treasury docs/dedication-brief.md); this costs a few
+ * linear solves and reports what the constraint cost against the first.
+ */
+const withMinimumPosition = <
+	T extends { positions: TPlanPosition[]; cost: number; notes: string[] },
+	F,
+>(
+	lots: TLotRules,
+	solve: (excluded: Set<string>) => T | F,
+	isFailure: (r: T | F) => r is F,
+): T | F => {
+	const floor = smallestPosition(lots);
+	const excluded = new Set<string>();
+	let first: T | null = null;
+	const rounds = 30;
+	for (let round = 0; round < rounds; round++) {
+		const result = solve(excluded);
+		if (isFailure(result)) return result;
+		first ??= result;
+		const small = result.positions.filter((p) => p.faceAmount < floor);
+		if (small.length === 0) {
+			if (result !== first && first.cost > 0)
+				result.notes.push(
+					`A minimum position of $${floor.toLocaleString("en-US")} set aside ${excluded.size} securities; it costs $${(result.cost - first.cost).toFixed(0)} (${(((result.cost - first.cost) / first.cost) * 100).toFixed(2)}%) over the plan without it.`,
+				);
+			return result;
+		}
+		for (const p of small) excluded.add(p.cusip);
+	}
+	// Still finding small positions: never hand back a plan that breaks the
+	// rule it was given. Drop them, leave that money in cash, and say so.
+	const last = solve(excluded);
+	if (isFailure(last)) return last;
+	const kept = last.positions.filter((p) => p.faceAmount >= floor);
+	const dropped = last.positions.length - kept.length;
+	if (dropped === 0) return last;
+	const cost = kept.reduce((sum, p) => sum + p.cost, 0);
+	return {
+		...last,
+		positions: kept,
+		cost,
+		notes: [
+			...last.notes,
+			`${dropped} position${dropped === 1 ? "" : "s"} under the $${floor.toLocaleString("en-US")} minimum ${dropped === 1 ? "was" : "were"} dropped after ${rounds} re-solves; $${(last.cost - cost).toFixed(0)} is left in cash and the match is approximate.`,
+		],
+	};
+};
+
 export type TPlanPosition = {
 	cusip: string;
 	faceAmount: number;
@@ -142,7 +247,9 @@ export const matchLiabilities = ({
 	minLot,
 	reinvestmentRate = 0,
 	maxNodes = 200,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	liabilities: TLiabilityInput[];
 	denomination?: number;
@@ -150,6 +257,40 @@ export const matchLiabilities = ({
 	minLot?: number;
 	reinvestmentRate?: number;
 	maxNodes?: number;
+}): TPlan | TMatchingFailure => {
+	const rules = lotsFor(lots, denomination);
+	return withMinimumPosition<TPlan, TMatchingFailure>(
+		rules,
+		(excluded) =>
+			matchOnce({
+				universe: universe.filter((u) => !excluded.has(u.cusip)),
+				liabilities,
+				denomination: rules.increment,
+				maxPositions,
+				minLot,
+				reinvestmentRate,
+				maxNodes,
+			}),
+		(r): r is TMatchingFailure => "kind" in r,
+	);
+};
+
+const matchOnce = ({
+	universe,
+	liabilities,
+	denomination,
+	maxPositions,
+	minLot,
+	reinvestmentRate,
+	maxNodes,
+}: {
+	universe: TPlannedSecurity[];
+	liabilities: TLiabilityInput[];
+	denomination: number;
+	maxPositions?: number;
+	minLot?: number;
+	reinvestmentRate: number;
+	maxNodes: number;
 }): TPlan | TMatchingFailure => {
 	const sorted = [...liabilities].sort((a, b) => a.date.localeCompare(b.date));
 	const last = sorted.at(-1)?.date ?? "";
@@ -284,7 +425,9 @@ export const immuniseTarget = ({
 	settlementDate,
 	denomination = 100,
 	method,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	target: { presentValue: number; keyRateDurations: number[] };
 	curve: TCurveParams;
@@ -292,55 +435,69 @@ export const immuniseTarget = ({
 	denomination?: number;
 	method: string;
 }): TPlan & { risk: TRiskMatch } => {
-	const securities = universe.map((s) => ({
-		cusip: s.cusip,
-		askPrice: s.dirtyPrice,
-		keyRateDurations: keyRateProfile(
-			s.payments.map((p) => ({
-				years: yearFraction(settlementDate, p.date),
-				amount: p.amount,
-			})),
-			curve,
-		).keyRateDurations,
-	}));
-	const solved = immunise({ securities, target });
-	const positions = roundedPositions(solved.positions, universe, denomination);
-	return {
-		method,
-		positions,
-		cost: positions.reduce((s, p) => s + p.cost, 0),
-		notes: [
-			...(solved.converged
-				? []
-				: [
-						"The solver did not meet its optimality conditions; check the residual risk.",
-					]),
-			...(() => {
-				// Measured 2026-09-29 on ten $1m liabilities from 2032 to 2041:
-				// duration matched exactly but $353/bp left at 7 years and $183/bp
-				// at 25, offsetting. Single-payment liabilities are shaped like
-				// zero-coupon bonds and coupon securities cannot fully reproduce
-				// that shape; STRIPS could. Said on the page rather than implied away.
-				const total =
-					solved.keyRateDurations.reduce((sum, d) => sum + d, 0) *
-					target.presentValue *
-					1e-4;
-				const worst = Math.max(...solved.residualDv01.map(Math.abs));
-				return total > 0 && worst > 0.02 * total
-					? [
-							`Duration is matched, but up to $${worst.toFixed(0)} per basis point is left unhedged at single key rates (offsetting across the curve). Coupon-paying bonds cannot fully reproduce single-payment liabilities; zero-coupon STRIPS would close it.`,
-						]
-					: [];
-			})(),
-		],
-		risk: {
-			targetPresentValue: target.presentValue,
-			targetKeyRateDurations: target.keyRateDurations,
-			achievedKeyRateDurations: solved.keyRateDurations,
-			residualDv01: solved.residualDv01,
-			durationResidual: solved.durationResidual,
-		},
+	const rules = lotsFor(lots, denomination);
+	const once = (excluded: Set<string>): TPlan & { risk: TRiskMatch } => {
+		const securities = universe
+			.filter((s) => !excluded.has(s.cusip))
+			.map((s) => ({
+				cusip: s.cusip,
+				askPrice: s.dirtyPrice,
+				keyRateDurations: keyRateProfile(
+					s.payments.map((p) => ({
+						years: yearFraction(settlementDate, p.date),
+						amount: p.amount,
+					})),
+					curve,
+				).keyRateDurations,
+			}));
+		const solved = immunise({ securities, target });
+		const positions = roundedPositions(
+			solved.positions,
+			universe,
+			rules.increment,
+		);
+		return {
+			method,
+			positions,
+			cost: positions.reduce((s, p) => s + p.cost, 0),
+			notes: [
+				...(solved.converged
+					? []
+					: [
+							"The solver did not meet its optimality conditions; check the residual risk.",
+						]),
+				...(() => {
+					// Measured 2026-09-29 on ten $1m liabilities from 2032 to 2041:
+					// duration matched exactly but $353/bp left at 7 years and $183/bp
+					// at 25, offsetting. Single-payment liabilities are shaped like
+					// zero-coupon bonds and coupon securities cannot fully reproduce
+					// that shape; STRIPS could. Said on the page rather than implied away.
+					const total =
+						solved.keyRateDurations.reduce((sum, d) => sum + d, 0) *
+						target.presentValue *
+						1e-4;
+					const worst = Math.max(...solved.residualDv01.map(Math.abs));
+					return total > 0 && worst > 0.02 * total
+						? [
+								`Duration is matched, but up to $${worst.toFixed(0)} per basis point is left unhedged at single key rates (offsetting across the curve). Coupon-paying bonds cannot always reproduce a target's exact shape; for single-payment liabilities, zero-coupon STRIPS would close it.`,
+							]
+						: [];
+				})(),
+			],
+			risk: {
+				targetPresentValue: target.presentValue,
+				targetKeyRateDurations: target.keyRateDurations,
+				achievedKeyRateDurations: solved.keyRateDurations,
+				residualDv01: solved.residualDv01,
+				durationResidual: solved.durationResidual,
+			},
+		};
 	};
+	return withMinimumPosition<TPlan & { risk: TRiskMatch }, never>(
+		rules,
+		once,
+		(_r): _r is never => false,
+	);
 };
 
 /** Immunise a liability stream: its present value and key-rate profile on today's curve. */
@@ -350,7 +507,9 @@ export const immuniseLiabilities = ({
 	curve,
 	settlementDate,
 	denomination,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	liabilities: TLiabilityInput[];
 	curve: TCurveParams;
@@ -358,6 +517,7 @@ export const immuniseLiabilities = ({
 	denomination?: number;
 }) =>
 	immuniseTarget({
+		lots,
 		universe,
 		target: keyRateProfile(
 			liabilities.map((l) => ({
@@ -385,7 +545,9 @@ export const horizonMatch = ({
 	settlementDate,
 	horizonYears,
 	denomination = 100,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	liabilities: TLiabilityInput[];
 	curve: TCurveParams;
@@ -401,12 +563,13 @@ export const horizonMatch = ({
 	const matched =
 		near.length === 0
 			? null
-			: matchLiabilities({ universe, liabilities: near, denomination });
+			: matchLiabilities({ universe, liabilities: near, denomination, lots });
 	if (matched !== null && "kind" in matched) return matched;
 	const immunised =
 		far.length === 0
 			? null
 			: immuniseLiabilities({
+					lots,
 					universe,
 					liabilities: far,
 					curve,
@@ -457,7 +620,9 @@ export const trackIndex = ({
 	settlementDate,
 	denomination,
 	indexName,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	indexKeyRateDurations: number[];
 	budget: number;
@@ -467,6 +632,7 @@ export const trackIndex = ({
 	indexName: string;
 }) =>
 	immuniseTarget({
+		lots,
 		universe,
 		target: { presentValue: budget, keyRateDurations: indexKeyRateDurations },
 		curve,
@@ -482,7 +648,9 @@ export const trackIndex = ({
 export const customPlan = ({
 	universe,
 	rows,
+	lots,
 }: {
+	lots?: TLotRules;
 	universe: TPlannedSecurity[];
 	rows: { cusip: string; faceAmount: number }[];
 }): TPlan => {
@@ -503,12 +671,25 @@ export const customPlan = ({
 		method: "Your portfolio",
 		positions,
 		cost: positions.reduce((s, p) => s + p.cost, 0),
-		notes:
-			missing.length > 0
+		notes: [
+			...(missing.length > 0
 				? [
 						`Not in today's bill, note and bond universe, so left out: ${missing.join(", ")}.`,
 					]
-				: [],
+				: []),
+			...(() => {
+				if (lots === undefined) return [];
+				const floor = smallestPosition(lots);
+				const small = positions.filter(
+					(p) => p.faceAmount < floor || p.faceAmount % lots.increment !== 0,
+				);
+				return small.length === 0
+					? []
+					: [
+							`Below the $${floor.toLocaleString("en-US")} minimum or off the $${lots.increment.toLocaleString("en-US")} increment: ${small.map((p) => p.cusip).join(", ")}.`,
+						];
+			})(),
+		],
 	};
 };
 
@@ -707,7 +888,9 @@ export const buildStrategy = ({
 	settlementDate,
 	horizonYears = 10,
 	denomination = 100,
+	lots,
 }: {
+	lots?: TLotRules;
 	strategy: TStrategyKey;
 	universe: TPlannedSecurity[];
 	budget: number;
@@ -716,6 +899,9 @@ export const buildStrategy = ({
 	horizonYears?: number;
 	denomination?: number;
 }): TPlan => {
+	const rules = lotsFor(lots, denomination);
+	const floor = smallestPosition(rules);
+	const skipped: string[] = [];
 	const at = (years: number) => addYears(settlementDate, years);
 	const targets: { years: number; families: TFamily[]; weight: number }[] =
 		(() => {
@@ -758,8 +944,11 @@ export const buildStrategy = ({
 	for (const t of targets) {
 		const security = nearest(universe, at(t.years), t.families);
 		if (security === null) continue;
-		const bought = buy(security, budget * t.weight, denomination);
-		if (bought === null) continue;
+		const bought = buy(security, budget * t.weight, rules.increment);
+		if (bought === null || bought.faceAmount < floor) {
+			skipped.push(security.maturityDate.slice(0, 7));
+			continue;
+		}
 		const existing = chosen.get(security.cusip);
 		chosen.set(
 			security.cusip,
@@ -779,7 +968,12 @@ export const buildStrategy = ({
 		method: STRATEGIES.find((s) => s.key === strategy)?.name ?? strategy,
 		positions,
 		cost: positions.reduce((s, p) => s + p.cost, 0),
-		notes: [],
+		notes:
+			skipped.length === 0
+				? []
+				: [
+						`${skipped.length} rung${skipped.length === 1 ? "" : "s"} (${skipped.join(", ")}) came to less than the $${floor.toLocaleString("en-US")} minimum and ${skipped.length === 1 ? "was" : "were"} left in cash.`,
+					],
 	};
 };
 

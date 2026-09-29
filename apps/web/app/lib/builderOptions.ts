@@ -1,4 +1,9 @@
-import { STRATEGIES, type TStrategyKey } from "@markets/portfolio";
+import {
+	LOT_PRESETS,
+	STRATEGIES,
+	type TLotRules,
+	type TStrategyKey,
+} from "@markets/portfolio";
 import type { TIndexCode } from "@saferate/treasury-client/types";
 
 /** The Builder's modes and choices: shared by the page and its server code. */
@@ -47,7 +52,46 @@ export type TBuilderInputs = {
 	indexCode: TIndexCode;
 	maxPositions: number | null;
 	rows: { cusip: string; faceAmount: number }[];
+	lotPreset: TLotPreset;
+	lots: TLotRules;
 };
 
 export const strategyByKey = (key: string) =>
 	STRATEGIES.find((s) => s.key === key) ?? null;
+
+export type TLotPreset = keyof typeof LOT_PRESETS | "custom";
+
+export const LOT_PRESET_OPTIONS: { key: TLotPreset; label: string }[] = [
+	{ key: "retail", label: "Retail broker: $1,000 minimum and steps" },
+	{ key: "apex", label: "Apex or TreasuryDirect: $100 minimum and steps" },
+	{
+		key: "institutional",
+		label: "Institutional: $1,000 steps, positions of $250k or more",
+	},
+	{ key: "custom", label: "Custom" },
+];
+
+/** The lot rules for a preset, with any of the three overridden. */
+export const lotsFrom = (
+	preset: TLotPreset,
+	overrides: {
+		increment: number | null;
+		minimumOrder: number | null;
+		minimumPosition: number | null;
+	},
+): TLotRules => {
+	const base = LOT_PRESETS[preset === "custom" ? "retail" : preset];
+	const increment = Math.max(1, overrides.increment ?? base.increment);
+	return {
+		increment,
+		minimumOrder: Math.max(
+			increment,
+			overrides.minimumOrder ?? base.minimumOrder,
+		),
+		minimumPosition: Math.max(
+			0,
+			overrides.minimumPosition ?? base.minimumPosition,
+		),
+		roundLot: base.roundLot,
+	};
+};

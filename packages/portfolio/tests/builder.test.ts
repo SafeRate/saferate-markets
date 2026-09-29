@@ -303,3 +303,74 @@ describe("a custom portfolio", () => {
 		expect(plan.notes[0]).toContain("91282CNS6");
 	});
 });
+
+import { LOT_PRESETS } from "../src/builder";
+
+describe("lot sizes", () => {
+	const liabilities = Array.from({ length: 10 }, (_, i) => ({
+		date: `${2027 + i}-06-30`,
+		amount: 1_000_000,
+	}));
+
+	test("a minimum position is honoured, the plan still covers every date, and its cost is reported", () => {
+		const loose = matchLiabilities({ universe, liabilities, denomination: 1000 });
+		const strict = matchLiabilities({
+			universe,
+			liabilities,
+			lots: { ...LOT_PRESETS.institutional, minimumPosition: 500_000 },
+		});
+		if ("kind" in loose || "kind" in strict) throw new Error("uncoverable");
+		for (const p of strict.positions)
+			expect(p.faceAmount).toBeGreaterThanOrEqual(500_000);
+		for (const row of strict.matching?.surplusByDate ?? [])
+			expect(row.surplus).toBeGreaterThanOrEqual(-1e-6);
+		expect(strict.cost).toBeGreaterThanOrEqual(loose.cost - 1);
+		if (strict.positions.length < loose.positions.length)
+			expect(strict.notes.join(" ")).toContain("minimum position");
+	});
+
+	test("index tracking with $1m blocks holds nothing smaller", () => {
+		const krd = [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0];
+		const plan = trackIndex({
+			universe,
+			indexKeyRateDurations: krd,
+			budget: 25_000_000,
+			curve,
+			settlementDate: SETTLE,
+			indexName: "test",
+			lots: { ...LOT_PRESETS.institutional, minimumPosition: 1_000_000 },
+		});
+		for (const p of plan.positions)
+			expect(p.faceAmount).toBeGreaterThanOrEqual(1_000_000);
+		expect(Math.abs(planRisk(plan, curve, SETTLE).duration - 6)).toBeLessThan(
+			0.3,
+		);
+	});
+
+	test("the increment is the step: $100 at Apex, $1,000 at a retail broker", () => {
+		for (const preset of [LOT_PRESETS.apex, LOT_PRESETS.retail]) {
+			const plan = buildStrategy({
+				strategy: "ladder",
+				universe,
+				budget: 1_000_000,
+				settlementDate: SETTLE,
+				lots: preset,
+			});
+			for (const p of plan.positions)
+				expect(p.faceAmount % preset.increment).toBe(0);
+		}
+	});
+
+	test("a ladder rung too small for the minimum is left in cash and said so", () => {
+		const plan = buildStrategy({
+			strategy: "ladder",
+			universe,
+			budget: 1_000_000,
+			settlementDate: SETTLE,
+			horizonYears: 10,
+			lots: LOT_PRESETS.institutional,
+		});
+		expect(plan.positions).toHaveLength(0);
+		expect(plan.notes[0]).toContain("left in cash");
+	});
+});
