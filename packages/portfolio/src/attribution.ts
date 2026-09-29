@@ -158,12 +158,23 @@ export const decomposeHolding = ({
 			return startZ(t) + (level * l + slope * s1 + curvature * c) / 100;
 		};
 	// Coupons inside the step, carried to its end at the start curve's forwards;
-	// the same figure enters every counterfactual, so it cancels.
+	// the same figure enters every counterfactual, so it cancels (the treasury
+	// repo's reinvestedAtForwards, unchanged).
 	let reinvested = 0;
 	for (let i = 0; i < payments.length; i++)
 		if (paymentsYears[i] <= periodYears)
 			reinvested +=
 				(payments[i] * df(startZ, paymentsYears[i])) / df(startZ, periodYears);
+	// The END is what the holder actually has: the coupon as received, since
+	// the ledger earns its own cash interest on it (the "cash" line). The
+	// difference is the treasury repo's "small unattributed difference" for a
+	// book that reinvests elsewhere, and lands in selection, as it says it
+	// should. Until 2026-09-29 the end used the forwards too, so every
+	// attribution spanning a coupon was left with it unexplained: -0.05 bp for
+	// a Saturday coupon (15 Aug 2026) in a Friday-to-Monday step.
+	let received = 0;
+	for (let i = 0; i < payments.length; i++)
+		if (paymentsYears[i] <= periodYears) received += payments[i];
 	const remainingAged = (z: TZero) => {
 		let total = 0;
 		for (let i = 0; i < payments.length; i++)
@@ -172,7 +183,7 @@ export const decomposeHolding = ({
 		return total;
 	};
 	const startValue = scale * startDirty;
-	const endValue = scale * (endDirty + reinvested);
+	const endValue = scale * (endDirty + received);
 	const growth = 1 / df(startZ, periodYears);
 	let onCurveStart = 0;
 	for (let i = 0; i < payments.length; i++)

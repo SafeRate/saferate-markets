@@ -50,6 +50,13 @@ export type TNewTransaction = z.infer<typeof ZNewTransaction>;
 
 type TScope = { db: D1Database; idOrganization: string };
 
+/**
+ * The most trades one addTransactions call stores: one D1 batch. Callers check
+ * it first and say so; until 2026-09-29 the import page did not, and a
+ * 25,000-row CSV under 1 MB reached this parse and came back as a 500.
+ */
+export const MAX_TRANSACTIONS_PER_ADD = 5000;
+
 export async function listPortfolios(input: TScope) {
 	const result = await input.db
 		.prepare(
@@ -192,7 +199,7 @@ export async function addTransactions(
 	const rows = z
 		.array(ZNewTransaction)
 		.min(1)
-		.max(5000)
+		.max(MAX_TRANSACTIONS_PER_ADD)
 		.parse(input.transactions);
 	const idImport = input.source === "csv" ? crypto.randomUUID() : null;
 	const now = Date.now();

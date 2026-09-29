@@ -255,7 +255,9 @@ const PortfolioOverview = ({ d }: { d: TLoader }) => {
 					: ""}
 			</p>
 			<section className="mt-4 grid gap-4 sm:grid-cols-4">
-				<Stat label="Market value" value={money(s.marketValue + s.cash)} />
+				{/* The ledger's market value already includes cash; adding it again
+				    showed Test 13's $750M block as $1.0B (found 2026-09-29). */}
+				<Stat label="Market value" value={money(s.marketValue)} />
 				<Stat
 					className={signClass(s.totalGain)}
 					label="Total gain"

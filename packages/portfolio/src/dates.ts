@@ -23,8 +23,23 @@ const isWeekend = (date: Date) => {
 	return day === 0 || day === 6;
 };
 
-export const isBusinessDay = (date: Date) =>
-	!isWeekend(date) && !isAHoliday(date, { utc: true });
+/**
+ * Memoised by day. The holiday library goes through dayjs on every call, and
+ * a valuation asks the same few hundred dates millions of times: measured
+ * 2026-09-29, 68% of the CPU of a 100-security, one-year attribution was
+ * here, and a staging page took 26 s of CPU. The calendar does not change
+ * while a Worker isolate lives.
+ */
+const businessDays = new Map<number, boolean>();
+export const isBusinessDay = (date: Date) => {
+	const key = date.getTime();
+	let known = businessDays.get(key);
+	if (known === undefined) {
+		known = !isWeekend(date) && !isAHoliday(date, { utc: true });
+		businessDays.set(key, known);
+	}
+	return known;
+};
 
 export const nextBusinessDay = (date: Date) => {
 	const next = new Date(date.getTime());
@@ -33,9 +48,16 @@ export const nextBusinessDay = (date: Date) => {
 	return next;
 };
 
-/** T+1: what a trade or a mark on this date settles on. */
-export const settlementFor = (iso: string) =>
-	toIso(nextBusinessDay(toDate(iso)));
+const settlements = new Map<string, string>();
+/** T+1: what a trade or a mark on this date settles on. Memoised, as above. */
+export const settlementFor = (iso: string) => {
+	let settles = settlements.get(iso);
+	if (settles === undefined) {
+		settles = toIso(nextBusinessDay(toDate(iso)));
+		settlements.set(iso, settles);
+	}
+	return settles;
+};
 
 const lastDayOfMonth = (year: number, month: number) =>
 	new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
@@ -74,17 +96,35 @@ export const couponDates = ({
 	from: string;
 	frequency: number;
 }) => {
-	const monthsPerPeriod = 12 / frequency;
-	const floor = toDate(from);
-	const dates: Date[] = [toDate(maturityDate)];
-	let cursor = addMonths(dates[0], -monthsPerPeriod);
-	while (cursor > floor) {
+	// The whole schedule back to 1970 once per security, then a slice: the
+	// same dates the step-back loop produced (each stepped from the one after
+	// it, so month ends carry the same way), without rebuilding them on every
+	// accrual. The first element is the last coupon at or before `from` that is
+	// not maturity itself, as before.
+	const key = `${maturityDate}|${frequency}`;
+	let schedule = schedules.get(key);
+	if (schedule === undefined) {
+		const monthsPerPeriod = 12 / frequency;
+		const dates: Date[] = [toDate(maturityDate)];
+		let cursor = addMonths(dates[0], -monthsPerPeriod);
+		while (cursor > SCHEDULE_FLOOR) {
+			dates.push(cursor);
+			cursor = addMonths(cursor, -monthsPerPeriod);
+		}
 		dates.push(cursor);
-		cursor = addMonths(cursor, -monthsPerPeriod);
+		schedule = dates.reverse().map(toIso);
+		schedules.set(key, schedule);
 	}
-	dates.push(cursor);
-	return dates.reverse().map(toIso);
+	let first = 0;
+	for (let i = schedule.length - 2; i >= 0; i--)
+		if (schedule[i] <= from) {
+			first = i;
+			break;
+		}
+	return schedule.slice(first);
 };
+const SCHEDULE_FLOOR = toDate("1970-01-01");
+const schedules = new Map<string, string[]>();
 
 /**
  * Accrued interest per 100 of face at a settlement date: actual/actual on the
@@ -123,7 +163,19 @@ const isLeapYear = (year: number) =>
  * over that year's length. The basis the treasury repo's cashflow times and
  * attribution periods are measured on (treasuryYtm.ts yearFraction).
  */
+const yearFractions = new Map<string, number>();
 export const yearFraction = (fromIso: string, toIso: string) => {
+	const key = `${fromIso}|${toIso}`;
+	const known = yearFractions.get(key);
+	if (known !== undefined) return known;
+	// Bounded: an isolate valuing an eighteen-year ledger would otherwise keep
+	// a few hundred thousand of these.
+	if (yearFractions.size > 200_000) yearFractions.clear();
+	const value = actualActual(fromIso, toIso);
+	yearFractions.set(key, value);
+	return value;
+};
+const actualActual = (fromIso: string, toIso: string) => {
 	const from = toDate(fromIso);
 	const to = toDate(toIso);
 	if (to <= from) return 0;

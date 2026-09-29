@@ -48,8 +48,17 @@ export const nominalPricer = (terms: {
 	maturityDate: string;
 	frequency: number;
 }): TPricer => {
-	const accrued = (settlementDate: string) =>
-		accruedPer100({ ...terms, settlementDate });
+	// Per settlement date, for this security's life: a valuation asks the same
+	// dates over and over.
+	const accruedOn = new Map<string, number>();
+	const accrued = (settlementDate: string) => {
+		let value = accruedOn.get(settlementDate);
+		if (value === undefined) {
+			value = accruedPer100({ ...terms, settlementDate });
+			accruedOn.set(settlementDate, value);
+		}
+		return value;
+	};
 	return {
 		dirty: (close, markDate) => close + accrued(settlementFor(markDate)),
 		tradeDirty: (clean, settlementDate) => clean + accrued(settlementDate),
@@ -188,10 +197,19 @@ export const frnPricer = (
 		const dayBefore = toIso(new Date(toDate(date).getTime() - 86_400_000));
 		return schedule(dayBefore)[0];
 	};
-	/** Accrued at `date` (a settlement or a coupon date), per 100. */
-	const accruedTo = (date: string) => {
+	/**
+	 * Accrued at `date` (a settlement or a coupon date), per 100.
+	 *
+	 * A COUPON is the accrual up to its date, so it anchors on rows settling
+	 * strictly before it (`strict`). A stored row that settles ON the coupon
+	 * date carries the new period's accrued, zero. Found 2026-09-29 by Test 09:
+	 * 30 Apr and 31 Jul 2026 (weekdays, so a row settled on each) paid nothing,
+	 * while 31 Jan (a Saturday) paid in full, and an all-FRN book showed half
+	 * its income: 1.56% since January against its index's 2.99%.
+	 */
+	const accruedTo = (date: string, strict = false) => {
 		const start = periodStart(date);
-		const at = lastAtOrBefore(known, date, (k) => k.settlement);
+		const at = lastAtOrBefore(known, date, (k) => k.settlement, strict);
 		const anchor =
 			at !== -1 && known[at].settlement > start ? known[at] : undefined;
 		if (anchor !== undefined)
@@ -214,7 +232,7 @@ export const frnPricer = (
 		dirty: (close, markDate) => close + accrued(settlementFor(markDate)),
 		tradeDirty: (clean, settlementDate) => clean + accrued(settlementDate),
 		accrued,
-		coupon: (couponDate) => accruedTo(couponDate),
+		coupon: (couponDate) => accruedTo(couponDate, true),
 		redemption: () => 100,
 		couponDates: schedule,
 		isEstimate: (date) => date > lastKnown,

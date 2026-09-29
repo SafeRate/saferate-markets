@@ -7,6 +7,7 @@ import {
 	listTransactions,
 	type TNewTransaction,
 	updatePortfolio,
+	MAX_TRANSACTIONS_PER_ADD,
 } from "@markets/persistence";
 import {
 	parseDate,
@@ -206,6 +207,14 @@ export const action = async ({
 				errors: parsed.errors.map((e) =>
 					e.line === null ? e.message : `Line ${e.line}: ${e.message}`,
 				),
+			};
+		if (parsed.trades.length > MAX_TRANSACTIONS_PER_ADD)
+			return {
+				intent,
+				ok: false,
+				errors: [
+					`The file has ${parsed.trades.length.toLocaleString("en-US")} trades; one import takes at most ${MAX_TRANSACTIONS_PER_ADD.toLocaleString("en-US")}. Split it and import the parts.`,
+				],
 			};
 		const result = await store(
 			parsed.trades.map(({ line, ...t }) => ({ ...t, label: `Line ${line}` })),

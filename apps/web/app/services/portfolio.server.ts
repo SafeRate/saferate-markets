@@ -9,6 +9,8 @@ import {
 	type TEnv,
 } from "@markets/mcp-tools";
 import {
+	isBusinessDay,
+	toDate,
 	attributeLedger,
 	attributionOver,
 	buildLedger,
@@ -738,6 +740,13 @@ export const validateNewTrades = async ({
 			);
 			continue;
 		}
+		// Found 2026-09-29 by the break tests: a Saturday and Labor Day were
+		// accepted, valued at the prior close. Treasuries do not trade then, and a
+		// date nobody could have traded on is a typo worth stopping.
+		if (!isBusinessDay(toDate(trade.tradeDate)))
+			problems.push(
+				`${trade.label}: ${trade.tradeDate} is a weekend or a federal holiday, when Treasuries do not trade.`,
+			);
 		if (trade.settleDate < trade.tradeDate)
 			problems.push(`${trade.label}: settles before it trades.`);
 		const series = marks.get(trade.cusip) ?? [];

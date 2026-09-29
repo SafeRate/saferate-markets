@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import frnRows from "../../../apps/api/tests/fixtures/securities/frn-frn-analytics.json";
+import aprilRows from "./fixtures/frn-91282CMJ7-april-2026.json";
 import tipsRows from "../../../apps/api/tests/fixtures/securities/tips-tips-analytics.json";
 import { settlementFor } from "../src/dates";
 import {
@@ -196,5 +197,45 @@ describe("the ledger on a TIPS", () => {
 		expect(coupon?.date).toBe("2026-01-15");
 		expect(coupon?.amount).toBeCloseTo(10_000 * tips.coupon("2026-01-15"), 8);
 		expect(coupon?.amount ?? 0).toBeGreaterThan(9_375);
+	});
+});
+
+describe("an FRN coupon on a weekday", () => {
+	/**
+	 * Production rows for 91282CMJ7 around its 30 Apr 2026 coupon. The row of
+	 * 29 Apr settles ON the coupon date, and the treasury stores the new
+	 * period's accrued there: zero. Found 2026-09-29 by Test 09: the coupon
+	 * anchored on that row and paid nothing, so every weekday FRN coupon was
+	 * lost. It is the accrual up to the date: 89 days (31 Jan to 30 Apr) at
+	 * index + spread, actual/360.
+	 */
+	const rows = aprilRows.rows.map((r) => ({
+		date: r.date,
+		accrued: r.accrued_interest,
+		indexRate: r.index_rate_percent / 100,
+		spread: r.quoted_spread_bp / 10_000,
+	}));
+	const frn = frnPricer({ maturityDate: aprilRows.maturityDate }, rows);
+
+	test("a row settling on the coupon date carries zero accrued", () => {
+		const onCouponDate = aprilRows.rows.find((r) => r.date === "2026-04-29");
+		expect(onCouponDate?.accrued_interest).toBeCloseTo(0, 6);
+	});
+
+	test("the coupon is the accrual to its date, not zero", () => {
+		const dayBefore = aprilRows.rows.find((r) => r.date === "2026-04-28");
+		if (dayBefore === undefined) throw new Error("fixture");
+		// The 28 Apr row settles 29 Apr: one more day of accrual to the 30th.
+		const expected =
+			dayBefore.accrued_interest +
+			((dayBefore.index_rate_percent / 100 + dayBefore.quoted_spread_bp / 10_000) *
+				100) /
+				360;
+		expect(frn.coupon("2026-04-30")).toBeCloseTo(expected, 9);
+		expect(frn.coupon("2026-04-30")).toBeGreaterThan(0.9);
+	});
+
+	test("on the coupon date itself a buyer pays no accrued", () => {
+		expect(frn.accrued("2026-04-30")).toBe(0);
 	});
 });

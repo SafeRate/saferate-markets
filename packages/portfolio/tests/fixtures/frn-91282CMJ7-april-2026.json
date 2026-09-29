@@ -1,0 +1,79 @@
+{
+	"source": "GET /v1/securities/91282CMJ7/analytics (production treasury via staging), 2026-04-20 to 2026-05-05",
+	"cusip": "91282CMJ7",
+	"maturityDate": "2027-01-31",
+	"rows": [
+		{
+			"date": "2026-04-20",
+			"accrued_interest": 0.8314304844323941,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-21",
+			"accrued_interest": 0.8418228334000929,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-22",
+			"accrued_interest": 0.8522151823677918,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-23",
+			"accrued_interest": 0.8626075313354906,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-24",
+			"accrued_interest": 0.8937845782385873,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-27",
+			"accrued_interest": 0.9041769272062862,
+			"index_rate_percent": 3.622876598779312,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-28",
+			"accrued_interest": 0.9145126955362287,
+			"index_rate_percent": 3.622876598779312,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-29",
+			"accrued_interest": 0,
+			"index_rate_percent": 3.622876598779312,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-04-30",
+			"accrued_interest": 0.010335768329942534,
+			"index_rate_percent": 3.622876598779312,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-05-01",
+			"accrued_interest": 0.041343073319770135,
+			"index_rate_percent": 3.622876598779312,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-05-04",
+			"accrued_interest": 0.051678841649712676,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		},
+		{
+			"date": "2026-05-05",
+			"accrued_interest": 0.06207119061741146,
+			"index_rate_percent": 3.643245628371565,
+			"quoted_spread_bp": 9.799999999999999
+		}
+	]
+}

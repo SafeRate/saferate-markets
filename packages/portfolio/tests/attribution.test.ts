@@ -7,7 +7,12 @@ import {
 	fitFactors,
 } from "../src/attribution";
 import { zeroRate } from "../src/curve";
-import { couponDates, settlementFor, yearFraction } from "../src/dates";
+import {
+	couponDates,
+	isBusinessDay,
+	settlementFor,
+	yearFraction,
+} from "../src/dates";
 import { buildLedger, type TSecurityTerms } from "../src/ledger";
 import { nominalPricer } from "../src/pricers";
 import curves from "./fixtures/zero-curves.json";
@@ -212,4 +217,62 @@ describe("a ledger, attributed and linked", () => {
 		const explained = period.components.reduce((s, c) => s + c.dollars, 0);
 		expect(explained).toBeCloseTo(gain - cost, 6);
 	});
+});
+
+describe("a coupon inside a step", () => {
+	/**
+	 * 15 Aug 2026 is a Saturday, so the note's coupon falls inside the step
+	 * from Friday's settlement to Monday's. Found 2026-09-29 by the testing
+	 * portfolios: carried to the step's end at the curve's forwards, the coupon
+	 * "earned" two days the ledger never pays, and every attribution spanning
+	 * a coupon was left -0.05 bp unexplained. Counted as received, the parts add
+	 * to the time-weighted return under every income policy.
+	 */
+	const calendar: string[] = [];
+	for (
+		let d = new Date("2026-08-03T00:00:00Z");
+		d.toISOString().slice(0, 10) <= "2026-08-28";
+		d.setUTCDate(d.getUTCDate() + 1)
+	)
+		if (isBusinessDay(d)) calendar.push(d.toISOString().slice(0, 10));
+	const terms = new Map([[NOTE.cusip, NOTE]]);
+	const marks = new Map([
+		[NOTE.cusip, calendar.map((date, i) => ({ date, close: 97 + i / 100 }))],
+	]);
+	const trades = [
+		{
+			idTransaction: "t1",
+			cusip: NOTE.cusip,
+			side: "buy" as const,
+			tradeDate: "2026-08-04",
+			settleDate: "2026-08-05",
+			faceAmount: 1_000_000,
+			cleanPrice: 97.01,
+		},
+	];
+	for (const income of ["cash", "reinvest", "distribute"] as const)
+		test(`leaves nothing unexplained, income ${income}`, () => {
+			const pricers = new Map([[NOTE.cusip, pricer]]);
+			const ledger = buildLedger({
+				trades,
+				terms,
+				marks,
+				calendar,
+				asOf: "2026-08-28",
+				income,
+				cashRate: () => 0.04,
+				pricers,
+			});
+			const days = attributeLedger({
+				ledger,
+				trades,
+				terms,
+				pricers,
+				marks,
+				curves: new Map(calendar.map((d) => [d, sep24.params])),
+			});
+			const period = attributionOver(days, null, "2026-08-28");
+			expect(ledger.cashflows.some((f) => f.kind === "coupon")).toBe(true);
+			expect(Math.abs(period.residual)).toBeLessThan(1e-9);
+		});
 });

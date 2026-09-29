@@ -6,7 +6,10 @@
  *   doppler run -p saferate-markets -c dev -- bun scripts/exercise-portfolios.ts --env development
  *
  * Flags: --email <address> (default dylan@saferate.com), --seed-only,
- * --exercise-only, --keep (leave the "Script test" stream, plan and portfolio).
+ * --exercise-only, --keep (leave the "Script test" stream, plan and portfolio),
+ * --testing (also seed the twenty "Test NN" portfolios built to break things,
+ * and run the import break tests), --only <text> (exercise only portfolios
+ * whose name contains it), --timeout <seconds> per request (default 120).
  *
  * Sign-in without an email: a one-time magic-link token is written to the
  * `verification` table exactly as Better Auth's sign-in endpoint writes it, and
@@ -52,6 +55,11 @@ if (!KEY) {
 }
 const WEB_APP_DIR = resolve(import.meta.dir, "../apps/web");
 const TEST = "Script test";
+const REQUEST_TIMEOUT_MS = Number(option("timeout") ?? 120) * 1000;
+/** --only <text>: exercise just the portfolios whose name contains it. */
+const ONLY = option("only");
+/** --dump <dir>: save each exercised portfolio's Tracking page there, to read. */
+const DUMP = option("dump");
 
 // ── Reporting ────────────────────────────────────────────────────────────────
 
@@ -102,16 +110,27 @@ const request = async (
 	path: string,
 	init: { method?: string; body?: FormData } = {},
 ) => {
-	const response = await fetch(`${WEB}${path}`, {
-		method: init.method ?? "GET",
-		body: init.body,
-		redirect: "manual",
-		headers: {
-			cookie: cookieHeader(),
-			origin: WEB,
-			"user-agent": "saferate-markets exercise-portfolios script",
-		},
-	});
+	let response: Response;
+	try {
+		response = await fetch(`${WEB}${path}`, {
+			method: init.method ?? "GET",
+			body: init.body,
+			redirect: "manual",
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+			headers: {
+				cookie: cookieHeader(),
+				origin: WEB,
+				"user-agent": "saferate-markets exercise-portfolios script",
+			},
+		});
+	} catch (error) {
+		// No answer at all is a finding, not a crash of the script.
+		return {
+			status: 0,
+			location: null,
+			text: `no response: ${error instanceof Error ? error.message : String(error)}`,
+		};
+	}
 	remember(response);
 	return {
 		status: response.status,
@@ -146,13 +165,45 @@ const expectPage = async (what: string, path: string, marker: string) => {
 	const started = Date.now();
 	const page = await get(path);
 	const took = `${((Date.now() - started) / 1000).toFixed(1)}s`;
-	if (page.status !== 200) return fail(what, `HTTP ${page.status} for ${path}`);
+	if (page.status !== 200)
+		return fail(
+			what,
+			page.status === 0
+				? `${page.text} after ${took} for ${path}`
+				: `HTTP ${page.status} after ${took} for ${path}`,
+		);
 	const shown = problems(page.text);
 	if (shown.length > 0) return fail(what, shown.join(" | ").slice(0, 400));
 	if (!page.text.includes(marker))
 		return fail(what, `no "${marker}" on ${path}`);
+	const broken = nonsense(page.text);
+	if (broken.length > 0) return fail(what, broken.join(" | ").slice(0, 400));
 	pass(what, took);
 	return page.text;
+};
+
+/**
+ * What a reader would see as a bug even on a page that rendered: a number
+ * that is not one, a value the code never filled in, or an attribution whose
+ * parts do not add up to its total (the page then says "unexplained").
+ */
+const nonsense = (html: string) => {
+	const visible = html
+		.replace(/<script[\s\S]*?<\/script>/g, " ")
+		.replace(/<style[\s\S]*?<\/style>/g, " ")
+		.replace(/<[^>]+>/g, " ")
+		.replace(/\s+/g, " ");
+	const found: string[] = [];
+	for (const word of ["NaN", "Infinity", "undefined", "[object Object]"]) {
+		const at = visible.indexOf(word);
+		if (at !== -1)
+			found.push(
+				`"${word}" in: …${visible.slice(Math.max(0, at - 80), at + 40)}…`,
+			);
+	}
+	const unexplained = visible.match(/unexplained: [^)]+/);
+	if (unexplained) found.push(`attribution ${unexplained[0]}`);
+	return found;
 };
 
 // ── Sign in ──────────────────────────────────────────────────────────────────
@@ -202,6 +253,22 @@ type TListed = {
 };
 const listCache = new Map<string, { date: string; securities: TListed[] }>();
 
+/** The API allows 60 requests a minute per organization: stay under it, and wait out a 429. */
+let lastCall = 0;
+const paced = async (url: string): Promise<Response> => {
+	for (let attempt = 0; attempt < 5; attempt++) {
+		const wait = lastCall + 1_100 - Date.now();
+		if (wait > 0) await Bun.sleep(wait);
+		lastCall = Date.now();
+		const response = await fetch(url, {
+			headers: { authorization: `Bearer ${KEY}` },
+		});
+		if (response.status !== 429) return response;
+		await Bun.sleep(15_000);
+	}
+	throw new Error(`${url}: still rate-limited after five tries`);
+};
+
 /** The securities priced on `date`, or on the next priced day within a week. */
 const pricedOn = async (date: string) => {
 	const cached = listCache.get(date);
@@ -209,9 +276,7 @@ const pricedOn = async (date: string) => {
 	const day = new Date(`${date}T00:00:00Z`);
 	for (let i = 0; i < 7; i++) {
 		const iso = day.toISOString().slice(0, 10);
-		const response = await fetch(`${API}/v1/securities?date=${iso}`, {
-			headers: { authorization: `Bearer ${KEY}` },
-		});
+		const response = await paced(`${API}/v1/securities?date=${iso}`);
 		if (response.ok) {
 			const body = (await response.json()) as { securities: TListed[] };
 			const found = { date: iso, securities: body.securities };
@@ -278,6 +343,11 @@ type TSeed = {
 	benchmark: string;
 	policy: "cash" | "reinvest" | "distribute";
 	trades: () => Promise<TSeedTrade[]>;
+	/**
+	 * An independent expectation of the overview's tiles, where the answer is
+	 * knowable from the trades alone. Returns a problem, or null.
+	 */
+	check?: (tiles: Record<string, string>) => Promise<string | null>;
 };
 
 const SEEDS: TSeed[] = [
@@ -345,6 +415,640 @@ const SEEDS: TSeed[] = [
 	},
 ];
 
+// ── The testing set (--testing): twenty portfolios chosen to break things ────
+
+const addDays = (date: string, days: number) => {
+	const d = new Date(`${date}T00:00:00Z`);
+	d.setUTCDate(d.getUTCDate() + days);
+	return d.toISOString().slice(0, 10);
+};
+const addMonths = (date: string, months: number) => {
+	const d = new Date(`${date}T00:00:00Z`);
+	d.setUTCMonth(d.getUTCMonth() + months);
+	return d.toISOString().slice(0, 10);
+};
+/** Priced securities of `families` maturing between two horizons, shortest first. */
+const between = (
+	list: { date: string; securities: TListed[] },
+	families: string[],
+	fromYears: number,
+	toYears: number,
+) =>
+	list.securities
+		.filter(
+			(s) =>
+				families.includes(s.family) &&
+				s.price !== null &&
+				s.maturity_date !== null &&
+				s.maturity_date >= yearsAfter(list.date, fromYears) &&
+				s.maturity_date <= yearsAfter(list.date, toYears),
+		)
+		.sort((a, b) => (a.maturity_date ?? "").localeCompare(b.maturity_date ?? ""));
+/** `k` items spread evenly along `xs`, first and last included. */
+const spread = <T>(xs: T[], k: number) =>
+	xs.length <= k
+		? xs
+		: Array.from(
+				{ length: k },
+				(_, i) => xs[Math.round((i * (xs.length - 1)) / (k - 1))],
+			);
+const dollars = (shown: string | undefined) =>
+	shown === undefined ? Number.NaN : Number(shown.replace(/[$,\s]/g, ""));
+const buy = (cusip: string, date: string, face: number): TSeedTrade => ({
+	cusip,
+	side: "buy",
+	date,
+	face,
+});
+const sell = (cusip: string, date: string, face: number): TSeedTrade => ({
+	cusip,
+	side: "sell",
+	date,
+	face,
+});
+const NOMINAL = ["bill", "note", "bond"];
+
+/** Test 01's bill, re-derived for its check on any run. */
+const test01Bill = async () => {
+	const jan = await pricedOn("2026-01-05");
+	return { date: jan.date, bill: pick(jan, ["bill"], 0.5) };
+};
+
+const TESTING: TSeed[] = [
+	{
+		name: "Test 01: One bill, held to maturity",
+		benchmark: "BILL",
+		policy: "distribute",
+		trades: async () => {
+			const { date, bill } = await test01Bill();
+			return [buy(bill.cusip, date, 1_000_000)];
+		},
+		// Distributed and matured: nothing held, and the gain is exactly face less cost.
+		check: async (tiles) => {
+			const { bill } = await test01Bill();
+			const expected = 1_000_000 - (1_000_000 * (bill.price as number)) / 100;
+			const gain = dollars(tiles["Total gain"]);
+			if (Math.abs(gain - expected) > 2)
+				return `total gain ${tiles["Total gain"]}, expected $${expected.toFixed(0)}: face less cost`;
+			if (dollars(tiles["Market value"]) !== 0)
+				return `market value ${tiles["Market value"]} after maturity, expected $0`;
+			return null;
+		},
+	},
+	{
+		name: "Test 02: One 30-year bond",
+		benchmark: "20PL",
+		policy: "cash",
+		trades: async () => {
+			const mar = await pricedOn("2026-03-02");
+			return [buy(pick(mar, ["bond"], 30).cusip, mar.date, 1_000_000)];
+		},
+	},
+	{
+		name: "Test 03: The same 10-year note, bought monthly",
+		benchmark: "0710",
+		policy: "reinvest",
+		trades: async () => {
+			const first = await pricedOn("2025-10-01");
+			const note = pick(first, ["note"], 10).cusip;
+			const trades: TSeedTrade[] = [];
+			for (let k = 0; k < 12; k++)
+				trades.push(
+					buy(note, (await pricedOn(addMonths("2025-10-01", k))).date, 100_000),
+				);
+			return trades;
+		},
+	},
+	{
+		name: "Test 04: In and out of one note, FIFO lots",
+		benchmark: "0307",
+		policy: "cash",
+		trades: async () => {
+			const on = async (d: string) => (await pricedOn(d)).date;
+			const note = pick(await pricedOn("2025-11-03"), ["note"], 5).cusip;
+			// Held: 500k, 800k, 400k, 600k, 0 (closed), then 100k reopened.
+			return [
+				buy(note, await on("2025-11-03"), 500_000),
+				buy(note, await on("2026-01-05"), 300_000),
+				sell(note, await on("2026-03-02"), 400_000),
+				buy(note, await on("2026-05-01"), 200_000),
+				sell(note, await on("2026-07-01"), 600_000),
+				buy(note, await on("2026-09-01"), 100_000),
+			];
+		},
+	},
+	{
+		name: "Test 05: Round trip, all sold",
+		benchmark: "0103",
+		policy: "distribute",
+		trades: async () => {
+			const feb = await pricedOn("2026-02-02");
+			const note = pick(feb, ["note"], 2).cusip;
+			return [
+				buy(note, feb.date, 1_000_000),
+				sell(note, (await pricedOn("2026-06-01")).date, 1_000_000),
+			];
+		},
+		check: async (tiles) =>
+			dollars(tiles["Market value"]) === 0
+				? null
+				: `market value ${tiles["Market value"]} with everything sold and distributed, expected $0`,
+	},
+	{
+		name: "Test 06: Forty securities across the curve",
+		benchmark: "AGG",
+		policy: "cash",
+		trades: async () => {
+			const jan = await pricedOn("2026-01-05");
+			return spread(between(jan, NOMINAL, 0.1, 30), 40).map((s) =>
+				buy(s.cusip, jan.date, 250_000),
+			);
+		},
+	},
+	{
+		name: "Test 07: A hundred odd lots of $1,000",
+		benchmark: "broad",
+		policy: "cash",
+		trades: async () => {
+			const apr = await pricedOn("2026-04-01");
+			return spread(between(apr, NOMINAL, 0.05, 30), 100).map((s) =>
+				buy(s.cusip, apr.date, 1_000),
+			);
+		},
+	},
+	{
+		name: "Test 08: TIPS ladder",
+		benchmark: "TIPS",
+		policy: "cash",
+		trades: async () => {
+			const oct = await pricedOn("2025-10-01");
+			const used = new Set<string>();
+			return [2, 4, 6, 8, 10, 20].map((years) =>
+				buy(pick(oct, ["tips"], years, used).cusip, oct.date, 500_000),
+			);
+		},
+	},
+	{
+		name: "Test 09: Every floating-rate note",
+		benchmark: "FRN",
+		policy: "cash",
+		trades: async () => {
+			const jan = await pricedOn("2026-01-05");
+			const aug = await pricedOn("2026-08-03");
+			const held = jan.securities.filter((s) => s.family === "frn");
+			const fresh = aug.securities.filter(
+				(s) => s.family === "frn" && !held.some((h) => h.cusip === s.cusip),
+			);
+			const latest = [...aug.securities.filter((s) => s.family === "frn")].sort(
+				(a, b) => (b.maturity_date ?? "").localeCompare(a.maturity_date ?? ""),
+			)[0];
+			return [
+				...held.map((s) => buy(s.cusip, jan.date, 1_000_000)),
+				...fresh.map((s) => buy(s.cusip, aug.date, 1_000_000)),
+				...(latest ? [buy(latest.cusip, aug.date, 500_000)] : []),
+			];
+		},
+	},
+	{
+		name: "Test 10: Bills, TIPS, floaters and a long bond",
+		benchmark: "AGG",
+		policy: "distribute",
+		trades: async () => {
+			const mar = await pricedOn("2026-03-02");
+			const used = new Set<string>();
+			return [
+				pick(mar, ["bill"], 0.25, used),
+				pick(mar, ["bill"], 1, used),
+				pick(mar, ["tips"], 10, used),
+				pick(mar, ["frn"], 2, used),
+				pick(mar, ["bond"], 30, used),
+			].map((s) => buy(s.cusip, mar.date, 1_000_000));
+		},
+	},
+	{
+		name: "Test 11: Bought in the 2008 crisis, held",
+		benchmark: "broad",
+		policy: "cash",
+		trades: async () => {
+			// Eighteen years of ledger, three maturities on the way (2010, 2013, 2018).
+			const oct = await pricedOn("2008-10-01");
+			const used = new Set<string>();
+			return [
+				pick(oct, ["note"], 2, used),
+				pick(oct, ["tips"], 5, used),
+				pick(oct, ["note"], 10, used),
+				pick(oct, ["bond"], 30, used),
+			].map((s) => buy(s.cusip, oct.date, 1_000_000));
+		},
+	},
+	{
+		name: "Test 12: Held through COVID",
+		benchmark: "0307",
+		policy: "reinvest",
+		trades: async () => {
+			const dec = await pricedOn("2019-12-02");
+			const used = new Set<string>();
+			const [two, five, seven] = [2, 5, 7].map(
+				(y) => pick(dec, ["note"], y, used).cusip,
+			);
+			return [
+				buy(two, dec.date, 1_000_000),
+				buy(five, dec.date, 1_000_000),
+				buy(seven, dec.date, 1_000_000),
+				buy(five, (await pricedOn("2020-03-16")).date, 1_000_000),
+				sell(seven, (await pricedOn("2022-06-01")).date, 1_000_000),
+			];
+		},
+	},
+	{
+		name: "Test 13: Institutional block, $750M",
+		benchmark: "0103",
+		policy: "cash",
+		trades: async () => {
+			const jun = await pricedOn("2026-06-01");
+			return [
+				buy(pick(jun, ["note"], 2).cusip, jun.date, 500_000_000),
+				buy(pick(jun, ["bill"], 0.25).cusip, jun.date, 250_000_000),
+			];
+		},
+	},
+	{
+		name: "Test 14: $100 lots",
+		benchmark: "broad",
+		policy: "distribute",
+		trades: async () => {
+			const jul = await pricedOn("2026-07-01");
+			const used = new Set<string>();
+			return [
+				pick(jul, ["bill"], 0.25, used),
+				pick(jul, ["note"], 2, used),
+				pick(jul, ["note"], 5, used),
+				pick(jul, ["note"], 10, used),
+				pick(jul, ["bond"], 30, used),
+			].map((s) => buy(s.cusip, jul.date, 100));
+		},
+	},
+	{
+		name: "Test 15: New issues, bought on their first day",
+		benchmark: "broad",
+		policy: "cash",
+		trades: async () => {
+			let seen = new Set(
+				(await pricedOn("2026-07-31")).securities.map((s) => s.cusip),
+			);
+			const trades: TSeedTrade[] = [];
+			const wanted = new Set(["note", "bond", "tips"]);
+			for (
+				let d = "2026-08-03";
+				d <= "2026-08-31" && wanted.size > 0;
+				d = addDays(d, 1)
+			) {
+				const day = await pricedOn(d);
+				if (day.date !== d) continue; // not a priced day
+				for (const s of day.securities)
+					if (!seen.has(s.cusip) && wanted.has(s.family) && s.price !== null) {
+						trades.push(buy(s.cusip, day.date, 1_000_000));
+						wanted.delete(s.family);
+					}
+				seen = new Set([...seen, ...day.securities.map((s) => s.cusip)]);
+			}
+			return trades;
+		},
+	},
+	{
+		name: "Test 16: Monthly bill roll, reinvested",
+		benchmark: "BILL",
+		policy: "reinvest",
+		trades: async () => {
+			const trades: TSeedTrade[] = [];
+			for (let k = 0; k < 8; k++) {
+				const list = await pricedOn(addMonths("2026-01-05", k));
+				trades.push(buy(pick(list, ["bill"], 1 / 12).cusip, list.date, 1_000_000));
+			}
+			return trades;
+		},
+	},
+	{
+		name: "Test 17: Two-year note rolled quarterly since 2024",
+		benchmark: "0103",
+		policy: "cash",
+		trades: async () => {
+			const trades: TSeedTrade[] = [];
+			let held: string | null = null;
+			for (let k = 0; k < 11; k++) {
+				const list = await pricedOn(addMonths("2024-01-02", 3 * k));
+				const current = pick(list, ["note"], 2).cusip;
+				if (current === held) continue;
+				if (held !== null) trades.push(sell(held, list.date, 1_000_000));
+				trades.push(buy(current, list.date, 1_000_000));
+				held = current;
+			}
+			return trades;
+		},
+	},
+	{
+		name: "Test 18: Coupon date and a bill two days from maturity",
+		benchmark: "0103",
+		policy: "cash",
+		trades: async () => {
+			const may = await pricedOn("2026-05-15");
+			const coupon = may.securities.find(
+				(s) =>
+					s.family === "note" &&
+					s.price !== null &&
+					/-(05|11)-15$/.test(s.maturity_date ?? "") &&
+					(s.maturity_date ?? "") > "2028",
+			);
+			const jun = await pricedOn("2026-06-01");
+			const soon = jun.securities
+				.filter(
+					(s) =>
+						s.family === "bill" &&
+						s.price !== null &&
+						(s.maturity_date ?? "") > addDays(jun.date, 2),
+				)
+				.sort((a, b) =>
+					(a.maturity_date ?? "").localeCompare(b.maturity_date ?? ""),
+				)[0];
+			return [
+				...(coupon ? [buy(coupon.cusip, may.date, 1_000_000)] : []),
+				...(soon ? [buy(soon.cusip, jun.date, 1_000_000)] : []),
+			];
+		},
+	},
+	{
+		name: "Test 19: Ten TIPS, each against its nominal",
+		benchmark: "TIPS",
+		policy: "distribute",
+		trades: async () => {
+			const feb = await pricedOn("2026-02-02");
+			const tips = spread(between(feb, ["tips"], 0.5, 30), 10);
+			const nominals = between(feb, ["note", "bond"], 0.3, 31);
+			return tips.flatMap((t) => {
+				const near = [...nominals].sort(
+					(a, b) =>
+						Math.abs(
+							Date.parse(a.maturity_date ?? "") - Date.parse(t.maturity_date ?? ""),
+						) -
+						Math.abs(
+							Date.parse(b.maturity_date ?? "") - Date.parse(t.maturity_date ?? ""),
+						),
+				)[0];
+				return [
+					buy(t.cusip, feb.date, 1_000_000),
+					buy(near.cusip, feb.date, 1_000_000),
+				];
+			});
+		},
+	},
+	{
+		name: "Test 20: Thirteen hundred trades",
+		benchmark: "0307",
+		policy: "cash",
+		trades: async () => {
+			// Ten notes, $10k of each every week for two years, and $20k of each
+			// sold every fourth week.
+			const start = await pricedOn("2024-10-01");
+			const notes = spread(between(start, ["note"], 3, 10), 10).map(
+				(s) => s.cusip,
+			);
+			const trades: TSeedTrade[] = [];
+			for (let w = 0; w < 104; w++) {
+				const day = (await pricedOn(addDays("2024-10-01", 7 * w))).date;
+				for (const note of notes) trades.push(buy(note, day, 10_000));
+				if (w % 4 === 3)
+					for (const note of notes) trades.push(sell(note, day, 20_000));
+			}
+			return trades;
+		},
+	},
+];
+
+// ── Break tests (--testing): each in its own throwaway portfolio ────────────
+
+/** The ISIN of a US CUSIP: "US" + CUSIP + the Luhn check digit on its digit expansion. */
+const isinOf = (cusip: string) => {
+	const body = `US${cusip}`;
+	const digits = [...body]
+		.map((ch) => (/[0-9]/.test(ch) ? ch : String(ch.charCodeAt(0) - 55)))
+		.join("");
+	let sum = 0;
+	[...digits].reverse().forEach((ch, i) => {
+		let d = Number(ch);
+		if (i % 2 === 0) {
+			d *= 2;
+			if (d > 9) d -= 9;
+		}
+		sum += d;
+	});
+	return `${body}${(10 - (sum % 10)) % 10}`;
+};
+const toThirtySeconds = (price: number) => {
+	const whole = Math.floor(price);
+	const ticks = Math.round((price - whole) * 32);
+	return ticks === 32
+		? `${whole + 1}-00`
+		: `${whole}-${String(ticks).padStart(2, "0")}`;
+};
+
+type TBreak = {
+	what: string;
+	expect: "accept" | "refuse" | "report";
+	csv: () => Promise<string>;
+};
+
+const breakTests = async () => {
+	heading("Break tests: what the trade import accepts and refuses");
+	const sep = await pricedOn("2026-09-01");
+	const note = pick(sep, ["note"], 5);
+	const px = note.price as number;
+	const { bill: matured } = await test01Bill();
+	const header = "CUSIP,Side,Trade Date,Face Amount,Price";
+	const row = (
+		date: string,
+		side = "buy",
+		face = "100000",
+		price = String(px),
+		cusip = note.cusip,
+	) => `${cusip},${side},${date},${face},${price}`;
+	const today = new Date().toISOString().slice(0, 10);
+	const cases: TBreak[] = [
+		{
+			what: "a Saturday trade date",
+			expect: "refuse",
+			csv: async () => `${header}\n${row("2026-08-29")}`,
+		},
+		{
+			what: "a federal holiday (Labor Day)",
+			expect: "refuse",
+			csv: async () => `${header}\n${row("2026-09-07")}`,
+		},
+		{
+			what: "a trade date in the future",
+			expect: "refuse",
+			csv: async () => `${header}\n${row(addDays(today, 7))}`,
+		},
+		{
+			what: "a bill bought after it matured",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", "100", matured.cusip)}`,
+		},
+		{
+			what: "an unknown CUSIP",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", String(px), "912828ZZ1")}`,
+		},
+		{
+			what: "a negative face amount",
+			expect: "refuse",
+			csv: async () => `${header}\n${row("2026-09-01", "buy", "-100000")}`,
+		},
+		{
+			what: "a zero price",
+			expect: "refuse",
+			csv: async () => `${header}\n${row("2026-09-01", "buy", "100000", "0")}`,
+		},
+		{
+			what: "a price quoted per $1 (0.99)",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", (px / 100).toFixed(4))}`,
+		},
+		{ what: "an empty file", expect: "refuse", csv: async () => "" },
+		{ what: "a header and no rows", expect: "refuse", csv: async () => header },
+		{
+			// Padded with an account column so it is over 1 MB whatever the
+			// price's length: the first version of this case came in just under
+			// and so tested the row cap instead.
+			what: "a file over 1 MB",
+			expect: "refuse",
+			csv: async () =>
+				`${header},Account\n${Array.from({ length: 25_000 }, () => `${row("2026-09-01")},${"x".repeat(20)}`).join("\n")}`,
+		},
+		{
+			what: "6,000 trades, under 1 MB",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${Array.from({ length: 6_000 }, () => row("2026-09-01")).join("\n")}`,
+		},
+		{
+			what: "selling more than was bought",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${row("2026-09-01")}\n${row("2026-09-02", "sell", "200000")}`,
+		},
+		{
+			what: "one bad row among good ones (all or nothing)",
+			expect: "refuse",
+			csv: async () =>
+				`${header}\n${row("2026-09-01")}\n${row("2026-09-02", "buy", "abc")}`,
+		},
+		{
+			what: "an ISIN instead of a CUSIP",
+			expect: "accept",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", String(px), isinOf(note.cusip))}`,
+		},
+		{
+			what: "a price in 32nds",
+			expect: "accept",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", toThirtySeconds(px))}`,
+		},
+		{
+			what: "a price with a dollar sign",
+			expect: "accept",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "buy", "100000", `$${px}`)}`,
+		},
+		{
+			what: "a US-style date (9/1/2026)",
+			expect: "accept",
+			csv: async () => `${header}\n${row("9/1/2026")}`,
+		},
+		{
+			what: "a face amount with thousands commas, quoted",
+			expect: "accept",
+			csv: async () => `${header}\n${row("2026-09-01", "buy", '"100,000"')}`,
+		},
+		{
+			what: "other column names, in another order",
+			expect: "accept",
+			csv: async () =>
+				`Px,Qty,Trade Dt,Security ID,Action\n${px},100000,2026-09-01,${note.cusip},BOUGHT`,
+		},
+		{
+			what: "a Windows file (BOM and CRLF)",
+			expect: "accept",
+			csv: async () => `﻿${header}\r\n${row("2026-09-01")}\r\n`,
+		},
+		{
+			what: "an explicit settlement date",
+			expect: "accept",
+			csv: async () =>
+				`CUSIP,Side,Trade Date,Settle Date,Face,Price\n${note.cusip},buy,2026-09-01,2026-09-03,100000,${px}`,
+		},
+		{
+			what: "a sell listed before the same day's buy",
+			expect: "report",
+			csv: async () =>
+				`${header}\n${row("2026-09-01", "sell")}\n${row("2026-09-01")}`,
+		},
+		{
+			what: "the same file imported twice",
+			expect: "report",
+			csv: async () => `${header}\n${row("2026-09-01")}`,
+		},
+	];
+	for (const c of cases) {
+		const id = await createPortfolio(`${TEST}: break`, "broad", "cash");
+		if (id === null) {
+			fail(c.what, "could not create a scratch portfolio");
+			continue;
+		}
+		const csv = await c.csv();
+		let result = await importCsv(id, csv);
+		if (c.what === "the same file imported twice")
+			result = await importCsv(id, csv);
+		const refused = problems(result.text);
+		const accepted = refused.length === 0 && /trades? added/.test(result.text);
+		const outcome =
+			result.status >= 500
+				? "crashed"
+				: accepted
+					? "accept"
+					: refused.length > 0
+						? "refuse"
+						: "unclear";
+		const said = refused.join(" | ").slice(0, 220);
+		if (c.expect === "report")
+			pass(c.what, `${outcome}${said ? `: ${said}` : ""}`);
+		else if (outcome === c.expect)
+			pass(c.what, `${outcome}${said ? `: ${said}` : ""}`);
+		else
+			fail(
+				c.what,
+				`expected ${c.expect}, got ${outcome} (HTTP ${result.status})${said ? `: ${said}` : ""}`,
+			);
+		// Whatever was accepted must still value.
+		if (outcome === "accept") {
+			const page = await get(`/dashboard/portfolios/${id}`);
+			const broken = [...problems(page.text), ...nonsense(page.text)];
+			if (page.status !== 200 || broken.length > 0)
+				fail(
+					`${c.what}: then values`,
+					`HTTP ${page.status} ${broken.join(" | ").slice(0, 200)}`,
+				);
+		}
+		await post(`/dashboard/portfolios/${id}/transactions`, {
+			intent: "deletePortfolio",
+			confirmName: `${TEST}: break`,
+		});
+	}
+};
+
 const tradesCsv = async (trades: TSeedTrade[]) => {
 	const lines = ["CUSIP,Side,Trade Date,Face Amount,Price"];
 	for (const t of trades) {
@@ -386,10 +1090,10 @@ const createPortfolio = async (
 	);
 };
 
-const seed = async () => {
-	heading("Seed example portfolios");
+const seed = async (seeds: TSeed[]) => {
+	heading(`Seed ${seeds.length} portfolios`);
 	const existing = await existingPortfolios();
-	for (const s of SEEDS) {
+	for (const s of seeds) {
 		if (existing.has(s.name)) {
 			pass(s.name, "already there, left alone");
 			continue;
@@ -399,14 +1103,20 @@ const seed = async () => {
 			fail(s.name, "create did not redirect to the new portfolio");
 			continue;
 		}
-		const imported = await importCsv(id, await tradesCsv(await s.trades()));
+		const trades = await s.trades();
+		const imported = await importCsv(id, await tradesCsv(trades));
 		const shown = problems(imported.text);
 		if (imported.status >= 400 || shown.length > 0)
-			fail(s.name, `import refused: ${shown.join(" | ") || imported.status}`);
-		else pass(s.name, `created and imported (${id})`);
+			fail(
+				s.name,
+				`import refused (HTTP ${imported.status}): ${shown.join(" | ").slice(0, 400)}`,
+			);
+		else pass(s.name, `${trades.length} trades imported (${id})`);
 	}
 	return existingPortfolios();
 };
+
+const ALL_SEEDS = [...SEEDS, ...TESTING];
 
 // ── The exercise ─────────────────────────────────────────────────────────────
 
@@ -434,12 +1144,15 @@ const exercisePortfolios = async (ids: Map<string, string>) => {
 	heading("Tracking, attribution, stress and the overview, per portfolio");
 	for (const [name, id] of ids) {
 		if (name.startsWith(TEST)) continue;
+		if (ONLY !== null && !name.includes(ONLY)) continue;
+		let tracking: string | undefined;
 		for (const attr of ["mtd", "ytd", "1y", "inception"])
-			await expectPage(
-				`${name}: tracking, ${attr} attribution`,
-				`/dashboard/portfolios/${id}?attr=${attr}`,
-				"Growth of $1",
-			);
+			tracking =
+				(await expectPage(
+					`${name}: tracking, ${attr} attribution`,
+					`/dashboard/portfolios/${id}?attr=${attr}`,
+					"Growth of $1",
+				)) ?? tracking;
 		await expectPage(
 			`${name}: custom period`,
 			`/dashboard/portfolios/${id}?attr=custom&from=2026-03-31&to=2026-06-30`,
@@ -455,7 +1168,37 @@ const exercisePortfolios = async (ids: Map<string, string>) => {
 			`/dashboard?portfolio=${id}`,
 			"Return since inception",
 		);
-		if (overview) figures.push({ name, ...headline(overview) });
+		if (DUMP !== null && tracking)
+			await Bun.write(
+				`${DUMP}/${name.replace(/[^A-Za-z0-9]+/g, "-")}.html`,
+				tracking,
+			);
+		if (overview) {
+			const shown = headline(overview);
+			figures.push({ name, ...shown });
+			// The overview and the Tracking page value with the same code; they
+			// must show the same figures. Found 2026-09-29: the overview added
+			// cash to a market value that already held it.
+			if (tracking) {
+				const there = headline(tracking).tiles;
+				const differ = ["Market value", "Total gain"].filter(
+					(label) => there[label] !== shown.tiles[label],
+				);
+				differ.length === 0
+					? pass(`${name}: overview agrees with Tracking`)
+					: fail(
+							`${name}: overview agrees with Tracking`,
+							differ.map((l) => `${l} ${shown.tiles[l]} vs ${there[l]}`).join("; "),
+						);
+			}
+			const check = ALL_SEEDS.find((s) => s.name === name)?.check;
+			if (check) {
+				const problem = await check(shown.tiles);
+				problem
+					? fail(`${name}: figures`, problem)
+					: pass(`${name}: figures`, "as computed independently");
+			}
+		}
 	}
 };
 
@@ -714,7 +1457,7 @@ const cleanUp = async (created: {
 await signIn();
 const portfolios = flag("exercise-only")
 	? await existingPortfolios()
-	: await seed();
+	: await seed(flag("testing") ? ALL_SEEDS : SEEDS);
 if (!flag("seed-only")) {
 	await exercisePortfolios(portfolios);
 	heading("What the overview shows");
@@ -727,6 +1470,7 @@ if (!flag("seed-only")) {
 		);
 		console.info(`    ${f.periods.join(" · ")}`);
 	}
+	if (flag("testing")) await breakTests();
 	const created = await exerciseBuilder();
 	if (!flag("keep")) await cleanUp(created);
 	await expectPage(

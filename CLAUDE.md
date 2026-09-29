@@ -398,6 +398,35 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   steadily as the cap tightens ($7.79M uncapped, $8.0M at 6, $9.7M at 1)
   where before a cap of 4 settled for $21.8M in one bond. The treasury repo's
   copy has the same flaw (not yet fixed there).
+- **The testing portfolios (`--testing`, 2026-09-29).** Twenty "Test NN"
+  portfolios on dylan@saferate.com in staging, each built to break one thing:
+  a bill to maturity, one long bond, the same note bought monthly, FIFO in and
+  out, a round trip, 40 and 100 securities, a TIPS ladder, every FRN, a mixed
+  barbell, 2008 and COVID histories, a $750M block, $100 lots, first-day new
+  issues, a reinvested bill roll, a quarterly 2-year roll, coupon-date and
+  pre-maturity trades, TIPS against nominals, and 1,300 trades. Plus 25 import
+  break tests. The script also fails any page showing NaN, Infinity,
+  "undefined" or an unexplained attribution, and any overview that disagrees
+  with Tracking. What they found, all fixed and each pinned by a test that
+  fails on the old code:
+  - FRN coupons on weekdays paid ZERO: a stored row settling on the coupon
+    date carries the new period's accrued (0), and the coupon anchored on it.
+    An all-FRN book showed half its income. Coupons now anchor strictly
+    before their date (pricers.ts).
+  - Attribution left -0.05 bp unexplained per coupon: the decomposition's end
+    value carried coupons at forwards, which the ledger never pays. The end is
+    now the coupon as received; the difference lands in selection, as the
+    treasury repo's reinvestedAtForwards comment says it should.
+  - A 100-security page took 26 s of Worker CPU (a timeout once): 68% was the
+    holiday library via dayjs inside settlementFor. isBusinessDay,
+    settlementFor, coupon schedules, accrued and yearFraction are memoised;
+    20 s to 0.9 s locally, 38 s to 5 s on staging. The memoised schedule was
+    checked identical to the old one on 192,526 random cases.
+  - Weekend and holiday trade dates were accepted; now refused.
+  - More than 5,000 rows in one import was a 500 (the persistence cap, never
+    checked by the page); now a message. `MAX_TRANSACTIONS_PER_ADD`.
+  - The overview added cash to a market value that already includes it.
+  Open, for Dylan: re-importing the same file is accepted silently.
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in
