@@ -113,6 +113,47 @@ describe("ZSecurityDetail", () => {
       expect(auction.bidToCoverRatio).toBeCloseTo(2.22, 2);
       expect(auction.offeringAmount).toBe(23_000_000_000);
    });
+
+   test("a row from before the result columns leaves them null, not missing", () => {
+      const auction = ZSecurityDetail.parse({ ...DETAIL, auctions: [AUCTION] })
+         .auctions[0];
+      expect(auction.primaryDealerAccepted).toBeNull();
+      expect(auction.indirectBidderAccepted).toBeNull();
+      expect(auction.medianYield).toBeNull();
+      expect(auction.securityTerm).toBeNull();
+   });
+
+   test("keeps who bought it and the rates it cleared at", () => {
+      // The columns upstream's ZSecurityAuctionRow carries after the results
+      // were added; until 2026-09-29 this schema dropped them on parse.
+      const auction = ZSecurityDetail.parse({
+         ...DETAIL,
+         auctions: [
+            {
+               ...AUCTION,
+               security_term: "10-Year",
+               total_tendered: 62_300_000_000,
+               primary_dealer_accepted: 4_100_000_000,
+               direct_bidder_accepted: 4_500_000_000,
+               indirect_bidder_accepted: 14_400_000_000,
+               noncompetitive_accepted: 30_000_000,
+               soma_accepted: 5_000_000_000,
+               fima_noncompetitive_accepted: 0,
+               allocation_percentage: 41.53,
+               low_yield: 1.9,
+               average_median_yield: 1.98,
+               price_per100: 99.8,
+            },
+         ],
+      }).auctions[0];
+      expect(auction.primaryDealerAccepted).toBe(4_100_000_000);
+      expect(auction.indirectBidderAccepted).toBe(14_400_000_000);
+      expect(auction.somaAccepted).toBe(5_000_000_000);
+      expect(auction.allocationPercentage).toBeCloseTo(41.53, 2);
+      expect(auction.medianYield).toBeCloseTo(1.98, 2);
+      expect(auction.pricePer100).toBeCloseTo(99.8, 2);
+      expect(auction.highDiscountMargin).toBeNull();
+   });
 });
 
 describe("ZSecurityPrice", () => {

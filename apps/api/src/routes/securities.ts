@@ -217,6 +217,33 @@ export const ZSecurityAnalyticsOut = z
 
 // ── Shaping ──────────────────────────────────────────────────────────────────
 
+/**
+ * The auction fields /v1/securities/{cusip} publishes, named one by one. The
+ * client now carries who bought each auction and at what rates (treasury PR
+ * #10, 2026-09-29), and passing those through `shape` broke this route's
+ * strict schema: every lookup a 500. A field the client gains is not a field
+ * the API has promised; publishing more is a decision, made here.
+ */
+const publishedAuction = (auction: {
+	auctionDate: string;
+	issueDate: string;
+	originalSecurityTerm: string;
+	isReopening: boolean;
+	highYield: number | null;
+	bidToCoverRatio: number | null;
+	offeringAmount: number | null;
+	totalAccepted: number | null;
+}) => ({
+	auction_date: auction.auctionDate,
+	issue_date: auction.issueDate,
+	original_security_term: auction.originalSecurityTerm,
+	is_reopening: auction.isReopening,
+	high_yield: auction.highYield,
+	bid_to_cover_ratio: auction.bidToCoverRatio,
+	offering_amount: auction.offeringAmount,
+	total_accepted: auction.totalAccepted,
+});
+
 /** snake_case, less the fields the envelope already states. */
 const shape = (value: unknown) => {
 	const { cusip: _c, ...rest } = snakeKeys(value) as Record<string, unknown>;
@@ -308,7 +335,10 @@ export const registerSecurityRoutes = (app: OpenAPIHono<AppEnv>) => {
 				ZSecurityOut.parse({
 					cusip,
 					family,
-					terms: shape(detail),
+					terms: {
+						...shape(detail),
+						auctions: detail.auctions.map(publishedAuction),
+					},
 					latest_price: prices.length ? shape(prices.at(-1)) : null,
 					analytics_basis: basis,
 					latest_analytics: latest ? shape(latest) : null,

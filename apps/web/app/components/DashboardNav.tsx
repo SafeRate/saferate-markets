@@ -27,7 +27,7 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 	{
 		title: "Markets",
 		items: [
-			{ kind: "soon", label: "Treasury Auctions" },
+			{ kind: "link", label: "Treasury Auctions", to: "/dashboard/auctions" },
 			{ kind: "link", label: "Treasury Rates", to: "/dashboard/rates" },
 		],
 	},

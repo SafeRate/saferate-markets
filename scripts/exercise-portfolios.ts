@@ -174,7 +174,9 @@ const expectPage = async (what: string, path: string, marker: string) => {
 		);
 	const shown = problems(page.text);
 	if (shown.length > 0) return fail(what, shown.join(" | ").slice(0, 400));
-	if (!page.text.includes(marker))
+	// React's server render puts <!-- --> between adjacent text pieces
+	// ("History: " and the term), so match on the text without them.
+	if (!page.text.replace(/<!--.*?-->/g, "").includes(marker))
 		return fail(what, `no "${marker}" on ${path}`);
 	const broken = nonsense(page.text);
 	if (broken.length > 0) return fail(what, broken.join(" | ").slice(0, 400));
@@ -1222,6 +1224,30 @@ const exercisePortfolios = async (ids: Map<string, string>) => {
 	}
 };
 
+const exerciseMarkets = async () => {
+	heading("Treasury Auctions and Rates");
+	await expectPage("auctions", "/dashboard/auctions", "Latest result, by term");
+	for (const term of [
+		"Bill 4-Week",
+		"Bill 13-Week",
+		"Note 2-Year",
+		"Bond 30-Year",
+		"TIPS 10-Year",
+		"FRN 2-Year",
+	])
+		await expectPage(
+			`auctions: ${term} history`,
+			`/dashboard/auctions?term=${encodeURIComponent(term)}`,
+			`History: ${term}`,
+		);
+	await expectPage(
+		"auctions: an unknown term falls back",
+		"/dashboard/auctions?term=nonsense",
+		"History: Note 10-Year",
+	);
+	await expectPage("rates", "/dashboard/rates", "Treasury Rates");
+};
+
 const PAYOUTS = Array.from(
 	{ length: 10 },
 	(_, i) => `${2027 + i}-06-30, 1,000,000, Year ${i + 1} payout`,
@@ -1490,6 +1516,7 @@ if (!flag("seed-only")) {
 		);
 		console.info(`    ${f.periods.join(" · ")}`);
 	}
+	await exerciseMarkets();
 	if (flag("testing")) await breakTests();
 	const created = await exerciseBuilder();
 	if (!flag("keep")) await cleanUp(created);

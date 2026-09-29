@@ -632,6 +632,24 @@ const zCusip = z
    .regex(/^[0-9A-Z]{9}$/, "a CUSIP is nine uppercase alphanumeric characters");
 
 /** One auction of one security. Reopenings mean a CUSIP can have several. */
+/** A nullable number that may be absent: a column added after the row was written. */
+const zLaterColumn = z.number().nullable().default(null);
+
+/**
+ * One auction of a security, as `security(cusip)` returns it: `SELECT *` from
+ * `security_auctions`, validated upstream by ZSecurityAuctionRow.
+ *
+ * WHO BOUGHT IT and AT WHAT RATES, not only the cover. Until 2026-09-29 this
+ * kept eight columns and dropped the rest on parse, though upstream sends all
+ * of them: the bidder classes (a cover of 2.4 with dealers taking 30% is a
+ * different auction from one with dealers taking 12%), the low / median /
+ * high rates, and the rate each family clears on (bills a discount and an
+ * investment rate, floaters a discount margin, coupons a yield). The added
+ * fields default to null because a database without upstream's later
+ * columns returns rows without the keys at all.
+ *
+ * Amounts are dollars; rates, yields and allocation are percent.
+ */
 export const ZSecurityAuction = z
    .object({
       auction_date: zIsoDate,
@@ -642,6 +660,23 @@ export const ZSecurityAuction = z
       original_security_term: z.string(),
       reopening: zSqliteBoolean,
       total_accepted: z.number().nullable(),
+      security_term: z.string().nullable().default(null),
+      total_tendered: zLaterColumn,
+      primary_dealer_accepted: zLaterColumn,
+      direct_bidder_accepted: zLaterColumn,
+      indirect_bidder_accepted: zLaterColumn,
+      noncompetitive_accepted: zLaterColumn,
+      soma_accepted: zLaterColumn,
+      fima_noncompetitive_accepted: zLaterColumn,
+      allocation_percentage: zLaterColumn,
+      high_discount_rate: zLaterColumn,
+      low_discount_rate: zLaterColumn,
+      average_median_discount_rate: zLaterColumn,
+      low_yield: zLaterColumn,
+      average_median_yield: zLaterColumn,
+      high_investment_rate: zLaterColumn,
+      high_discount_margin: zLaterColumn,
+      price_per100: zLaterColumn,
    })
    .transform((row) => ({
       auctionDate: row.auction_date,
@@ -652,6 +687,23 @@ export const ZSecurityAuction = z
       offeringAmount: row.offering_amount,
       originalSecurityTerm: row.original_security_term,
       totalAccepted: row.total_accepted,
+      securityTerm: row.security_term,
+      totalTendered: row.total_tendered,
+      primaryDealerAccepted: row.primary_dealer_accepted,
+      directBidderAccepted: row.direct_bidder_accepted,
+      indirectBidderAccepted: row.indirect_bidder_accepted,
+      noncompetitiveAccepted: row.noncompetitive_accepted,
+      somaAccepted: row.soma_accepted,
+      fimaNoncompetitiveAccepted: row.fima_noncompetitive_accepted,
+      allocationPercentage: row.allocation_percentage,
+      highDiscountRate: row.high_discount_rate,
+      lowDiscountRate: row.low_discount_rate,
+      medianDiscountRate: row.average_median_discount_rate,
+      lowYield: row.low_yield,
+      medianYield: row.average_median_yield,
+      highInvestmentRate: row.high_investment_rate,
+      highDiscountMargin: row.high_discount_margin,
+      pricePer100: row.price_per100,
    }));
 
 export type TSecurityAuction = z.infer<typeof ZSecurityAuction>;

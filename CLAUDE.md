@@ -456,10 +456,36 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
    engine on real closes. Order sheets split TreasuryDirect-eligible (new issue
    at an upcoming auction, non-competitive, <= $10M, buy only) from secondary
    (any CUSIP, buy or sell; IBKR, Apex, custodian).
-4. Treasury Auctions page: needs the upcoming schedule STORED (fetched daily in
-   treasury-worker auctionsUpdate but discarded): a worker change + production
-   D1 migration, both for the final deploy.
+4. (done 2026-09-29) Treasury Auctions: /dashboard/auctions, see below. Still
+   wanted, both needing treasury deploys: a dated auctions read in treasury-api
+   (new securities' announced auctions; short bills that are not reopenings)
+   and the stored upcoming_auctions feed.
 5. Trade Execution: order-sheet history now, IBKR later.
+
+## Treasury Auctions (2026-09-29, `/dashboard/auctions`)
+
+- **From what treasury-api already serves; no deploy.** The auction-basis
+  on-the-run queues (runStatusOn) name each term's securities; each one's
+  `security(cusip)` carries every auction of it. services/auctions.server.ts
+  reads 11 of each bill queue and 6 of each coupon queue, cached per isolate
+  by run date: about 100 detail reads, 1.5 s cold, 0.3 s warm on staging.
+- **Bills group by the term OFFERED** (`securityTerm`), coupons by original
+  term. The queues hold only 17/26/52-week bills, but 4/6/8/13-week bills are
+  nearly all reopenings of those, so they arrive through them. Grouping bills
+  by queue (the first render) put a 4-week auction in the 17-week row.
+- **Cannot see yet, and says so on the page:** a new security's auction before
+  it is held (a reopening shows once announced), and a short bill that is not
+  a reopening. Both want a dated auctions read in treasury-api.
+- **The client keeps the full auction row** (treasury PR #10: bidder classes,
+  allocation, low/median/high rates, discount rate / margin, price). Vendored
+  from the PR branch `client-auction-results` at c217c17 until it merges;
+  re-run `sync-treasury-client.sh main` then. The REST route
+  /v1/securities/{cusip} pins its eight published auction fields
+  (`publishedAuction`): passing the new ones through its strict schema made
+  every lookup a 500 in tests. MCP's get_treasury_security passes the record
+  through, so its answers gain the new fields when the API deploys.
+- Shares are of the competitive award (dealers + direct + indirect). "High
+  less median" is NOT the tail (that needs the when-issued yield).
 
 ## Rich/cheap — built 2026-09-28 (`/v1/rich-cheap`, `get_treasury_rich_cheap`)
 
