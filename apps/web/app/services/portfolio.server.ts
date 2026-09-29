@@ -170,7 +170,7 @@ export const loadSecurities = async (env: TEnv, cusips: string[]) => {
  * curve rows (each tenor row repeats its day's fit). In five-year pieces: the
  * zero family stores ten rows a day and upstream caps a reply at 20,000.
  */
-const loadCurveParams = async (env: TEnv, from: string, to: string) => {
+export const loadCurveParams = async (env: TEnv, from: string, to: string) => {
 	const params = new Map<string, TCurveParams>();
 	const ZRow = z
 		.object({
@@ -272,21 +272,19 @@ const downsample = <T>(rows: T[], max: number) =>
 				(_, i) => i % Math.ceil(rows.length / max) === 0 || i === rows.length - 1,
 			);
 
-export const valuePortfolio = async ({
+/**
+ * Everything a portfolio page starts from: its securities and their pricers,
+ * checked trades, the market calendar and the ledger. Shared by the valuation
+ * and stress pages so the two can never build different ledgers.
+ */
+export const loadPortfolioState = async ({
 	env,
 	transactions,
-	codeBenchmark,
 	policyIncome,
-	custom,
-	attributionPeriod = "ytd",
 }: {
-	/** Which period to attribute: one at a time, it is the costly part. */
-	attributionPeriod?: TPeriodKey;
 	env: TEnv;
 	transactions: TPortfolioTransaction[];
-	codeBenchmark: string | null;
 	policyIncome: TIncomePolicy;
-	custom: { from: string; to: string } | null;
 }) => {
 	const trades = transactions.map(toTrade);
 	const asOf = await readLatestPriceDate(env);
@@ -343,6 +341,51 @@ export const valuePortfolio = async ({
 		cashRate,
 		pricers,
 	});
+	return {
+		status: "ready" as const,
+		asOf,
+		trades,
+		info,
+		terms,
+		marks,
+		pricers,
+		linkerRisk,
+		floaterRisk,
+		firstTrade,
+		ledger,
+	};
+};
+
+export const valuePortfolio = async ({
+	env,
+	transactions,
+	codeBenchmark,
+	policyIncome,
+	custom,
+	attributionPeriod = "ytd",
+}: {
+	/** Which period to attribute: one at a time, it is the costly part. */
+	attributionPeriod?: TPeriodKey;
+	env: TEnv;
+	transactions: TPortfolioTransaction[];
+	codeBenchmark: string | null;
+	policyIncome: TIncomePolicy;
+	custom: { from: string; to: string } | null;
+}) => {
+	const state = await loadPortfolioState({ env, transactions, policyIncome });
+	if (state.status !== "ready") return state;
+	const {
+		asOf,
+		trades,
+		info,
+		terms,
+		marks,
+		pricers,
+		linkerRisk,
+		floaterRisk,
+		firstTrade,
+		ledger,
+	} = state;
 	const summary = summarise(ledger, asOf);
 	const end = ledger.days.at(-1)?.date ?? asOf;
 

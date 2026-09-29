@@ -20,7 +20,7 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 		items: [
 			{ kind: "link", label: "Portfolio Tracking", to: "/dashboard/portfolios" },
 			{ kind: "soon", label: "Portfolio Builder" },
-			{ kind: "soon", label: "Stress Testing" },
+			{ kind: "link", label: "Stress Testing", to: "/dashboard/stress" },
 		],
 	},
 	{

@@ -340,6 +340,19 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   moved +152bp in a day against theta3, so theta splits are offsetting
   fiction. Components add to the TWR (residual < 1e-9 in tests; nil on the
   four live test portfolios).
+- **Stress Testing** (/dashboard/stress, services/stress.server.ts) on the
+  treasury repo's own risk code, ported VERBATIM with its tests into
+  packages/portfolio/src/risk (historicalSimulation, volatilityModels after
+  Tsay: GARCH(1,1) + generalised Pareto tail; portfolioStress; nelderMead;
+  keyRates). Standard shocks and a user shock reprice every nominal cashflow
+  exactly on the day's fitted curve; every stored market_events window is
+  replayed on today's holdings; VaR/ES 1 and 10 day, 95/99, by GARCH-filtered
+  historical simulation over every curve move since 2008-09, EVT and empirical
+  side by side. TIPS move by real duration (breakevens unchanged), FRNs by rate
+  duration; neither enters VaR. The scenario set is cached per isolate by
+  as-of date: first view ~7s, then ~1.5s. Checked on the live single-note
+  book: DV01 $675/bp, +100bp -6.72%, 1-day 99% VaR $11,457 (1.19%).
+  Veronesi is not cited anywhere in the treasury repo (asked 2026-09-29).
 - TIPS and FRN risk is shown APART from nominal duration (real duration;
   spread and rate duration), never blended.
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
@@ -349,10 +362,7 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
 
 ### Next, in order (agreed with Dylan 2026-09-29)
 1. (done) Attribution: see above.
-2. Stress testing and VaR/ES: portfolioStress.ts and historicalSimulation.ts
-   (filtered historical simulation from 2008; Monte Carlo was rejected on
-   purpose, slope kurtosis 79.8), plus user curve shocks on the Diebold-Li
-   level/slope/curvature.
+2. (done) Stress testing: see below.
 3. Portfolio Builder: starting amount + liabilities -> recommended portfolio
    (cashflowMatching.ts, immunisation.ts) and strategy templates with pros and
    cons (bill roll, short end, ladder, bullet, barbell, duration targets,

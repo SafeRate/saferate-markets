@@ -5,3 +5,7 @@ export * from "./csv";
 export * from "./pricers";
 export * from "./attribution";
 export * from "./curve";
+export * from "./risk/historicalSimulation";
+export * from "./risk/keyRates";
+export * from "./risk/portfolioStress";
+export * from "./risk/volatilityModels";
