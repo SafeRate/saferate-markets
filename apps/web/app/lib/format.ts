@@ -41,9 +41,16 @@ export const describeSecurity = (
 		couponPercent: number;
 		maturityDate: string;
 		family: string | null;
+		spreadPercent?: number | null;
 	} | null,
 ) => {
 	if (info === null) return DASH;
+	if (info.family === "frn") {
+		const at = new Date(`${info.maturityDate}T00:00:00Z`);
+		const month = at.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
+		const spread = info.spreadPercent;
+		return `FRN ${month} ${at.getUTCFullYear()}${spread === null || spread === undefined ? "" : ` (index + ${spread}%)`}`;
+	}
 	const date = new Date(`${info.maturityDate}T00:00:00Z`);
 	const month = date.toLocaleString("en-US", {
 		month: "short",

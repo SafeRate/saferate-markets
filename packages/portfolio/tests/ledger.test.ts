@@ -15,7 +15,6 @@ import {
 	realisedPriceGains,
 	summarise,
 } from "../src/returns";
-import { accruedPer100 } from "../src/dates";
 
 /**
  * Worked examples, each checkable by hand. The note is the real 10-year
@@ -62,13 +61,6 @@ const trade = (t: Omit<TTrade, "idTransaction">): TTrade => {
 	n += 1;
 	return { idTransaction: `t${n}`, ...t };
 };
-const accrued = (s: TSecurityTerms, settlementDate: string) =>
-	accruedPer100({
-		couponRate: s.couponRate,
-		maturityDate: s.maturityDate,
-		settlementDate,
-		frequency: s.frequency,
-	});
 
 const run = (
 	trades: TTrade[],
@@ -237,7 +229,6 @@ describe("selling", () => {
 			terms: TERMS,
 			lastMarks: new Map([[NOTE.cusip, { date: "2026-09-25", close: 96.5 }]]),
 			asOf: "2026-09-25",
-			accrued,
 		});
 		expect(position.averageCleanCost).toBe(97);
 		expect(position.unrealisedPriceGain).toBeCloseTo(-2_500, 8);
@@ -363,6 +354,7 @@ describe("projected income", () => {
 			cusip: NOTE.cusip,
 			kind: "coupon",
 			amount: 23_125,
+			isEstimate: false,
 		});
 		expect(flows.filter((f) => f.kind === "coupon")).toHaveLength(17);
 		expect(flows.at(-1)).toEqual({
@@ -370,6 +362,7 @@ describe("projected income", () => {
 			cusip: NOTE.cusip,
 			kind: "redemption",
 			amount: 1_000_000,
+			isEstimate: false,
 		});
 	});
 });
@@ -487,7 +480,6 @@ describe("where income goes: the portfolio's setting", () => {
 			terms: TERMS,
 			lastMarks: new Map([[NOTE.cusip, { date: "2026-08-31", close: 96 }]]),
 			asOf: "2026-08-31",
-			accrued,
 		});
 		expect(position.averageCleanCost).toBeCloseTo(96, 10);
 		expect(position.faceAmount).toBeCloseTo(

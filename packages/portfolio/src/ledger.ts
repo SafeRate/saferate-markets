@@ -1,10 +1,5 @@
-import {
-	accruedPer100,
-	couponDates,
-	daysBetween,
-	settlementFor,
-	toDate,
-} from "./dates";
+import { daysBetween, settlementFor, toDate } from "./dates";
+import { nominalPricer, type TPricer } from "./pricers";
 
 /**
  * A portfolio's life, day by day, from its trades and the market's closes.
@@ -138,24 +133,20 @@ export type TLedger = {
 	income: TIncomePolicy;
 };
 
-const dirtyPer100 = (terms: TSecurityTerms, close: number, markDate: string) =>
-	close +
-	accruedPer100({
-		couponRate: terms.couponRate,
-		maturityDate: terms.maturityDate,
-		settlementDate: settlementFor(markDate),
-		frequency: terms.frequency,
-	});
+/** The pricers a ledger runs on: those supplied, and the coupon formula for the rest. */
+export const pricersFor = (
+	terms: Map<string, TSecurityTerms>,
+	supplied: Map<string, TPricer> = new Map(),
+) => {
+	const all = new Map<string, TPricer>();
+	for (const [cusip, security] of terms)
+		all.set(cusip, supplied.get(cusip) ?? nominalPricer(security));
+	return all;
+};
 
 /** Trade cash per 100 of face: clean plus the accrued interest that changes hands. */
-export const tradeDirtyPer100 = (terms: TSecurityTerms, trade: TTrade) =>
-	trade.cleanPrice +
-	accruedPer100({
-		couponRate: terms.couponRate,
-		maturityDate: terms.maturityDate,
-		settlementDate: trade.settleDate,
-		frequency: terms.frequency,
-	});
+export const tradeDirtyPer100 = (pricer: TPricer, trade: TTrade) =>
+	pricer.tradeDirty(trade.cleanPrice, trade.settleDate);
 
 /**
  * Everything wrong with a set of trades, before any valuation. An empty list
@@ -164,6 +155,8 @@ export const tradeDirtyPer100 = (terms: TSecurityTerms, trade: TTrade) =>
 export const checkTrades = (
 	trades: TTrade[],
 	terms: Map<string, TSecurityTerms>,
+	/** CUSIPs with a pricer supplied: a TIPS or FRN is valued only with one. */
+	priced: Set<string> = new Set(),
 ): TLedgerProblem[] => {
 	const problems: TLedgerProblem[] = [];
 	const held = new Map<string, number>();
@@ -178,7 +171,10 @@ export const checkTrades = (
 			problems.push({ kind: "no_terms", cusip: trade.cusip });
 			continue;
 		}
-		if (!SUPPORTED_FAMILIES.includes(security.family)) {
+		if (
+			!SUPPORTED_FAMILIES.includes(security.family) &&
+			!priced.has(trade.cusip)
+		) {
 			problems.push({
 				kind: "unsupported_family",
 				cusip: trade.cusip,
@@ -225,8 +221,11 @@ export const buildLedger = ({
 	asOf,
 	income,
 	cashRate = () => 0,
+	pricers: supplied,
 }: {
 	trades: TTrade[];
+	/** TIPS and FRN pricers, from their stored analytics. Nominals need none. */
+	pricers?: Map<string, TPricer>;
 	income: TIncomePolicy;
 	/** Annual rate, decimal, that cash earns on a date. */
 	cashRate?: (date: string) => number;
@@ -282,20 +281,11 @@ export const buildLedger = ({
 		return { close: lastClose.get(cusip), isStale: !exact };
 	};
 
+	const pricers = pricersFor(terms, supplied);
 	// Each security's coupon dates, once, from before the first trade.
 	const coupons = new Map<string, string[]>();
-	for (const [cusip, security] of terms) {
-		coupons.set(
-			cusip,
-			security.couponRate > 0
-				? couponDates({
-						maturityDate: security.maturityDate,
-						from: firstTrade,
-						frequency: security.frequency,
-					})
-				: [],
-		);
-	}
+	for (const [cusip, pricer] of pricers)
+		coupons.set(cusip, pricer.couponDates(firstTrade));
 
 	let previousValue = 0;
 	let previousDate: string | null = null;
@@ -337,35 +327,34 @@ export const buildLedger = ({
 		for (const [cusip, face] of holdings) {
 			const security = terms.get(cusip);
 			if (security === undefined || face <= 0) continue;
-			if (security.couponRate > 0) {
-				for (const couponDate of coupons.get(cusip) ?? []) {
-					if (couponDate > settlement) break;
-					if (couponDate > previousSettlement) {
-						const amount =
-							(face / 100) * ((security.couponRate * 100) / security.frequency);
-						couponsToday.push({ cusip, amount });
-						cashflows.push({
-							date: couponDate,
-							bookedOn: date,
-							cusip,
-							kind: "coupon",
-							amount,
-							faceAmount: face,
-						});
-					}
+			const pricer = pricers.get(cusip) as TPricer;
+			for (const couponDate of coupons.get(cusip) ?? []) {
+				if (couponDate > settlement) break;
+				if (couponDate > previousSettlement) {
+					const amount = (face / 100) * pricer.coupon(couponDate);
+					couponsToday.push({ cusip, amount });
+					cashflows.push({
+						date: couponDate,
+						bookedOn: date,
+						cusip,
+						kind: "coupon",
+						amount,
+						faceAmount: face,
+					});
 				}
 			}
 			if (
 				security.maturityDate > previousSettlement &&
 				security.maturityDate <= settlement
 			) {
-				principal += face;
+				const repaid = (face / 100) * pricer.redemption();
+				principal += repaid;
 				cashflows.push({
 					date: security.maturityDate,
 					bookedOn: date,
 					cusip,
 					kind: "redemption",
-					amount: face,
+					amount: repaid,
 					faceAmount: face,
 				});
 				holdings.set(cusip, 0);
@@ -381,7 +370,9 @@ export const buildLedger = ({
 		for (const trade of todays) {
 			const security = terms.get(trade.cusip);
 			if (security === undefined) continue;
-			const amount = (trade.faceAmount / 100) * tradeDirtyPer100(security, trade);
+			const amount =
+				(trade.faceAmount / 100) *
+				tradeDirtyPer100(pricers.get(trade.cusip) as TPricer, trade);
 			const face = holdings.get(trade.cusip) ?? 0;
 			if (trade.side === "buy") {
 				purchases += amount;
@@ -418,7 +409,7 @@ export const buildLedger = ({
 						cash += coupon.amount;
 						continue;
 					}
-					const dirty = dirtyPer100(security, close, date);
+					const dirty = (pricers.get(coupon.cusip) as TPricer).dirty(close, date);
 					const face = (coupon.amount / dirty) * 100;
 					holdings.set(coupon.cusip, (holdings.get(coupon.cusip) ?? 0) + face);
 					reinvestments.push({
@@ -460,7 +451,8 @@ export const buildLedger = ({
 			const mark = close ?? trade?.cleanPrice;
 			if (mark === undefined) continue;
 			if (isStale && close !== undefined) staleMarks.push({ cusip, date });
-			marketValue += (face / 100) * dirtyPer100(security, mark, date);
+			marketValue +=
+				(face / 100) * (pricers.get(cusip) as TPricer).dirty(mark, date);
 		}
 
 		const base = previousValue + contributions;

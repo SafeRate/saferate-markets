@@ -1,13 +1,7 @@
-import {
-	addMonths,
-	couponDates,
-	daysBetween,
-	settlementFor,
-	toDate,
-	toIso,
-} from "./dates";
+import { addMonths, daysBetween, settlementFor, toDate, toIso } from "./dates";
 import type { TLedger, TSecurityTerms, TTrade, TValuationDay } from "./ledger";
-import { tradeDirtyPer100 } from "./ledger";
+import { pricersFor, tradeDirtyPer100 } from "./ledger";
+import type { TPricer } from "./pricers";
 
 /**
  * Returns off a ledger.
@@ -203,15 +197,17 @@ export const positionsAt = ({
 	terms,
 	lastMarks,
 	asOf,
-	accrued,
+	pricers: supplied,
 }: {
 	ledger: TLedger;
 	trades: TTrade[];
 	terms: Map<string, TSecurityTerms>;
 	lastMarks: Map<string, { date: string; close: number }>;
 	asOf: string;
-	accrued: (security: TSecurityTerms, settlementDate: string) => number;
+	/** The same TIPS and FRN pricers the ledger ran on. */
+	pricers?: Map<string, TPricer>;
 }): TPosition[] => {
+	const pricers = pricersFor(terms, supplied);
 	const trades = [...userTrades, ...ledger.reinvestments];
 	const lots = new Map<string, { face: number; clean: number }[]>();
 	const ordered = [...trades]
@@ -240,12 +236,12 @@ export const positionsAt = ({
 	return [...ledger.holdings]
 		.filter(([, face]) => face > 1e-9)
 		.map(([cusip, face]) => {
-			const security = terms.get(cusip) as TSecurityTerms;
+			const pricer = pricers.get(cusip) as TPricer;
 			const queue = lots.get(cusip) ?? [];
 			const cost = queue.reduce((sum, lot) => sum + lot.face * lot.clean, 0);
 			const averageCleanCost = cost / Math.max(face, 1e-9);
 			const mark = lastMarks.get(cusip) ?? null;
-			const accruedNow = accrued(security, settlement);
+			const accruedNow = pricer.accrued(settlement);
 			return {
 				cusip,
 				faceAmount: face,
@@ -253,7 +249,8 @@ export const positionsAt = ({
 				close: mark?.close ?? null,
 				markDate: mark?.date ?? null,
 				accruedPer100: accruedNow,
-				marketValue: mark === null ? 0 : (face / 100) * (mark.close + accruedNow),
+				marketValue:
+					mark === null ? 0 : (face / 100) * pricer.dirty(mark.close, asOf),
 				unrealisedPriceGain:
 					mark === null ? null : (face * (mark.close - averageCleanCost)) / 100,
 			};
@@ -328,6 +325,8 @@ export type TProjectedFlow = {
 	cusip: string;
 	kind: "coupon" | "redemption";
 	amount: number;
+	/** A TIPS or FRN figure resting on today's ratio or rate held flat. */
+	isEstimate: boolean;
 };
 
 /** Coupons and principal still to come on what is held after `asOf`. */
@@ -335,36 +334,36 @@ export const projectedIncome = ({
 	holdings,
 	terms,
 	asOf,
+	pricers: supplied,
 }: {
 	holdings: Map<string, number>;
 	terms: Map<string, TSecurityTerms>;
 	asOf: string;
+	pricers?: Map<string, TPricer>;
 }): TProjectedFlow[] => {
+	const pricers = pricersFor(terms, supplied);
 	const settlement = settlementFor(asOf);
 	const flows: TProjectedFlow[] = [];
 	for (const [cusip, face] of holdings) {
 		const security = terms.get(cusip);
-		if (security === undefined || face <= 1e-9) continue;
-		if (security.couponRate > 0) {
-			for (const date of couponDates({
-				maturityDate: security.maturityDate,
-				from: settlement,
-				frequency: security.frequency,
-			})) {
-				if (date > settlement)
-					flows.push({
-						date,
-						cusip,
-						kind: "coupon",
-						amount: (face / 100) * ((security.couponRate * 100) / security.frequency),
-					});
-			}
+		const pricer = pricers.get(cusip);
+		if (security === undefined || pricer === undefined || face <= 1e-9) continue;
+		for (const date of pricer.couponDates(settlement)) {
+			if (date > settlement)
+				flows.push({
+					date,
+					cusip,
+					kind: "coupon",
+					amount: (face / 100) * pricer.coupon(date),
+					isEstimate: pricer.isEstimate(date),
+				});
 		}
 		flows.push({
 			date: security.maturityDate,
 			cusip,
 			kind: "redemption",
-			amount: face,
+			amount: (face / 100) * pricer.redemption(),
+			isEstimate: pricer.isEstimate(security.maturityDate),
 		});
 	}
 	return flows.sort(

@@ -1,6 +1,7 @@
 import {
 	call,
 	familyOf,
+	readAnalyticsFor,
 	readDailyLevels,
 	readLatestPriceDate,
 	readSecurityDetail,
@@ -8,7 +9,6 @@ import {
 	type TEnv,
 } from "@markets/mcp-tools";
 import {
-	accruedPer100,
 	buildLedger,
 	chainReturns,
 	checkTrades,
@@ -25,7 +25,10 @@ import {
 	type TIncomePolicy,
 	type TLedgerProblem,
 	type TMark,
+	frnPricer,
 	type TPeriodKey,
+	type TPricer,
+	tipsPricer,
 	type TSecurityTerms,
 	type TTrade,
 } from "@markets/portfolio";
@@ -53,6 +56,8 @@ export type TSecurityInfo = {
 	maturityDate: string;
 	originalSecurityTerm: string;
 	detailSecurityType: string;
+	/** A floater's fixed spread over its index, percent. Null otherwise. */
+	spreadPercent: number | null;
 };
 
 /** Terms and closes for each CUSIP, from its detail and price history. */
@@ -70,6 +75,16 @@ export const loadSecurities = async (env: TEnv, cusips: string[]) => {
 	const info = new Map<string, TSecurityInfo>();
 	const terms = new Map<string, TSecurityTerms>();
 	const marks = new Map<string, TMark[]>();
+	const pricers = new Map<string, TPricer>();
+	/** The latest stored TIPS / FRN analytics row, for their own risk measures. */
+	const linkerRisk = new Map<
+		string,
+		{ date: string; realDuration: number; indexRatio: number }
+	>();
+	const floaterRisk = new Map<
+		string,
+		{ date: string; spreadDuration: number; rateDuration: number }
+	>();
 	const unknown: string[] = [];
 	for (const { cusip, detail, prices } of loaded) {
 		if (detail === null) {
@@ -84,6 +99,7 @@ export const loadSecurities = async (env: TEnv, cusips: string[]) => {
 			maturityDate: detail.maturityDate,
 			originalSecurityTerm: detail.originalSecurityTerm,
 			detailSecurityType: detail.detailSecurityType,
+			spreadPercent: detail.spread,
 		});
 		if (family !== null) {
 			terms.set(cusip, {
@@ -92,15 +108,57 @@ export const loadSecurities = async (env: TEnv, cusips: string[]) => {
 				// The detail stores the coupon in PERCENT (4.625), unlike prices.
 				couponRate: (detail.couponPercent ?? 0) / 100,
 				maturityDate: detail.maturityDate,
-				frequency: 2,
+				// A floater pays quarterly; everything else coupon-bearing, semiannually.
+				frequency: family === "frn" ? 4 : 2,
 			});
+		}
+		// TIPS and FRNs are valued from their stored analytics, as the index does.
+		if (family === "tips" || family === "frn") {
+			const analytics = await readAnalyticsFor(env, { cusip, basis: family });
+			const security = terms.get(cusip) as TSecurityTerms;
+			if (analytics.basis === "tips") {
+				pricers.set(
+					cusip,
+					tipsPricer(
+						security,
+						analytics.rows.map((r) => ({ date: r.date, indexRatio: r.indexRatio })),
+					),
+				);
+				const last = analytics.rows.at(-1);
+				if (last)
+					linkerRisk.set(cusip, {
+						date: last.date,
+						realDuration: last.modifiedDuration,
+						indexRatio: last.indexRatio,
+					});
+			} else if (analytics.basis === "frn") {
+				pricers.set(
+					cusip,
+					frnPricer(
+						security,
+						analytics.rows.map((r) => ({
+							date: r.date,
+							accrued: r.accruedInterest,
+							indexRate: r.indexRatePercent / 100,
+							spread: r.quotedSpreadBp / 10_000,
+						})),
+					),
+				);
+				const last = analytics.rows.at(-1);
+				if (last)
+					floaterRisk.set(cusip, {
+						date: last.date,
+						spreadDuration: last.spreadDurationYears,
+						rateDuration: last.rateDurationYears,
+					});
+			}
 		}
 		marks.set(
 			cusip,
 			prices.map((p) => ({ date: p.date, close: p.close })),
 		);
 	}
-	return { info, terms, marks, unknown };
+	return { info, terms, marks, pricers, linkerRisk, floaterRisk, unknown };
 };
 
 /** The bill curve over a window: the market's calendar, and what cash earns. */
@@ -131,7 +189,7 @@ const toTrade = (t: TPortfolioTransaction): TTrade => ({
 export const describeProblem = (problem: TLedgerProblem) => {
 	switch (problem.kind) {
 		case "unsupported_family":
-			return `${problem.cusip} is a ${problem.family.toUpperCase()}. TIPS and floating rate notes are not valued in portfolios yet: they need their inflation and reset accrual, which is next.`;
+			return `${problem.cusip} is a ${problem.family.toUpperCase()}. It has no stored analytics to value it from, so it cannot be priced yet.`;
 		case "oversold":
 			return `${problem.cusip}: sells ${problem.soldFace.toLocaleString("en-US")} face on ${problem.tradeDate}, but only ${problem.heldFace.toLocaleString("en-US")} is held then.`;
 		case "trade_after_maturity":
@@ -177,13 +235,14 @@ export const valuePortfolio = async ({
 	const asOf = await readLatestPriceDate(env);
 	if (trades.length === 0) return { status: "empty" as const, asOf };
 
-	const { info, terms, marks, unknown } = await loadSecurities(
-		env,
-		trades.map((t) => t.cusip),
-	);
+	const { info, terms, marks, pricers, linkerRisk, floaterRisk, unknown } =
+		await loadSecurities(
+			env,
+			trades.map((t) => t.cusip),
+		);
 	const problems = [
 		...unknown.map((cusip) => ({ kind: "no_terms" as const, cusip })),
-		...checkTrades(trades, terms),
+		...checkTrades(trades, terms, new Set(pricers.keys())),
 	];
 	if (problems.length > 0)
 		return {
@@ -225,6 +284,7 @@ export const valuePortfolio = async ({
 		asOf,
 		income: policyIncome,
 		cashRate,
+		pricers,
 	});
 	const summary = summarise(ledger, asOf);
 	const end = ledger.days.at(-1)?.date ?? asOf;
@@ -305,20 +365,13 @@ export const valuePortfolio = async ({
 			return last === undefined ? [] : [[cusip, last] as const];
 		}),
 	);
-	const accrued = (s: TSecurityTerms, settlementDate: string) =>
-		accruedPer100({
-			couponRate: s.couponRate,
-			maturityDate: s.maturityDate,
-			settlementDate,
-			frequency: s.frequency,
-		});
 	const positions = positionsAt({
 		ledger,
 		trades,
 		terms,
 		lastMarks,
 		asOf: end,
-		accrued,
+		pricers,
 	});
 	const realised = realisedPriceGains(trades, ledger, end);
 
@@ -331,8 +384,15 @@ export const valuePortfolio = async ({
 			.filter((row) => ledger.holdings.has(row.cusip))
 			.map((row) => [row.cusip, ZSecurityAnalytics.parse(row)] as const),
 	);
-	const bondValue = positions.reduce((s, p) => s + p.marketValue, 0);
-	const covered = positions.filter((p) => analytics.has(p.cusip));
+	// Nominal risk over bills, notes and bonds. A TIPS duration is REAL and a
+	// floater's is mostly spread, so each is reported apart, never blended in.
+	const familyAt = (cusip: string) => terms.get(cusip)?.family;
+	const nominals = positions.filter((p) => {
+		const f = familyAt(p.cusip);
+		return f === "bill" || f === "note" || f === "bond";
+	});
+	const bondValue = nominals.reduce((s, p) => s + p.marketValue, 0);
+	const covered = nominals.filter((p) => analytics.has(p.cusip));
 	const coveredValue = covered.reduce((s, p) => s + p.marketValue, 0);
 	const weighted = (
 		pick: (a: z.infer<typeof ZSecurityAnalytics>) => number | null,
@@ -348,7 +408,7 @@ export const valuePortfolio = async ({
 		[...analytics.values()][0]?.keyRateDurations.map((k) => k.label) ?? [];
 	const risk = {
 		coveredShare: bondValue > 0 ? coveredValue / bondValue : null,
-		uncovered: positions
+		uncovered: nominals
 			.filter((p) => !analytics.has(p.cusip))
 			.map((p) => p.cusip),
 		modifiedDuration: weighted((a) => a.modifiedDuration),
@@ -362,12 +422,50 @@ export const valuePortfolio = async ({
 			label,
 			duration: weighted((a) => a.keyRateDurations[i]?.value ?? 0) ?? 0,
 		})),
+		linkers: (() => {
+			const held = positions.filter((p) => linkerRisk.has(p.cusip));
+			const value = held.reduce((s, p) => s + p.marketValue, 0);
+			return held.length === 0
+				? null
+				: {
+						marketValue: value,
+						realDuration: held.reduce(
+							(s, p) =>
+								s +
+								(p.marketValue / value) * (linkerRisk.get(p.cusip)?.realDuration ?? 0),
+							0,
+						),
+					};
+		})(),
+		floaters: (() => {
+			const held = positions.filter((p) => floaterRisk.has(p.cusip));
+			const value = held.reduce((s, p) => s + p.marketValue, 0);
+			return held.length === 0
+				? null
+				: {
+						marketValue: value,
+						spreadDuration: held.reduce(
+							(s, p) =>
+								s +
+								(p.marketValue / value) *
+									(floaterRisk.get(p.cusip)?.spreadDuration ?? 0),
+							0,
+						),
+						rateDuration: held.reduce(
+							(s, p) =>
+								s +
+								(p.marketValue / value) * (floaterRisk.get(p.cusip)?.rateDuration ?? 0),
+							0,
+						),
+					};
+		})(),
 	};
 
 	const income = projectedIncome({
 		holdings: ledger.holdings,
 		terms,
 		asOf: end,
+		pricers,
 	});
 	const horizon = new Date(`${end}T00:00:00Z`);
 	horizon.setUTCFullYear(horizon.getUTCFullYear() + 1);
@@ -482,7 +580,7 @@ export const validateNewTrades = async ({
 	incoming: (Omit<TTrade, "idTransaction"> & { label: string })[];
 }) => {
 	const asOf = await readLatestPriceDate(env);
-	const { terms, marks, unknown } = await loadSecurities(env, [
+	const { terms, marks, pricers, unknown } = await loadSecurities(env, [
 		...existing.map((t) => t.cusip),
 		...incoming.map((t) => t.cusip),
 	]);
@@ -519,6 +617,8 @@ export const validateNewTrades = async ({
 		...existing.map(toTrade),
 		...incoming.map((t, i) => ({ ...t, idTransaction: `new-${i}` })),
 	];
-	problems.push(...checkTrades(all, terms).map(describeProblem));
+	problems.push(
+		...checkTrades(all, terms, new Set(pricers.keys())).map(describeProblem),
+	);
 	return [...new Set(problems)];
 };

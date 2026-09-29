@@ -319,17 +319,26 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   points under the close showed as +3% of "performance". The trade-to-close
   gap now lives in the dollar gain and MWR, and trades >1 point from the
   close are flagged on the page (refused at 5).
-- **Supported: bills, notes, bonds.** TIPS and FRNs are REFUSED, not
-  mispriced. Next: value them from tipsAnalytics / frnAnalytics as the index
-  does (never recompute a second answer); project their future coupons from
-  the breakeven curve and money-market forwards, labelled as estimates.
+- **Every kind is valued**, each through a pricer (packages/portfolio
+  pricers.ts): nominals by the coupon formula; TIPS as real dirty x the stored
+  index ratio at settlement (linear within a month, so two stored days fix any
+  date), coupons on adjusted principal, deflation floor at maturity; FRNs at
+  max(0, index + spread) actual/360 from the stored accrual, paid quarterly.
+  Held to production rows to 10-12 places. End to end on production data from
+  a 1 Sep buy: FRN +0.31% vs the FRN index +0.31%; TIPS -3.56% vs the TIPS
+  index -2.57%, the gap confirmed by hand (real yield +47bp on an 8-year real
+  duration against a 7-year index). Future TIPS/FRN coupons hold today's ratio
+  or rate flat and are marked "estimate"; breakeven- and forward-implied
+  projections are a later refinement.
+- TIPS and FRN risk is shown APART from nominal duration (real duration;
+  spread and rate duration), never blended.
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in
   getParentClientNodes) - restart it; it is not the code.
 
 ### Next, in order (agreed with Dylan 2026-09-29)
-1. TIPS and FRN valuation; custom-period attribution (MTD/YTD/1Y/SI/custom)
+1. Custom-period attribution (MTD/YTD/1Y/SI/custom)
    using saferate-treasury's attribution libraries against the indices.
 2. Stress testing and VaR/ES: portfolioStress.ts and historicalSimulation.ts
    (filtered historical simulation from 2008; Monte Carlo was rejected on

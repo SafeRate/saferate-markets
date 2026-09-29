@@ -60,7 +60,7 @@ export default function Portfolios({
 			<p className="mt-2 text-sm text-slate-600">
 				Enter or upload your trades; value, income, returns against a Safe Rate
 				index and risk are computed from them and the daily Treasury closes. Bills,
-				notes and bonds today; TIPS and floating rate notes are next.
+				notes, bonds, TIPS and floating rate notes.
 			</p>
 
 			{portfolios.length > 0 ? (

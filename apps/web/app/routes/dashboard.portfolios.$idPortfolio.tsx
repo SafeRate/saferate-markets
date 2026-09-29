@@ -425,57 +425,92 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 			<div className="grid gap-6 lg:grid-cols-2">
 				<Section title="Risk">
 					<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-						<dl className="grid grid-cols-2 gap-3 text-sm">
-							<div>
-								<dt className="text-xs text-slate-500">Modified duration</dt>
-								<dd className="tabular font-semibold">
-									{number(v.risk.modifiedDuration)} years
-								</dd>
-							</div>
-							<div>
-								<dt className="text-xs text-slate-500">DV01</dt>
-								<dd className="tabular font-semibold">{money(v.risk.dv01)} per bp</dd>
-							</div>
-							<div>
-								<dt className="text-xs text-slate-500">Yield (value-weighted)</dt>
-								<dd className="tabular font-semibold">
-									{rate(v.risk.yieldPercent, 3)}
-								</dd>
-							</div>
-							<div>
-								<dt className="text-xs text-slate-500">Convexity</dt>
-								<dd className="tabular font-semibold">{number(v.risk.convexity, 3)}</dd>
-							</div>
-						</dl>
-						{v.risk.keyRates.length > 0 ? (
-							<div className="mt-4">
-								<p className="text-xs text-slate-500">Key-rate durations</p>
-								<div className="mt-2 flex h-24 items-end gap-1">
-									{v.risk.keyRates.map((k) => {
-										const peak = Math.max(
-											...v.risk.keyRates.map((x) => Math.abs(x.duration)),
-											1e-9,
-										);
-										return (
-											<div
-												className="flex flex-1 flex-col items-center"
-												key={k.label}
-												title={`${k.label}: ${k.duration.toFixed(3)}`}
-											>
-												<div
-													className="w-full rounded-t bg-primary/70"
-													style={{ height: `${(Math.abs(k.duration) / peak) * 80}px` }}
-												/>
-												<span className="mt-1 text-[10px] text-slate-500">{k.label}</span>
-											</div>
-										);
-									})}
-								</div>
-							</div>
+						{v.risk.coveredShare !== null ? (
+							<>
+								<dl className="grid grid-cols-2 gap-3 text-sm">
+									<div>
+										<dt className="text-xs text-slate-500">Modified duration</dt>
+										<dd className="tabular font-semibold">
+											{number(v.risk.modifiedDuration)} years
+										</dd>
+									</div>
+									<div>
+										<dt className="text-xs text-slate-500">DV01</dt>
+										<dd className="tabular font-semibold">{money(v.risk.dv01)} per bp</dd>
+									</div>
+									<div>
+										<dt className="text-xs text-slate-500">Yield (value-weighted)</dt>
+										<dd className="tabular font-semibold">
+											{rate(v.risk.yieldPercent, 3)}
+										</dd>
+									</div>
+									<div>
+										<dt className="text-xs text-slate-500">Convexity</dt>
+										<dd className="tabular font-semibold">
+											{number(v.risk.convexity, 3)}
+										</dd>
+									</div>
+								</dl>
+								{v.risk.keyRates.length > 0 ? (
+									<div className="mt-4">
+										<p className="text-xs text-slate-500">Key-rate durations</p>
+										<div className="mt-2 flex h-24 items-end gap-1">
+											{v.risk.keyRates.map((k) => {
+												const peak = Math.max(
+													...v.risk.keyRates.map((x) => Math.abs(x.duration)),
+													1e-9,
+												);
+												return (
+													<div
+														className="flex flex-1 flex-col items-center"
+														key={k.label}
+														title={`${k.label}: ${k.duration.toFixed(3)}`}
+													>
+														<div
+															className="w-full rounded-t bg-primary/70"
+															style={{ height: `${(Math.abs(k.duration) / peak) * 80}px` }}
+														/>
+														<span className="mt-1 text-[10px] text-slate-500">{k.label}</span>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								) : null}
+							</>
+						) : (
+							<p className="text-sm text-slate-600">No bills, notes or bonds held.</p>
+						)}
+						{v.risk.linkers || v.risk.floaters ? (
+							<dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-sm">
+								{v.risk.linkers ? (
+									<div>
+										<dt className="text-xs text-slate-500">
+											TIPS ({money(v.risk.linkers.marketValue)}): real duration
+										</dt>
+										<dd className="tabular font-semibold">
+											{number(v.risk.linkers.realDuration)} years
+										</dd>
+									</div>
+								) : null}
+								{v.risk.floaters ? (
+									<div>
+										<dt className="text-xs text-slate-500">
+											FRNs ({money(v.risk.floaters.marketValue)}): spread / rate duration
+										</dt>
+										<dd className="tabular font-semibold">
+											{number(v.risk.floaters.spreadDuration)} /{" "}
+											{number(v.risk.floaters.rateDuration, 3)} years
+										</dd>
+									</div>
+								) : null}
+							</dl>
 						) : null}
 						<p className="mt-3 text-xs text-slate-500">
 							From each security's stored analytics at the {v.asOf} close, weighted by
-							market value; bonds only, so cash lowers none of it.
+							market value; bills, notes and bonds above, so cash lowers none of it.
+							TIPS duration is to the real yield and a floater's is mostly to its
+							spread, so each is shown apart rather than blended in.
 							{v.risk.uncovered.length > 0
 								? ` Not covered (${percent(1 - (v.risk.coveredShare ?? 1), 1)} of bond value, no analytics that day, usually inside three months of maturity): ${v.risk.uncovered.join(", ")}.`
 								: ""}
@@ -501,6 +536,9 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 											<td className="px-3 py-2">
 												{f.kind === "coupon" ? "Coupon" : "Maturity"} ·{" "}
 												{describeSecurity(f.info)}
+												{f.isEstimate ? (
+													<span className="ml-1 text-xs text-amber-700">estimate</span>
+												) : null}
 											</td>
 											<td className={`${td} text-right`}>{money(f.amount)}</td>
 										</tr>
@@ -511,7 +549,8 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 						<p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
 							All remaining coupons and principal: {money(v.incomeTotal)}. Dates are
 							contractual; a payment on a weekend or holiday is made the next business
-							day.
+							day. TIPS and FRN amounts after the latest close hold today's index ratio
+							or floating rate flat, so they are estimates.
 						</p>
 					</div>
 				</Section>
