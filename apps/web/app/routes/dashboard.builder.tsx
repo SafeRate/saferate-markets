@@ -22,13 +22,15 @@ import {
 import { requireOrganization } from "@/lib/session.server";
 import {
 	BUILDER_MODES,
-	describePlan,
-	loadMarket,
-	runBuilder,
 	strategyByKey,
 	type TBuilderInputs,
 	type TBuilderMode,
 	TRACKABLE_INDICES,
+} from "@/lib/builderOptions";
+import {
+	describePlan,
+	loadMarket,
+	runBuilder,
 } from "@/services/builder.server";
 import type { Route } from "./+types/dashboard.builder";
 

@@ -355,6 +355,16 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   Veronesi is not cited anywhere in the treasury repo (asked 2026-09-29).
 - TIPS and FRN risk is shown APART from nominal duration (real duration;
   spread and rate duration), never blended.
+- **Run `build-web.sh staging` before calling a page done.** The dev server
+  serves a page whose client code imports a `.server` module; the production
+  build refuses it ("Server-only module referenced by client"). Found
+  2026-09-29 on the Builder: shared constants now live in lib/builderOptions.ts.
+  Likewise never import one route module from another; shared UI goes in
+  components/, shared logic in lib/.
+- **Dev-only noise:** "An RPC result was not disposed properly" and workerd
+  "internal error; reference = ..." lines come from the remote binding proxy
+  in `dev-web.sh`; pages still return correct data, and the deployed Workers
+  make the same calls without them.
 - **Fixtures and end-to-end checks:** local dev (`dev-web.sh`) prints the magic
   link; sign in with curl and a cookie jar. The dev server's HMR can blow its
   stack after many edits ("Maximum call stack size exceeded" in
