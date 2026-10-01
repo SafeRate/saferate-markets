@@ -7,6 +7,7 @@ import {
 	ScrollRestoration,
 	useRouteLoaderData,
 } from "react-router";
+import { PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import Analytics from "@/components/Analytics";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { resolveTrackingTools } from "@/lib/analytics";
@@ -35,6 +36,23 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 				<meta charSet="utf-8" />
 				<meta content="width=device-width, initial-scale=1" name="viewport" />
 				<Meta />
+				{/* The link-preview card (Slack, LinkedIn, X, iMessage): an absolute
+				    URL, since unfurlers do not resolve relative ones. One image for
+				    every page; public/og.png, 1200x630. */}
+				<meta content={PRODUCT_NAME} property="og:site_name" />
+				<meta content="website" property="og:type" />
+				<meta content={`${SITE_HOSTS.production.web}/og.png`} property="og:image" />
+				<meta content="1200" property="og:image:width" />
+				<meta content="630" property="og:image:height" />
+				<meta
+					content="Safe Rate Markets: portfolio management for U.S. Treasuries"
+					property="og:image:alt"
+				/>
+				<meta content="summary_large_image" name="twitter:card" />
+				<meta
+					content={`${SITE_HOSTS.production.web}/og.png`}
+					name="twitter:image"
+				/>
 				<link href="/favicon.ico" rel="icon" />
 				<link
 					as="font"
