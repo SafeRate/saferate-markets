@@ -123,7 +123,7 @@ export type TRuleOrigin = "our_policy" | "source_licence" | "law";
 
 export const RULE_ORIGIN_LABEL: Record<TRuleOrigin, string> = {
 	our_policy: "Our policy",
-	source_licence: "Required by a source licence",
+	source_licence: "Required by a source license",
 	law: "Required by law",
 };
 
@@ -137,7 +137,7 @@ export const PROHIBITED_USES: readonly {
 		rule:
 			"Do not use the data beyond your plan: showing it to the public, putting it inside a product or feed your customers use, or using an index inside a financial product, without an Enterprise agreement.",
 		origin: "our_policy",
-		why: "The plans are priced by who the data is for. Redistribution and benchmark use are different licences, set out on the pricing page.",
+		why: "The plans are priced by who the data is for. Redistribution and benchmark use are different licenses, set out on the pricing page.",
 	},
 	{
 		rule:

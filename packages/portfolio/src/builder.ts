@@ -531,7 +531,7 @@ export const immuniseLiabilities = ({
 		curve,
 		settlementDate,
 		denomination,
-		method: "Immunisation",
+		method: "Immunization",
 	});
 
 /**
@@ -599,7 +599,7 @@ export const horizonMatch = ({
 		a.security.maturityDate.localeCompare(b.security.maturityDate),
 	);
 	return {
-		method: `Horizon matching (cash-matched to ${edge}, immunised beyond)`,
+		method: `Horizon matching (cash-matched to ${edge}, immunized beyond)`,
 		positions,
 		cost: positions.reduce((s, p) => s + p.cost, 0),
 		notes: [...(matched?.notes ?? []), ...(immunised?.notes ?? [])],

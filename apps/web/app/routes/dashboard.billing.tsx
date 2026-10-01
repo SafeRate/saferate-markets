@@ -246,7 +246,7 @@ export default function Billing({
 			) : null}
 			{d.checkout === "cancelled" ? (
 				<p className="mt-6 text-sm text-slate-500">
-					Checkout was cancelled. Nothing was charged.
+					Checkout was canceled. Nothing was charged.
 				</p>
 			) : null}
 			{actionData?.status === "error" ? (
@@ -357,7 +357,7 @@ export default function Billing({
 				, including what each plan licenses (section 4).
 			</p>
 			<p className="mt-3 text-sm text-slate-600">
-				Firm-wide use, redistribution or a benchmark licence:{" "}
+				Firm-wide use, redistribution or a benchmark license:{" "}
 				<a className="text-primary underline underline-offset-4" href="/pricing">
 					see Enterprise
 				</a>

@@ -143,7 +143,7 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 			{single ? (
 				<section className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 					<Stat
-						label="Annualised"
+						label="Annualized"
 						tone={signClass(single.annualised)}
 						value={percent(single.annualised)}
 					/>
@@ -187,7 +187,7 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 					<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
 						<tr>
 							<th className={th}>Strategy</th>
-							<th className={`${th} text-right`}>Annualised</th>
+							<th className={`${th} text-right`}>Annualized</th>
 							<th className={`${th} text-right`}>Total</th>
 							<th className={`${th} text-right`}>Volatility</th>
 							<th className={`${th} text-right`}>Worst drawdown</th>
@@ -288,7 +288,7 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 				the bill curve's 1-month rate, and no money is ever added. The bullet's
 				target dates are fixed at the start. Returns are time-weighted from the
 				first day's close, so the first purchase's cost counts; volatility is of
-				daily returns, annualised; turnover is half of everything bought and sold
+				daily returns, annualized; turnover is half of everything bought and sold
 				after the start, a year, over the average value. The index starts at the
 				same close. A backtest uses the closes Safe Rate holds, not the prices a
 				trade would have got, and says nothing about the future.

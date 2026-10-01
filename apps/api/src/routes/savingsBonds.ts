@@ -86,7 +86,7 @@ export const ZIBondValueOut = z
 			.object({
 				earning_period_start: z.string(),
 				earning_period_end: z.string(),
-				composite_rate: z.number().openapi({ description: "Decimal, annualised." }),
+				composite_rate: z.number().openapi({ description: "Decimal, annualized." }),
 				fixed_rate: z.number().openapi({ description: "Decimal." }),
 				semiannual_inflation_rate: z.number().openapi({ description: "Decimal." }),
 				fixed_rate_set_on: z.string(),

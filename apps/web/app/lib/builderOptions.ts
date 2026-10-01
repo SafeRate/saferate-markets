@@ -22,7 +22,7 @@ export const BUILDER_MODES: {
 	needs: "liabilities" | "budget" | "rows";
 }[] = [
 	{ mode: "match", label: "Cash-flow matching", needs: "liabilities" },
-	{ mode: "immunise", label: "Immunisation", needs: "liabilities" },
+	{ mode: "immunise", label: "Immunization", needs: "liabilities" },
 	{ mode: "horizon", label: "Horizon matching", needs: "liabilities" },
 	{ mode: "strategy", label: "Strategy template", needs: "budget" },
 	{ mode: "index", label: "Track an index", needs: "budget" },

@@ -111,7 +111,7 @@ export const PLANS = [
 			"Bulk and history exports",
 			"Security review and DPA",
 			"Redistribution: your website, app, terminal or feed, and agents your customers use",
-			"Benchmark licence: an index inside a fund or financial product",
+			"Benchmark license: an index inside a fund or financial product",
 		],
 		sale: { kind: "contact" },
 	},

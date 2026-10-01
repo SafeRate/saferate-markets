@@ -189,7 +189,7 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 			{d.banded === null ? (
 				<p className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
 					{d.asked
-						? `No curve analytics for ${shortDate(d.asked)}: a weekend, a holiday, or a day not yet analysed. The newest priced day is ${shortDate(d.latest)}.`
+						? `No curve analytics for ${shortDate(d.asked)}: a weekend, a holiday, or a day not yet analyzed. The newest priced day is ${shortDate(d.latest)}.`
 						: "No curve analytics in the last week."}
 				</p>
 			) : (
@@ -229,13 +229,13 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 						</p>
 						<p>
 							Under a year, the residuals are against the curve's extrapolation (its
-							fitted range starts at one year) and annualised over a short horizon, so
+							fitted range starts at one year) and annualized over a short horizon, so
 							the z-scores there run larger and mean less. Bills have no z by
 							construction and are ranked by price residual instead, which says how far
 							from the curve, not how unusual. TIPS and floaters are priced off other
 							curves and are not here.
 							{d.unpriced > 0
-								? ` ${d.unpriced} analysed securit${d.unpriced === 1 ? "y has" : "ies have"} no price that day and ${d.unpriced === 1 ? "is" : "are"} left out.`
+								? ` ${d.unpriced} analyzed securit${d.unpriced === 1 ? "y has" : "ies have"} no price that day and ${d.unpriced === 1 ? "is" : "are"} left out.`
 								: ""}
 						</p>
 					</div>

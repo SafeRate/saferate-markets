@@ -301,7 +301,7 @@ export default function Terms() {
 				</p>
 				<p>
 					The underlying public Treasury data is not ours to own, and we make no
-					claim to it. Your plan is a licence to use what you retrieve as section{" "}
+					claim to it. Your plan is a license to use what you retrieve as section{" "}
 					{n("plans")} describes. Feedback you send us, we may use freely and without
 					obligation.
 				</p>
@@ -462,9 +462,9 @@ export default function Terms() {
 					before it applies.
 				</p>
 				<p>
-					Section {n("plans")} is generated from our plan catalogue, so it changes
-					when a plan does. A change that narrows your rights is a material change
-					and gets the notice above; one that widens them takes effect immediately.
+					Section {n("plans")} is generated from our plan catalog, so it changes when
+					a plan does. A change that narrows your rights is a material change and
+					gets the notice above; one that widens them takes effect immediately.
 				</p>
 			</LegalSection>
 		</LegalPage>

@@ -387,7 +387,7 @@ const closedConstituentsRoute = createRoute({
 	tags: ["Indices"],
 	summary: "Constituents for a completed period",
 	description:
-		"⚠️ `date` is the period END, a month-end. The list is the portfolio struck at the PREVIOUS month-end and held through `date`, with each security's return over that month. So 2026-08-31 returns the portfolio struck 2026-07-31. Analytics are labelled the other way, by the period start.",
+		"⚠️ `date` is the period END, a month-end. The list is the portfolio struck at the PREVIOUS month-end and held through `date`, with each security's return over that month. So 2026-08-31 returns the portfolio struck 2026-07-31. Analytics are labeled the other way, by the period start.",
 	request: {
 		params: ZCodeParam.extend({
 			date: zIsoDate.openapi({ example: "2026-08-31" }),

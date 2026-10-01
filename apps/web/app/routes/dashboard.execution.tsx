@@ -11,7 +11,7 @@ export const meta: Route.MetaFunction = () => [
 
 const METHOD_LABEL: Record<string, string> = {
 	match: "Cash-flow matching",
-	immunise: "Immunisation",
+	immunise: "Immunization",
 	horizon: "Horizon matching",
 	strategy: "Strategy",
 	index: "Index tracking",

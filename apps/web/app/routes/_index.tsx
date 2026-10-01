@@ -10,7 +10,7 @@ import type { Route } from "./+types/_index";
 
 const TITLE = `${PRODUCT_NAME} — Portfolio management for U.S. Treasuries`;
 const DESCRIPTION =
-	"Institutional-grade tools to track, build, stress-test, backtest and trade U.S. Treasury portfolios, on every Treasury priced daily since September 2008, from primary sources with no data licence to pay for. With a REST API and an MCP server.";
+	"Institutional-grade tools to track, build, stress-test, backtest and trade U.S. Treasury portfolios, on every Treasury priced daily since September 2008, from primary sources with no data license to pay for. With a REST API and an MCP server.";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: TITLE },
@@ -263,7 +263,7 @@ const SUITE = [
 		icon: "build",
 		title: "Portfolio construction",
 		body:
-			"Fund liabilities by cash-flow matching, immunisation or horizon matching; track an index; or start from a ladder, barbell, bullet or bill roll, with lot sizes for retail, Apex, TreasuryDirect or institutional blocks.",
+			"Fund liabilities by cash-flow matching, immunization or horizon matching; track an index; or start from a ladder, barbell, bullet or bill roll, with lot sizes for retail, Apex, TreasuryDirect or institutional blocks.",
 	},
 	{
 		icon: "risk",
@@ -293,7 +293,7 @@ const SUITE = [
 
 const INSTITUTIONAL = [
 	"Exact-repricing return attribution, linked across days",
-	"Liability-driven construction: cash-flow matching and immunisation",
+	"Liability-driven construction: cash-flow matching and immunization",
 	"Key-rate durations on twelve tenors, for every security and index",
 	"Value at risk and expected shortfall, with extreme-value tails",
 	"TIPS on real duration and index ratios; floaters on spread duration",
@@ -323,7 +323,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							Institutional-grade tools for the world's largest government bond market:
 							track, build, stress-test, backtest and trade, on every Treasury priced
 							daily since {coverage}. Built on free primary sources, so there are no
-							data licences to pay for, at a fraction of what terminals and data feeds
+							data licenses to pay for, at a fraction of what terminals and data feeds
 							cost.
 						</p>
 						<div className="mt-8 flex flex-wrap items-center gap-3">
@@ -368,7 +368,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 								: "Marketable debt",
 							live?.marketable ? trillions(live.marketable) : "The whole market",
 						],
-						["Data licence fees", "$0"],
+						["Data license fees", "$0"],
 					].map(([label, value]) => (
 						<div className="bg-white px-6 py-6" key={label}>
 							<p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>

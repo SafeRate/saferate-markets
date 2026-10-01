@@ -297,13 +297,13 @@ const AttributionSection = ({
 			)}
 			<p className="mt-2 text-xs text-slate-500">
 				Notes and bonds are decomposed each day by exact repricing on Safe Rate's
-				fitted zero curve: carry (the curve's forwards realised, the same per dollar
-				for every bond), roll-down (ageing down an unchanged curve), the curve's
-				move split into level, slope and curvature on Diebold-Li loadings, and
-				selection (the change in the bond's own cheapness to the curve). Bills sit
-				below the curve's fitted range and TIPS and FRNs are priced off other
-				curves, so they are split into income and price only. Days are linked with
-				Carino's method, so contributions add to the time-weighted return
+				fitted zero curve: carry (the curve's forwards realized, the same per dollar
+				for every bond), roll-down (aging down an unchanged curve), the curve's move
+				split into level, slope and curvature on Diebold-Li loadings, and selection
+				(the change in the bond's own cheapness to the curve). Bills sit below the
+				curve's fitted range and TIPS and FRNs are priced off other curves, so they
+				are split into income and price only. Days are linked with Carino's method,
+				so contributions add to the time-weighted return
 				{Math.abs(a.residual) > 1e-6 ? ` (unexplained: ${bp(a.residual)})` : ""}.
 			</p>
 		</Section>
@@ -487,7 +487,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 										<td className="px-3 py-2">
 											{row.label}
 											{isLong ? (
-												<span className="ml-1 text-xs text-slate-500">(annualised)</span>
+												<span className="ml-1 text-xs text-slate-500">(annualized)</span>
 											) : null}
 											{!row.isFullPeriod && row.key !== "inception" ? (
 												<span className="ml-1 text-xs text-amber-700">since inception</span>
@@ -573,7 +573,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 								<th className={`${th} text-right`}>Market value</th>
 								<th className={`${th} text-right`}>Weight</th>
 								<th className={`${th} text-right`}>Unrealised</th>
-								<th className={`${th} text-right`}>Realised</th>
+								<th className={`${th} text-right`}>Realized</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -623,7 +623,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 				<p className="mt-2 text-xs text-slate-500">
 					Cost is first in, first out, clean. Gains are price gains only: accrued
 					interest is income. Not tax accounting: no discount accretion or premium
-					amortisation.
+					amortization.
 					{v.staleMarks > 0
 						? ` ${v.staleMarks} day${v.staleMarks === 1 ? "" : "s"} had a held security with no close; it was marked at its previous close.`
 						: ""}

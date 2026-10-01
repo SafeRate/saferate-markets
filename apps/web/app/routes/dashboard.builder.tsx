@@ -230,7 +230,7 @@ const MODE_HELP: Record<TBuilderMode, string> = {
 	immunise:
 		"Match the liabilities' sensitivity to rates rather than their dates: a portfolio with the same value and the same exposure at twelve points on the curve, so a move in rates changes both by the same amount. Far fewer bonds and cheaper than cash-flow matching, but it must be rebalanced as time passes, and very large or oddly shaped moves leave a small mismatch.",
 	horizon:
-		"Cash-match the liabilities inside the horizon, where timing matters most, and immunise the rest: what most liability managers do.",
+		"Cash-match the liabilities inside the horizon, where timing matters most, and immunize the rest: what most liability managers do.",
 	strategy:
 		"A rule-based portfolio for an amount to invest. Each comes with its trade-offs below.",
 	index:

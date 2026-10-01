@@ -97,7 +97,7 @@ const CATEGORIES: TCategory[] = [
 			"A SHA-256 hash of the key, never the key itself",
 			"Who created it, when it was last used, whether it is revoked or rotated out",
 		],
-		why: "To authenticate requests and to let you recognise your own keys.",
+		why: "To authenticate requests and to let you recognize your own keys.",
 		basis: "Performance of our contract with you",
 		kept:
 			"Revoked keys are kept as a record that they existed, for the life of the organization.",
@@ -151,7 +151,7 @@ export default function Privacy() {
 					<li>
 						We do not sell your personal information. Our analytics tools may count as
 						sharing under California law, so you can turn them off in one click and we
-						honour Global Privacy Control automatically.
+						honor Global Privacy Control automatically.
 					</li>
 					<li>
 						We use {TRACKING_TOOLS.map((t) => t.name).join(" and ")} on our public
@@ -351,7 +351,7 @@ export default function Privacy() {
 			<LegalSection id="security" number={n("security")} title="How we protect it">
 				<p>
 					API keys are never stored. We keep a SHA-256 hash and a short non-secret
-					prefix, which is enough to authenticate a request and to let you recognise
+					prefix, which is enough to authenticate a request and to let you recognize
 					your keys. A key is displayed in full exactly once, when you create it. If
 					you lose it, rotate it: we cannot recover it for you, and that is the
 					point.
@@ -404,9 +404,9 @@ export default function Privacy() {
 					<Link className="underline underline-offset-4" to="/privacy-choices">
 						your privacy choices
 					</Link>
-					, and we honour Global Privacy Control automatically, without asking where
+					, and we honor Global Privacy Control automatically, without asking where
 					you live. We collect no sensitive personal information as the law defines
-					it. You may use an authorised agent to exercise these rights.
+					it. You may use an authorized agent to exercise these rights.
 				</p>
 			</LegalSection>
 
