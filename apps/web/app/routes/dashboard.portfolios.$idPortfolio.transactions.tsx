@@ -445,7 +445,7 @@ export default function Transactions({
 			<WriteGate to="add or import your own trades">
 				<section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 					<h2 className="font-semibold text-neutral-900">Add a trade</h2>
-					<Form className="mt-4 grid gap-4 sm:grid-cols-4" method="post">
+					<Form className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4" method="post">
 						<input name="intent" type="hidden" value="add" />
 						<SecurityPicker />
 						<label className="text-sm font-medium text-slate-700">
@@ -628,7 +628,7 @@ export default function Transactions({
 			</section>
 
 			{isDemo ? null : (
-				<section className="mt-10 grid gap-6 lg:grid-cols-2">
+				<section className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
 					<div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 						<h2 className="font-semibold text-neutral-900">Settings</h2>
 						<Form className="mt-4 space-y-4" method="post">

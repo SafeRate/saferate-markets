@@ -25,7 +25,7 @@ export default function Pricing() {
 				history back to 2008.
 			</p>
 
-			<section className="mt-12 grid gap-6 md:grid-cols-3">
+			<section className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
 				{PLANS.map((plan) => (
 					<div
 						className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"

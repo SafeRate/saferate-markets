@@ -289,7 +289,7 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 							))}
 						</div>
 					</div>
-					<div className="mt-3 grid gap-4 lg:grid-cols-2">
+					<div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
 						<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 							<p className="text-xs uppercase tracking-wide text-slate-500">
 								Bid-to-cover

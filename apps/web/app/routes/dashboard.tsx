@@ -144,7 +144,10 @@ const PortfolioPicker = ({
 	portfolios: TLoader["portfolios"];
 	selected: string;
 }) => (
-	<form className="flex items-center gap-2 text-sm" method="get">
+	<form
+		className="flex min-w-0 flex-wrap items-center gap-2 text-sm"
+		method="get"
+	>
 		<label className="text-muted-foreground" htmlFor="portfolio">
 			Portfolio
 		</label>
@@ -257,7 +260,7 @@ const PortfolioOverview = ({ d }: { d: TLoader }) => {
 					? ` ${o.staleMarks} holding${o.staleMarks === 1 ? " has" : "s have"} no close that day and use the last one.`
 					: ""}
 			</p>
-			<section className="mt-4 grid gap-4 sm:grid-cols-4">
+			<section className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-4">
 				{/* The ledger's market value already includes cash; adding it again
 				    showed Test 13's $750M block as $1.0B (found 2026-09-29). */}
 				<Stat label="Market value" value={money(s.marketValue)} />
@@ -323,7 +326,7 @@ const PortfolioOverview = ({ d }: { d: TLoader }) => {
 				</table>
 			</div>
 
-			<div className="mt-4 grid gap-4 lg:grid-cols-5">
+			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
 				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
 					<p className="text-xs uppercase tracking-wide text-muted-foreground">
 						Growth of $100

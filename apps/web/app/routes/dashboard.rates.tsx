@@ -166,7 +166,7 @@ export default function Rates({ loaderData }: Route.ComponentProps) {
 						/>
 					</section>
 
-					<section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					<section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 						<Table
 							rows={
 								d.moneyMarket?.rates.map((r) => ({ label: r.label, value: r.rate })) ??

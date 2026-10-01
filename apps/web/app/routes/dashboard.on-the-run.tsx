@@ -204,7 +204,7 @@ export default function OnTheRun({ loaderData }: Route.ComponentProps) {
 				</p>
 			) : (
 				<>
-					<div className="mt-6 grid gap-4 lg:grid-cols-2">
+					<div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
 						{outcome.queues.map((q) => (
 							<section
 								className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"

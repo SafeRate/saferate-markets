@@ -137,7 +137,7 @@ const Pair = ({
 			<h2 className="font-semibold text-neutral-900">{title}</h2>
 			<p className="text-xs text-slate-500">{note}</p>
 		</div>
-		<div className="grid gap-0 lg:grid-cols-2">
+		<div className="grid grid-cols-1 gap-0 lg:grid-cols-2">
 			<div className="overflow-x-auto lg:border-r lg:border-slate-100">
 				<p className="px-2.5 pt-2 text-xs font-semibold text-emerald-800">
 					{showZ ? "Unusually cheap" : "Cheapest to the curve"}

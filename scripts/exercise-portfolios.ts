@@ -1184,7 +1184,7 @@ const exercisePortfolios = async (ids: Map<string, string>) => {
 		);
 		await expectPage(
 			`${name}: stress`,
-			`/dashboard/stress?portfolio=${id}`,
+			`/dashboard/stress?portfolio=${id}&run=1`,
 			"Key-rate DV01",
 		);
 		const overview = await expectPage(

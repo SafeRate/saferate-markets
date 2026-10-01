@@ -4,7 +4,7 @@ import {
 	listTransactions,
 } from "@markets/persistence";
 import { PRODUCT_NAME } from "@markets/schema";
-import { Form, Link } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 import { money, number, percent } from "@/lib/format";
 import { requireDashboard } from "@/lib/session.server";
 import { analyseStress, type TCustomShock } from "@/services/stress.server";
@@ -21,6 +21,12 @@ const num = (raw: string | null) => {
 		: null;
 };
 
+/**
+ * The analysis runs only when asked (`run` in the query): it simulates 50,000
+ * paths over every daily curve move since 2008 and replays every stored
+ * episode, which takes seconds on a cold history. Opening the page, or
+ * switching portfolio in the menu, chooses; the Run button runs.
+ */
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
 	const org = await requireDashboard(request, env);
@@ -42,12 +48,13 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const parallel = num(url.searchParams.get("parallel"));
 	const twist = num(url.searchParams.get("twist"));
 	const fly = num(url.searchParams.get("fly"));
+	const run = url.searchParams.has("run");
 	const custom: TCustomShock | null =
 		parallel === null && twist === null && fly === null
 			? null
 			: { parallelBp: parallel ?? 0, twistBp: twist ?? 0, butterflyBp: fly ?? 0 };
-	if (portfolio === null)
-		return { portfolios, portfolio: null, custom, analysis: null };
+	if (portfolio === null || !run)
+		return { portfolios, portfolio, custom, analysis: null };
 	const transactions = await listTransactions({
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -227,7 +234,7 @@ const TsaySection = ({
 					</tbody>
 				</table>
 			</div>
-			<div className="mt-3 grid gap-3 sm:grid-cols-3">
+			<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 				<div className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
 					<p className="text-xs uppercase tracking-wide text-slate-500">
 						GARCH(1,1)
@@ -266,8 +273,45 @@ const TsaySection = ({
 	);
 };
 
+/** Shown while a run is loading this page; the button it sits beside is disabled. */
+const Running = () => (
+	<p
+		aria-live="polite"
+		className="mt-6 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-slate-700"
+	>
+		<svg
+			aria-hidden="true"
+			className="h-5 w-5 animate-spin text-primary"
+			fill="none"
+			viewBox="0 0 24 24"
+		>
+			<circle
+				className="opacity-25"
+				cx="12"
+				cy="12"
+				r="10"
+				stroke="currentColor"
+				strokeWidth="4"
+			/>
+			<path
+				className="opacity-90"
+				d="M22 12a10 10 0 0 0-10-10"
+				stroke="currentColor"
+				strokeLinecap="round"
+				strokeWidth="4"
+			/>
+		</svg>
+		Running the stress test. This can take up to 10 seconds.
+	</p>
+);
+
 export default function Stress({ loaderData }: Route.ComponentProps) {
 	const { portfolios, portfolio, custom, analysis } = loaderData;
+	const navigation = useNavigation();
+	const running =
+		navigation.state === "loading" &&
+		navigation.location.pathname === "/dashboard/stress" &&
+		new URLSearchParams(navigation.location.search).has("run");
 	const header = (
 		<div className="flex flex-wrap items-end justify-between gap-3">
 			<div>
@@ -281,7 +325,7 @@ export default function Stress({ loaderData }: Route.ComponentProps) {
 				</p>
 			</div>
 			{portfolios.length > 0 ? (
-				<Form className="flex items-end gap-2 text-sm" method="get">
+				<Form className="flex flex-wrap items-end gap-2 text-sm" method="get">
 					<label className="text-xs text-slate-600">
 						Portfolio
 						<select
@@ -296,16 +340,38 @@ export default function Stress({ loaderData }: Route.ComponentProps) {
 							))}
 						</select>
 					</label>
+					<input name="run" type="hidden" value="1" />
 					<button
-						className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold"
+						className="whitespace-nowrap rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+						disabled={running}
 						type="submit"
 					>
-						Show
+						{running ? "Running…" : "Run stress test"}
 					</button>
 				</Form>
 			) : null}
 		</div>
 	);
+	if (running)
+		return (
+			<main className="max-w-6xl">
+				{header}
+				<Running />
+			</main>
+		);
+	if (portfolio !== null && analysis === null)
+		return (
+			<main className="max-w-6xl">
+				{header}
+				<p className="mt-8 rounded-lg border border-dashed border-slate-300 p-6 text-sm text-slate-600">
+					Choose a portfolio and click{" "}
+					<span className="font-semibold">Run stress test</span>. It values today's
+					holdings under standard shocks and every stored market episode since 2008,
+					and simulates 50,000 paths for value at risk, so it can take up to 10
+					seconds.
+				</p>
+			</main>
+		);
 	if (portfolio === null || analysis === null)
 		return (
 			<main className="max-w-6xl">
@@ -463,6 +529,7 @@ export default function Stress({ loaderData }: Route.ComponentProps) {
 					<h2 className="font-semibold text-neutral-900">Standard shocks</h2>
 					<Form className="flex flex-wrap items-end gap-2 text-xs" method="get">
 						<input name="portfolio" type="hidden" value={portfolio.idPortfolio} />
+						<input name="run" type="hidden" value="1" />
 						{(
 							[
 								["parallel", "Parallel bp", custom?.parallelBp],

@@ -115,7 +115,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
 			</p>
 
 			{d.returns ? (
-				<section className="mt-6 grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
+				<section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-4 lg:grid-cols-7">
 					{d.returns.periods.map((p) => (
 						<div
 							className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"

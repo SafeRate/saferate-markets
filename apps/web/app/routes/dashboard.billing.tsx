@@ -315,7 +315,7 @@ export default function Billing({
 					</p>
 				</section>
 			) : (
-				<section className="mt-8 grid gap-4 sm:grid-cols-2">
+				<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
 					{d.plans.map((plan) => (
 						<div
 							className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"

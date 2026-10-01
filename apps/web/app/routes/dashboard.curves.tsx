@@ -250,7 +250,7 @@ export default function Curves({ loaderData }: Route.ComponentProps) {
 				</p>
 			) : (
 				<>
-					<div className="mt-6 grid gap-4 lg:grid-cols-2">
+					<div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
 						<CurveChart
 							curves={outcome.nominal}
 							note={

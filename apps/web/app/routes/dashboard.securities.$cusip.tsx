@@ -168,7 +168,7 @@ export default function SecurityPage({ loaderData }: Route.ComponentProps) {
 			</h1>
 			<p className="mt-1 font-mono text-sm text-slate-500">{s.cusip}</p>
 
-			<section className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
+			<section className="mt-6 grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
 				<Fact
 					label="Type"
 					value={
@@ -187,7 +187,7 @@ export default function SecurityPage({ loaderData }: Route.ComponentProps) {
 				<Fact label="Pays" value={t.paymentFrequency ?? "—"} />
 			</section>
 
-			<section className="mt-4 grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
+			<section className="mt-4 grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-6">
 				<Fact
 					label={`Close, ${s.pricedThrough ?? "—"}`}
 					value={s.latestPrice ? price(s.latestPrice.close) : "—"}
@@ -265,7 +265,7 @@ export default function SecurityPage({ loaderData }: Route.ComponentProps) {
 				</p>
 			) : null}
 
-			<div className="mt-6 grid gap-4 lg:grid-cols-2">
+			<div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 					<div className="flex items-baseline justify-between">
 						<p className="text-xs uppercase tracking-wide text-slate-500">

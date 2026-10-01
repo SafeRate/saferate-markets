@@ -294,7 +294,7 @@ export default function Builder({
 			</p>
 
 			<Form
-				className="mt-5 grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-4"
+				className="mt-5 grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-4"
 				method="get"
 			>
 				<input name="mode" type="hidden" value={inputs.mode} />
@@ -499,7 +499,7 @@ export default function Builder({
 			</Form>
 
 			{inputs.mode === "strategy" && strategy ? (
-				<section className="mt-5 grid gap-4 sm:grid-cols-2">
+				<section className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-sm">
 						<p className="font-semibold text-emerald-900">{strategy.name}: for</p>
 						<p className="mt-1 text-slate-700">{strategy.summary}</p>
@@ -528,7 +528,7 @@ export default function Builder({
 
 			{result?.status === "planned" ? (
 				<>
-					<section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+					<section className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 						<Card
 							hint={`${result.positions.length} positions`}
 							title="Cost"

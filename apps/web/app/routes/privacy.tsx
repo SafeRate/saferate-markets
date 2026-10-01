@@ -202,7 +202,7 @@ export default function Privacy() {
 								<li key={item}>{item}</li>
 							))}
 						</ul>
-						<dl className="mt-3 grid gap-1 text-sm sm:grid-cols-[6rem_1fr]">
+						<dl className="mt-3 grid grid-cols-1 gap-1 text-sm sm:grid-cols-[6rem_1fr]">
 							<dt className="font-medium text-neutral-900">Why</dt>
 							<dd>{c.why}</dd>
 							<dt className="font-medium text-neutral-900">Basis</dt>

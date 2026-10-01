@@ -111,7 +111,7 @@ export default function Portfolios({
 			<section className="mt-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 				<h2 className="font-semibold text-neutral-900">New portfolio</h2>
 				<WriteGate to="create your own portfolios">
-					<Form className="mt-4 grid gap-4 sm:grid-cols-3" method="post">
+					<Form className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3" method="post">
 						<label className="text-sm font-medium text-slate-700">
 							Name
 							<input className={field} maxLength={80} name="namePortfolio" required />

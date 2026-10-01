@@ -141,7 +141,7 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 	return (
 		<>
 			{single ? (
-				<section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				<section className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 					<Stat
 						label="Annualised"
 						tone={signClass(single.annualised)}
@@ -310,7 +310,7 @@ export default function Backtest({ loaderData }: Route.ComponentProps) {
 			</p>
 
 			<Form
-				className="mt-6 grid gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4"
+				className="mt-6 grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4"
 				method="get"
 			>
 				<input name="run" type="hidden" value="1" />

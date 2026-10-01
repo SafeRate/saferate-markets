@@ -403,7 +403,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 				</div>
 			) : null}
 
-			<section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+			<section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 				<Stat
 					hint={s.cash > 0 ? `including ${money(s.cash)} cash` : undefined}
 					label="Market value"
@@ -642,7 +642,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 				) : null}
 			</Section>
 
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<Section title="Risk">
 					<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 						{v.risk.coveredShare !== null ? (

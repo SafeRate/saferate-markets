@@ -308,7 +308,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 					aria-hidden="true"
 					className="pointer-events-none absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-sky-200/40 blur-3xl"
 				/>
-				<div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1.05fr_1fr]">
+				<div className="relative mx-auto grid grid-cols-1 max-w-6xl items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1.05fr_1fr]">
 					<div>
 						<p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
 							Portfolio management for U.S. Treasuries
@@ -386,7 +386,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 					<p className="mt-3 max-w-2xl text-slate-600">
 						From the first trade to the order sheet, on one set of numbers.
 					</p>
-					<div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+					<div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
 						{SUITE.map((item) => (
 							<div
 								className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
@@ -405,7 +405,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				</section>
 
 				{/* ── Institutional, and the data ────────────────────────── */}
-				<section className="grid gap-10 border-t border-slate-200 py-20 lg:grid-cols-2">
+				<section className="grid grid-cols-1 gap-10 border-t border-slate-200 py-20 lg:grid-cols-2">
 					<div>
 						<h2 className="text-3xl font-semibold tracking-tight text-neutral-900">
 							Institutional-grade, without the data bill
@@ -456,7 +456,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				</section>
 
 				{/* ── API and MCP ─────────────────────────────────────────── */}
-				<section className="grid items-center gap-10 border-t border-slate-200 py-20 lg:grid-cols-[1fr_1.1fr]">
+				<section className="grid grid-cols-1 items-center gap-10 border-t border-slate-200 py-20 lg:grid-cols-[1fr_1.1fr]">
 					<div>
 						<p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
 							Integrate
@@ -512,7 +512,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						Every plan includes the full dashboard for your own portfolios; plans
 						differ in API and MCP limits and in who may use them.
 					</p>
-					<div className="mt-8 grid gap-5 md:grid-cols-3">
+					<div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
 						{PLANS.map((plan) => (
 							<div
 								className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
