@@ -1,6 +1,7 @@
 import {
 	readAnalytics,
 	readDailyLevels,
+	explainNoOpenConstituents,
 	readOpenConstituents,
 } from "@markets/mcp-tools";
 import { fromBase, PERIOD_LABEL, trailingReturns } from "@markets/portfolio";
@@ -46,6 +47,9 @@ export const loader = async ({
 		readAnalytics(env, { code }),
 		readOpenConstituents(env, code),
 	]);
+	// Only on the branch that already found no list: one extra read, rarely.
+	const openMissing =
+		open === null ? await explainNoOpenConstituents(env, code) : null;
 	const series = fromBase(daily);
 	const returns = trailingReturns(series);
 	const latest = daily.at(-1) ?? null;
@@ -76,6 +80,7 @@ export const loader = async ({
 		range: range in RANGES ? range : "5y",
 		chart,
 		analytics: analytics.filter((a) => a.date === analyticsDate),
+		openMissing,
 		open:
 			open === null
 				? null
@@ -271,9 +276,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
 					</p>
 				</section>
 			) : (
-				<p className="mt-6 text-sm text-slate-500">
-					The open period's constituents are not published yet for this index.
-				</p>
+				<p className="mt-6 text-sm text-slate-500">{d.openMissing}</p>
 			)}
 		</main>
 	);

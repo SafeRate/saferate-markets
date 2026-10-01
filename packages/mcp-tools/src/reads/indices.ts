@@ -13,6 +13,7 @@ import {
 	ZIndexLevelDaily,
 	ZIndexReturns,
 	ZOpenConstituents,
+	ZOpenConstituentsStatus,
 } from "@saferate/treasury-client/types";
 import { z } from "zod";
 
@@ -142,6 +143,37 @@ export const readConstituentsOn = (
 			? null
 			: [...parsed].sort((a, b) => b.weightPercent - a.weightPercent);
 	});
+
+/**
+ * Why there is no open-period list, for the branch that already found none.
+ * Two different facts share that empty reply (treasury-integration,
+ * 2026-10-01): a list never written, which the next run fills; and a list
+ * WITHHELD because a newer month-end rebalance superseded the one it was
+ * struck at, which rolls forward once the first business day after that
+ * rebalance is priced. Saying "written after each run" for the second tells a
+ * reader to wait for a run that already happened. When the status cannot be
+ * read, say only that it is unavailable.
+ */
+export const explainNoOpenConstituents = async (
+	env: TEnv,
+	code: TIndexCode,
+): Promise<string> => {
+	const status = await call(
+		env,
+		"openConstituentsStatus",
+	)({ code })
+		.then((reply) =>
+			reply === null || reply === undefined
+				? null
+				: ZOpenConstituentsStatus.parse(reply),
+		)
+		.catch(() => null);
+	if (status?.state === "superseded" && status.held && status.supersededBy)
+		return `The most recent open-period list for ${code} was struck at the ${status.held} rebalance, which the ${status.supersededBy} rebalance has superseded, so it is withheld rather than served as current. It rolls forward once the first business day after ${status.supersededBy} is priced.`;
+	if (status?.state === "never-written")
+		return `No open-period list for ${code} has been written yet. It is written after each business day's run.`;
+	return `The open-period list for ${code} is not available right now.`;
+};
 
 export const readOpenConstituents = (env: TEnv, code: TIndexCode) =>
 	nullOnUnknownIndex(async () => {

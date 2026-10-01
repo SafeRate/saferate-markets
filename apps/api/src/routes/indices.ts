@@ -15,6 +15,7 @@ import {
 	readDailyLevels,
 	readDailyLevelsOn,
 	readLatestLevels,
+	explainNoOpenConstituents,
 	readOpenConstituents,
 	readReturns,
 } from "@markets/mcp-tools";
@@ -523,10 +524,7 @@ export const registerIndexRoutes = (app: OpenAPIHono<AppEnv>) => {
 		try {
 			const open = await readOpenConstituents(c.env, code);
 			if (open === null) {
-				return noData(
-					c,
-					`No open-period snapshot for ${code} yet. It is written after each business day's run.`,
-				);
+				return noData(c, await explainNoOpenConstituents(c.env, code));
 			}
 			return c.json(
 				ZOpenConstituentsOut.parse({
