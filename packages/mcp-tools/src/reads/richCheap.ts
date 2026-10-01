@@ -277,6 +277,17 @@ export const RICH_CHEAP_BANDS = [
  * answers a different question (how far from the curve, not how unusual).
  * Price residual is positive when rich, so the cheapest are the most negative.
  */
+/**
+ * The shortest bill the money-market curve admits to its fit, in days
+ * (upstream moneyMarketCurve.ts DEFAULT_MIN_MATURITY_DAYS). Prices are quoted
+ * to six decimals, and one unit of the last is ~36bp on a one-day bill, so a
+ * bill inside this never set the curve it is measured against. Measured on
+ * 2026-08-12/13: bills 5 to 12 days out took the top "unusually rich" slots
+ * at z -9.02 to -4.13 on residuals of 0.1 to 0.2 cents. Left out of both bill
+ * lists and counted.
+ */
+export const BILL_MIN_MATURITY_DAYS = 14;
+
 export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 	const coupons = rows.filter((row) => row.family !== "bill");
 	const bands = RICH_CHEAP_BANDS.map((band) => {
@@ -294,9 +305,13 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 			rich: rankRichCheap(inBand, { direction: "richer", limit: perSide }).ranked,
 		};
 	});
-	const bills = rows.filter(
+	const allBills = rows.filter(
 		(row) => row.family === "bill" && Number.isFinite(row.priceResidualCents),
 	);
+	const bills = allBills.filter(
+		(row) => row.yearsToMaturity * 365.25 >= BILL_MIN_MATURITY_DAYS - 0.5,
+	);
+	const tooShort = allBills.length - bills.length;
 	const billsScored =
 		bills.length - rankRichCheap(bills, { limit: 0 }).unscoredCount;
 	if (billsScored > 0)
@@ -304,6 +319,7 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 			bands,
 			bills: {
 				total: bills.length,
+				tooShort,
 				scoreable: billsScored,
 				byZ: true as boolean,
 				cheap: rankRichCheap(bills, { direction: "cheaper", limit: perSide })
@@ -318,6 +334,7 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 		bands,
 		bills: {
 			total: bills.length,
+			tooShort,
 			scoreable: 0,
 			byZ: false as boolean,
 			cheap: byCents.slice(0, perSide),

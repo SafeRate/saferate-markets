@@ -159,6 +159,15 @@ describe("bills split on the score, not the type", () => {
 		expect(out.bills.rich.map((r) => r.cusip)).toEqual(["B"]);
 	});
 
+	test("a bill inside 14 days never ranks, however large its z", () => {
+		const sixDays = { ...bill("S", -9.02, 0.2), yearsToMaturity: 6 / 365.25 };
+		const fourteen = { ...bill("F", -1.1, 0.4), yearsToMaturity: 14 / 365.25 };
+		const out = bandRichCheap([sixDays, fourteen, bill("B", -1.5, -4)]);
+		expect(out.bills.tooShort).toBe(1);
+		expect(out.bills.total).toBe(2);
+		expect(out.bills.rich.map((r) => r.cusip)).toEqual(["B", "F"]);
+	});
+
 	test("a day with no bill z falls back to cents and says so", () => {
 		const out = bandRichCheap([bill("A", null, 3), bill("B", null, -4)]);
 		expect(out.bills.byZ).toBe(false);

@@ -323,6 +323,9 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 							{d.banded.bills.byZ
 								? "Bills are ranked on z among themselves, and are all under a year, so the same caution applies."
 								: `No bill z-scores are published for ${shortDate(d.date)}, so that day's bills are ranked by price residual instead, which says how far from the curve, not how unusual.`}{" "}
+							{d.banded.bills.tooShort > 0
+								? `${d.banded.bills.tooShort} bill${d.banded.bills.tooShort === 1 ? "" : "s"} inside 14 days of maturity ${d.banded.bills.tooShort === 1 ? "is" : "are"} left out: the bill curve is fitted only to bills at least 14 days out, since a price quoted to six decimals is worth tens of basis points that close to maturity.`
+								: ""}{" "}
 							Floating-rate notes are not ranked here: they are priced off their own
 							spread rather than a curve.
 							{d.unpriced > 0
