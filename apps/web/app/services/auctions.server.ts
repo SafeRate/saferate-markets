@@ -22,7 +22,14 @@ import type {
  * shorter bills are nearly all offered as REOPENINGS of those, so a 4-week
  * auction arrives in the record of the 17-week bill it reopens. A short bill
  * that is not one is missed. Both gaps want a dated auctions read in
- * treasury-api, which is frozen with production (2026-09-29).
+ * treasury-api (requested 2026-10-01).
+ *
+ * WHEN SWITCHING TO IT: a new issue has no security_details row until it is
+ * issued (measured 2026-10-01: exactly the two reopening = 0 auctions were
+ * absent). A read that inner-joins details for `kind` drops every new issue,
+ * the same hole for a different reason. Expect `kind` null for a security not
+ * yet issued and keep the row: group it by the offered term, and check the
+ * read returns a NEW announced issue before deleting this fan-out.
  *
  * BILLS GROUP BY THE TERM OFFERED, everything else by original term. Found on
  * first render: grouping bills by their queue put a 4-week auction in the
