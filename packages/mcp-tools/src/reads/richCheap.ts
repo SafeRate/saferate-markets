@@ -308,8 +308,10 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 	const allBills = rows.filter(
 		(row) => row.family === "bill" && Number.isFinite(row.priceResidualCents),
 	);
+	// Whole days, as upstream's cut is, then its own comparison (kept unless
+	// < 14): no slack constant that only works while days happen to be whole.
 	const bills = allBills.filter(
-		(row) => row.yearsToMaturity * 365.25 >= BILL_MIN_MATURITY_DAYS - 0.5,
+		(row) => Math.round(row.yearsToMaturity * 365.25) >= BILL_MIN_MATURITY_DAYS,
 	);
 	const tooShort = allBills.length - bills.length;
 	const billsScored =
