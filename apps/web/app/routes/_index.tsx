@@ -338,9 +338,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							</a>
 						</div>
 						<p className="mt-3 text-sm text-slate-500">
-							Just your email.{" "}
+							The demo needs just your email.{" "}
 							<span className="font-medium text-slate-700">
-								No payment or credit card required.
+								No payment or credit card required to tour it.
 							</span>
 						</p>
 					</div>
@@ -547,8 +547,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							See it on today's market.
 						</h2>
 						<p className="mt-2 text-slate-400">
-							Sample portfolios, a liability stream and a plan, live. No payment or
-							credit card required.
+							Sample portfolios, a liability stream and a plan, live. The demo needs no
+							payment or credit card.
 						</p>
 					</div>
 					<a
