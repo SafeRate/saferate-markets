@@ -7,7 +7,7 @@ import {
 } from "@markets/mcp-tools";
 import { parseDate } from "@markets/portfolio";
 import { PRODUCT_NAME } from "@markets/schema";
-import { Form } from "react-router";
+import { Form, Link } from "react-router";
 import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.rich-cheap";
 
@@ -23,6 +23,28 @@ export const meta: Route.MetaFunction = () => [
  * sign-in rather than a password; nothing on it is secret. Every date comes
  * from the data: with no date, the newest day that has analytics.
  */
+/**
+ * The newest day before `date`, within three weeks, on which any TIPS carries
+ * a z: only asked when the day shown has none (2026-10-01: scores stopped at
+ * 09-25 upstream for three business days). Weekends are skipped, not read.
+ */
+const newestScoredTipsDay = async (
+	env: Route.LoaderArgs["context"]["cloudflare"]["env"],
+	date: string,
+) => {
+	for (let back = 1; back <= 21; back++) {
+		const day = new Date(Date.parse(`${date}T00:00:00Z`) - back * 86_400_000);
+		if (day.getUTCDay() === 0 || day.getUTCDay() === 6) continue;
+		const iso = day.toISOString().slice(0, 10);
+		const read = await readRichCheap(env, { basis: "tips", date: iso }).catch(
+			() => null,
+		);
+		if (read?.date === iso && read.rows.some((r) => r.zScore !== null))
+			return iso;
+	}
+	return null;
+};
+
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
 	await requireOrganization(request, env);
@@ -47,14 +69,19 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		basis: "tips",
 		date: day.date,
 	}).catch(() => null);
+	const tips =
+		tipsDay !== null && tipsDay.date === day.date
+			? rankTipsRichCheap(tipsDay.rows)
+			: null;
 	return {
 		latest,
 		asked,
 		date: day.date,
 		banded: bandRichCheap(day.rows),
-		tips:
-			tipsDay !== null && tipsDay.date === day.date
-				? rankTipsRichCheap(tipsDay.rows)
+		tips,
+		tipsScoredOn:
+			tips !== null && tips.total > 0 && tips.scoreable === 0
+				? await newestScoredTipsDay(env, day.date)
 				: null,
 		unpriced: day.unpriced,
 	};
@@ -229,6 +256,19 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 								No TIPS z-scores are published for {shortDate(d.date)} yet, so none of
 								the {d.tips.total} TIPS can be ranked. A missing score is not a score of
 								zero.
+								{d.tipsScoredOn ? (
+									<>
+										{" "}
+										The newest day with TIPS scores is{" "}
+										<Link
+											className="text-primary underline underline-offset-4"
+											to={`?date=${d.tipsScoredOn}`}
+										>
+											{shortDate(d.tipsScoredOn)}
+										</Link>
+										.
+									</>
+								) : null}
 							</p>
 						</section>
 					) : d.tips && d.tips.total > 0 ? (
