@@ -2,7 +2,7 @@ import { getBuilderPlan } from "@markets/persistence";
 import { data } from "react-router";
 import { describeSecurity } from "@/lib/format";
 import { orderLines } from "@/lib/orders";
-import { requireOrganization } from "@/lib/session.server";
+import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.plans.$idPlan.orders.csv";
 
 /**
@@ -22,7 +22,7 @@ export const loader = async ({
 	params,
 }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const plan = await getBuilderPlan({
 		db: env.DB,
 		idOrganization: org.idOrganization,

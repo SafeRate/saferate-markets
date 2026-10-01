@@ -6,6 +6,8 @@
  *   doppler run -p saferate-markets -c dev -- bun scripts/exercise-portfolios.ts --env development
  *
  * Flags: --email <address> (default dylan@saferate.com), --seed-only,
+ * --demo (as an account with NO paid plan: tour the read-only demo and
+ * check every write is refused; use with --email of an unpaid account),
  * --exercise-only, --keep (leave the "Script test" stream, plan and portfolio),
  * --testing (also seed the twenty "Test NN" portfolios built to break things,
  * and run the import break tests), --only <text> (exercise only portfolios
@@ -1608,9 +1610,114 @@ const cleanUp = async (created: {
 	}
 };
 
+// ── The demo (--demo): an account with no paid plan tours, and cannot write ──
+
+const exerciseDemo = async () => {
+	heading(`The read-only demo, as ${EMAIL}`);
+	const overview = await expectPage(
+		"overview shows the demo banner",
+		"/dashboard",
+		"You are touring",
+	);
+	if (overview && !overview.includes("Core ladder, 1 to 10 years"))
+		fail("overview shows a demo portfolio", "no demo portfolio on the overview");
+	const ids = await existingPortfolios();
+	const demo = [...ids.keys()];
+	demo.length === 5
+		? pass("the five demo portfolios are listed", demo.join("; "))
+		: fail(
+				"the five demo portfolios are listed",
+				`${demo.length}: ${demo.join("; ")}`,
+			);
+	await exercisePortfolios(ids);
+	await expectPage(
+		"a demo portfolio's trades, read-only",
+		`/dashboard/portfolios/${ids.values().next().value}/transactions`,
+		"This is the read-only demo",
+	);
+	await expectPage(
+		"the demo liability stream",
+		"/dashboard/liabilities/demo-stream",
+		"Year 10 payout",
+	);
+	await expectPage(
+		"the Builder runs on the demo stream",
+		`/dashboard/builder?${new URLSearchParams({ run: "1", mode: "match", stream: "demo-stream" })}`,
+		"This is the read-only demo",
+	);
+	await expectPage(
+		"the demo plan's order sheet",
+		"/dashboard/plans/demo-plan",
+		"TreasuryDirect",
+	);
+	await expectPage(
+		"execution lists the demo plan",
+		"/dashboard/execution",
+		"Pension payouts, matched",
+	);
+	await expectPage(
+		"backtests are part of the tour",
+		"/dashboard/backtest?run=1&strategy=ladder",
+		"Rungs filled",
+	);
+	heading("Every write is refused");
+	const first = ids.values().next().value as string;
+	for (const [what, path, fields] of [
+		[
+			"create a portfolio",
+			"/dashboard/portfolios",
+			{ namePortfolio: "Mine", codeBenchmark: "AGG", policyIncome: "cash" },
+		],
+		[
+			"add a trade to a demo portfolio",
+			`/dashboard/portfolios/${first}/transactions`,
+			{
+				intent: "add",
+				cusip: "91282CMM0",
+				side: "buy",
+				tradeDate: "2026-09-01",
+				faceAmount: "1000",
+				cleanPrice: "96",
+			},
+		],
+		[
+			"delete a demo portfolio",
+			`/dashboard/portfolios/${first}/transactions`,
+			{ intent: "deletePortfolio", confirmName: "Core ladder, 1 to 10 years" },
+		],
+		[
+			"save a liability stream",
+			"/dashboard/liabilities",
+			{ name: "Mine", lines: "2030-06-30, 1000" },
+		],
+		[
+			"delete the demo plan",
+			"/dashboard/plans/demo-plan",
+			{ intent: "delete", confirm: "yes" },
+		],
+	] as const) {
+		const r = await post(path, fields as Record<string, string>);
+		r.status === 402
+			? pass(`${what}: refused`, "402")
+			: fail(`${what}: refused`, `HTTP ${r.status}`);
+	}
+	const after = await existingPortfolios();
+	after.size === 5
+		? pass("the demo is unchanged afterwards")
+		: fail("the demo is unchanged afterwards", `${after.size} portfolios`);
+};
+
 // ── Run ──────────────────────────────────────────────────────────────────────
 
 await signIn();
+if (flag("demo")) {
+	await exerciseDemo();
+	await exerciseMarkets();
+	console.info(
+		failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`,
+	);
+	process.exit(failures === 0 ? 0 : 1);
+}
 const portfolios = flag("exercise-only")
 	? await existingPortfolios()
 	: await seed(flag("testing") ? ALL_SEEDS : SEEDS);

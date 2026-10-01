@@ -97,7 +97,7 @@ export default function Home() {
 					className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
 					href="/sign-in"
 				>
-					Get started
+					Tour the live demo
 				</a>
 				<a
 					className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-primary/40 hover:text-primary"
@@ -172,8 +172,10 @@ export default function Home() {
 					Plans
 				</h2>
 				<p className="mt-2 text-sm text-slate-600">
-					Every plan includes the full dashboard; they differ in API and MCP limits
-					and in who may use them.
+					Sign in free to tour the live demo: sample portfolios, a liability stream
+					and a plan, on today's market. Every plan then includes the full dashboard
+					for your own portfolios; plans differ in API and MCP limits and in who may
+					use them.
 				</p>
 				<div className="mt-6 grid gap-6 md:grid-cols-3">
 					{PLANS.map((plan) => (

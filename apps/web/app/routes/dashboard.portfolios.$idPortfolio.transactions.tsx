@@ -32,7 +32,8 @@ import {
 	parseBenchmark,
 	parsePolicy,
 } from "@/lib/portfolioOptions";
-import { requireOrganization } from "@/lib/session.server";
+import { useIsDemo, WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import { loadSecurities, validateNewTrades } from "@/services/portfolio.server";
 import type { Route } from "./+types/dashboard.portfolios.$idPortfolio.transactions";
 
@@ -47,7 +48,7 @@ const loadPortfolio = async (
 	env: Env,
 	idPortfolio: string,
 ) => {
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const portfolio = await getPortfolio({
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -413,6 +414,7 @@ export default function Transactions({
 	actionData,
 }: Route.ComponentProps) {
 	const { portfolio, transactions } = loaderData;
+	const isDemo = useIsDemo();
 	const busy = useNavigation().state !== "idle";
 	const imports = [
 		...new Set(
@@ -440,100 +442,102 @@ export default function Transactions({
 				the next business day.
 			</p>
 
-			<section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-				<h2 className="font-semibold text-neutral-900">Add a trade</h2>
-				<Form className="mt-4 grid gap-4 sm:grid-cols-4" method="post">
-					<input name="intent" type="hidden" value="add" />
-					<SecurityPicker />
-					<label className="text-sm font-medium text-slate-700">
-						Side
-						<select className={field} name="side">
-							<option value="buy">Buy</option>
-							<option value="sell">Sell</option>
-						</select>
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Face amount ($)
-						<input
-							className={field}
-							inputMode="decimal"
-							name="faceAmount"
-							placeholder="1,000,000"
-							required
-						/>
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Trade date
-						<input className={field} name="tradeDate" required type="date" />
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Settlement (optional)
-						<input className={field} name="settleDate" type="date" />
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Clean price
-						<input
-							className={field}
-							name="cleanPrice"
-							placeholder="96.53125 or 96-17"
-							required
-						/>
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Account (optional)
-						<input className={field} maxLength={120} name="account" />
-					</label>
-					<div className="sm:col-span-4">
-						<button className={button} disabled={busy} type="submit">
-							Add trade
-						</button>
-						<Outcome intent="add" result={actionData} />
-					</div>
-				</Form>
-			</section>
-
-			<section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-				<h2 className="font-semibold text-neutral-900">Import a CSV</h2>
-				<p className="mt-1 text-sm text-slate-600">
-					One row per trade. Columns are matched by name in any order: a CUSIP (or US
-					ISIN), face or quantity, price, and trade date are required; side,
-					settlement date and account are optional. With no side column a negative
-					quantity is a sale. Prices may be in 32nds. A file imports whole or not at
-					all, and can be undone.
-				</p>
-				<pre className="mt-3 overflow-x-auto rounded-md bg-slate-50 p-3 font-mono text-xs text-slate-700">
-					{
-						"cusip,side,face,price,trade_date,settle_date,account\n91282CMM0,buy,1000000,96-17,2026-09-25,2026-09-28,Main"
-					}
-				</pre>
-				<Form
-					className="mt-4 flex flex-wrap items-center gap-3"
-					encType="multipart/form-data"
-					method="post"
-				>
-					<input name="intent" type="hidden" value="import" />
-					<input
-						accept=".csv,text/csv"
-						className="text-sm"
-						name="file"
-						required
-						type="file"
-					/>
-					{actionData?.intent === "import" &&
-					!actionData.ok &&
-					"duplicates" in actionData &&
-					actionData.duplicates ? (
-						<label className="flex items-center gap-1 text-sm text-slate-700">
-							<input name="allowDuplicates" type="checkbox" value="yes" />
-							Import anyway
+			<WriteGate to="add or import your own trades">
+				<section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+					<h2 className="font-semibold text-neutral-900">Add a trade</h2>
+					<Form className="mt-4 grid gap-4 sm:grid-cols-4" method="post">
+						<input name="intent" type="hidden" value="add" />
+						<SecurityPicker />
+						<label className="text-sm font-medium text-slate-700">
+							Side
+							<select className={field} name="side">
+								<option value="buy">Buy</option>
+								<option value="sell">Sell</option>
+							</select>
 						</label>
-					) : null}
-					<button className={button} disabled={busy} type="submit">
-						Import
-					</button>
-				</Form>
-				<Outcome intent="import" result={actionData} />
-			</section>
+						<label className="text-sm font-medium text-slate-700">
+							Face amount ($)
+							<input
+								className={field}
+								inputMode="decimal"
+								name="faceAmount"
+								placeholder="1,000,000"
+								required
+							/>
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Trade date
+							<input className={field} name="tradeDate" required type="date" />
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Settlement (optional)
+							<input className={field} name="settleDate" type="date" />
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Clean price
+							<input
+								className={field}
+								name="cleanPrice"
+								placeholder="96.53125 or 96-17"
+								required
+							/>
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Account (optional)
+							<input className={field} maxLength={120} name="account" />
+						</label>
+						<div className="sm:col-span-4">
+							<button className={button} disabled={busy} type="submit">
+								Add trade
+							</button>
+							<Outcome intent="add" result={actionData} />
+						</div>
+					</Form>
+				</section>
+
+				<section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+					<h2 className="font-semibold text-neutral-900">Import a CSV</h2>
+					<p className="mt-1 text-sm text-slate-600">
+						One row per trade. Columns are matched by name in any order: a CUSIP (or
+						US ISIN), face or quantity, price, and trade date are required; side,
+						settlement date and account are optional. With no side column a negative
+						quantity is a sale. Prices may be in 32nds. A file imports whole or not at
+						all, and can be undone.
+					</p>
+					<pre className="mt-3 overflow-x-auto rounded-md bg-slate-50 p-3 font-mono text-xs text-slate-700">
+						{
+							"cusip,side,face,price,trade_date,settle_date,account\n91282CMM0,buy,1000000,96-17,2026-09-25,2026-09-28,Main"
+						}
+					</pre>
+					<Form
+						className="mt-4 flex flex-wrap items-center gap-3"
+						encType="multipart/form-data"
+						method="post"
+					>
+						<input name="intent" type="hidden" value="import" />
+						<input
+							accept=".csv,text/csv"
+							className="text-sm"
+							name="file"
+							required
+							type="file"
+						/>
+						{actionData?.intent === "import" &&
+						!actionData.ok &&
+						"duplicates" in actionData &&
+						actionData.duplicates ? (
+							<label className="flex items-center gap-1 text-sm text-slate-700">
+								<input name="allowDuplicates" type="checkbox" value="yes" />
+								Import anyway
+							</label>
+						) : null}
+						<button className={button} disabled={busy} type="submit">
+							Import
+						</button>
+					</Form>
+					<Outcome intent="import" result={actionData} />
+				</section>
+			</WriteGate>
 
 			<section className="mt-6">
 				<div className="flex items-baseline justify-between">
@@ -542,19 +546,21 @@ export default function Transactions({
 					</h2>
 					{imports.length > 0 ? (
 						<div className="flex flex-wrap gap-2">
-							{imports.map((idImport, i) => (
-								<Form key={idImport} method="post">
-									<input name="intent" type="hidden" value="undoImport" />
-									<input name="idImport" type="hidden" value={idImport} />
-									<button
-										className="text-xs text-red-700 underline underline-offset-4"
-										type="submit"
-									>
-										Undo import {i + 1} (
-										{transactions.filter((t) => t.idImport === idImport).length} trades)
-									</button>
-								</Form>
-							))}
+							{imports.map((idImport, i) =>
+								isDemo ? null : (
+									<Form key={idImport} method="post">
+										<input name="intent" type="hidden" value="undoImport" />
+										<input name="idImport" type="hidden" value={idImport} />
+										<button
+											className="text-xs text-red-700 underline underline-offset-4"
+											type="submit"
+										>
+											Undo import {i + 1} (
+											{transactions.filter((t) => t.idImport === idImport).length} trades)
+										</button>
+									</Form>
+								),
+							)}
 						</div>
 					) : null}
 				</div>
@@ -596,16 +602,22 @@ export default function Transactions({
 											{t.sourceTransaction === "csv" ? "CSV" : "Manual"}
 										</td>
 										<td className="px-3 py-2 text-right">
-											<Form method="post">
-												<input name="intent" type="hidden" value="delete" />
-												<input name="idTransaction" type="hidden" value={t.idTransaction} />
-												<button
-													className="text-xs text-red-700 underline underline-offset-4"
-													type="submit"
-												>
-													Delete
-												</button>
-											</Form>
+											{isDemo ? null : (
+												<Form method="post">
+													<input name="intent" type="hidden" value="delete" />
+													<input
+														name="idTransaction"
+														type="hidden"
+														value={t.idTransaction}
+													/>
+													<button
+														className="text-xs text-red-700 underline underline-offset-4"
+														type="submit"
+													>
+														Delete
+													</button>
+												</Form>
+											)}
 										</td>
 									</tr>
 								))}
@@ -615,79 +627,81 @@ export default function Transactions({
 				)}
 			</section>
 
-			<section className="mt-10 grid gap-6 lg:grid-cols-2">
-				<div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-					<h2 className="font-semibold text-neutral-900">Settings</h2>
-					<Form className="mt-4 space-y-4" method="post">
-						<input name="intent" type="hidden" value="settings" />
-						<label className="block text-sm font-medium text-slate-700">
-							Name
+			{isDemo ? null : (
+				<section className="mt-10 grid gap-6 lg:grid-cols-2">
+					<div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+						<h2 className="font-semibold text-neutral-900">Settings</h2>
+						<Form className="mt-4 space-y-4" method="post">
+							<input name="intent" type="hidden" value="settings" />
+							<label className="block text-sm font-medium text-slate-700">
+								Name
+								<input
+									className={field}
+									defaultValue={portfolio.namePortfolio}
+									maxLength={80}
+									name="namePortfolio"
+									required
+								/>
+							</label>
+							<label className="block text-sm font-medium text-slate-700">
+								Benchmark
+								<select
+									className={field}
+									defaultValue={portfolio.codeBenchmark ?? ""}
+									name="codeBenchmark"
+								>
+									<option value="">None</option>
+									{BENCHMARK_OPTIONS.map((o) => (
+										<option key={o.code} value={o.code}>
+											{o.label}
+										</option>
+									))}
+								</select>
+							</label>
+							<label className="block text-sm font-medium text-slate-700">
+								Coupons and proceeds
+								<select
+									className={field}
+									defaultValue={portfolio.policyIncome}
+									name="policyIncome"
+								>
+									{INCOME_OPTIONS.map((o) => (
+										<option key={o.policy} value={o.policy}>
+											{o.label}
+										</option>
+									))}
+								</select>
+							</label>
+							<button className={button} disabled={busy} type="submit">
+								Save
+							</button>
+							<Outcome intent="settings" result={actionData} />
+						</Form>
+					</div>
+					<div className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
+						<h2 className="font-semibold text-red-800">Delete this portfolio</h2>
+						<p className="mt-1 text-sm text-slate-600">
+							Removes the portfolio and every trade in it, permanently. Type its name
+							to confirm.
+						</p>
+						<Form className="mt-4 space-y-3" method="post">
+							<input name="intent" type="hidden" value="deletePortfolio" />
 							<input
 								className={field}
-								defaultValue={portfolio.namePortfolio}
-								maxLength={80}
-								name="namePortfolio"
-								required
+								name="confirmName"
+								placeholder={portfolio.namePortfolio}
 							/>
-						</label>
-						<label className="block text-sm font-medium text-slate-700">
-							Benchmark
-							<select
-								className={field}
-								defaultValue={portfolio.codeBenchmark ?? ""}
-								name="codeBenchmark"
+							<button
+								className="rounded-full border border-red-300 px-5 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+								type="submit"
 							>
-								<option value="">None</option>
-								{BENCHMARK_OPTIONS.map((o) => (
-									<option key={o.code} value={o.code}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<label className="block text-sm font-medium text-slate-700">
-							Coupons and proceeds
-							<select
-								className={field}
-								defaultValue={portfolio.policyIncome}
-								name="policyIncome"
-							>
-								{INCOME_OPTIONS.map((o) => (
-									<option key={o.policy} value={o.policy}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<button className={button} disabled={busy} type="submit">
-							Save
-						</button>
-						<Outcome intent="settings" result={actionData} />
-					</Form>
-				</div>
-				<div className="rounded-xl border border-red-200 bg-white p-5 shadow-sm">
-					<h2 className="font-semibold text-red-800">Delete this portfolio</h2>
-					<p className="mt-1 text-sm text-slate-600">
-						Removes the portfolio and every trade in it, permanently. Type its name to
-						confirm.
-					</p>
-					<Form className="mt-4 space-y-3" method="post">
-						<input name="intent" type="hidden" value="deletePortfolio" />
-						<input
-							className={field}
-							name="confirmName"
-							placeholder={portfolio.namePortfolio}
-						/>
-						<button
-							className="rounded-full border border-red-300 px-5 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-							type="submit"
-						>
-							Delete portfolio
-						</button>
-						<Outcome intent="deletePortfolio" result={actionData} />
-					</Form>
-				</div>
-			</section>
+								Delete portfolio
+							</button>
+							<Outcome intent="deletePortfolio" result={actionData} />
+						</Form>
+					</div>
+				</section>
+			)}
 		</main>
 	);
 }

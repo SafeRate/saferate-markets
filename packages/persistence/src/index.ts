@@ -5,3 +5,4 @@ export * from "./subscriptions";
 export * from "./portfolios";
 export * from "./liabilities";
 export * from "./backtests";
+export * from "./demo";

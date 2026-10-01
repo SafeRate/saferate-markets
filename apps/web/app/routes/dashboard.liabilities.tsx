@@ -7,7 +7,8 @@ import { Form, Link, redirect, useNavigation } from "react-router";
 import { LiabilityInputFields } from "@/components/LiabilityInputFields";
 import { money } from "@/lib/format";
 import { readLiabilityInput } from "@/lib/liabilityInput";
-import { requireOrganization } from "@/lib/session.server";
+import { WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.liabilities";
 
 export const meta: Route.MetaFunction = () => [
@@ -16,7 +17,7 @@ export const meta: Route.MetaFunction = () => [
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	return {
 		streams: await listLiabilityStreams({
 			db: env.DB,
@@ -27,7 +28,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const form = await request.formData();
 	const name = String(form.get("name") ?? "").trim();
 	if (name === "") return { errors: ["Give the stream a name."] };
@@ -104,37 +105,39 @@ export default function Liabilities({
 			) : null}
 			<section className="mt-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 				<h2 className="font-semibold text-neutral-900">New liability stream</h2>
-				<Form
-					className="mt-4 space-y-3"
-					encType="multipart/form-data"
-					method="post"
-				>
-					<label className="block text-sm font-medium text-slate-700">
-						Name
-						<input
-							className={field}
-							maxLength={80}
-							name="name"
-							placeholder="Fund distributions 2027-2046"
-							required
-						/>
-					</label>
-					<LiabilityInputFields />
-					{actionData?.errors ? (
-						<ul className="space-y-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-							{actionData.errors.map((e) => (
-								<li key={e}>{e}</li>
-							))}
-						</ul>
-					) : null}
-					<button
-						className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
-						disabled={busy}
-						type="submit"
+				<WriteGate to="save your own liability streams">
+					<Form
+						className="mt-4 space-y-3"
+						encType="multipart/form-data"
+						method="post"
 					>
-						Save stream
-					</button>
-				</Form>
+						<label className="block text-sm font-medium text-slate-700">
+							Name
+							<input
+								className={field}
+								maxLength={80}
+								name="name"
+								placeholder="Fund distributions 2027-2046"
+								required
+							/>
+						</label>
+						<LiabilityInputFields />
+						{actionData?.errors ? (
+							<ul className="space-y-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+								{actionData.errors.map((e) => (
+									<li key={e}>{e}</li>
+								))}
+							</ul>
+						) : null}
+						<button
+							className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
+							disabled={busy}
+							type="submit"
+						>
+							Save stream
+						</button>
+					</Form>
+				</WriteGate>
 			</section>
 		</main>
 	);

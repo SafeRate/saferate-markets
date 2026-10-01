@@ -9,7 +9,8 @@ import {
 	parseBenchmark,
 	parsePolicy,
 } from "@/lib/portfolioOptions";
-import { requireOrganization } from "@/lib/session.server";
+import { WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.portfolios";
 
 export const meta: Route.MetaFunction = () => [
@@ -18,7 +19,7 @@ export const meta: Route.MetaFunction = () => [
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	return {
 		portfolios: await listPortfolios({
 			db: env.DB,
@@ -29,7 +30,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const form = await request.formData();
 	const namePortfolio = String(form.get("namePortfolio") ?? "").trim();
 	if (namePortfolio === "") return { error: "Give the portfolio a name." };
@@ -109,45 +110,47 @@ export default function Portfolios({
 
 			<section className="mt-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
 				<h2 className="font-semibold text-neutral-900">New portfolio</h2>
-				<Form className="mt-4 grid gap-4 sm:grid-cols-3" method="post">
-					<label className="text-sm font-medium text-slate-700">
-						Name
-						<input className={field} maxLength={80} name="namePortfolio" required />
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Benchmark
-						<select className={field} defaultValue="broad" name="codeBenchmark">
-							<option value="">None</option>
-							{BENCHMARK_OPTIONS.map((o) => (
-								<option key={o.code} value={o.code}>
-									{o.label}
-								</option>
-							))}
-						</select>
-					</label>
-					<label className="text-sm font-medium text-slate-700">
-						Coupons and proceeds
-						<select className={field} defaultValue="cash" name="policyIncome">
-							{INCOME_OPTIONS.map((o) => (
-								<option key={o.policy} value={o.policy}>
-									{o.label}
-								</option>
-							))}
-						</select>
-					</label>
-					<div className="sm:col-span-3">
-						{actionData?.error ? (
-							<p className="mb-2 text-sm text-red-700">{actionData.error}</p>
-						) : null}
-						<button
-							className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
-							disabled={busy}
-							type="submit"
-						>
-							Create portfolio
-						</button>
-					</div>
-				</Form>
+				<WriteGate to="create your own portfolios">
+					<Form className="mt-4 grid gap-4 sm:grid-cols-3" method="post">
+						<label className="text-sm font-medium text-slate-700">
+							Name
+							<input className={field} maxLength={80} name="namePortfolio" required />
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Benchmark
+							<select className={field} defaultValue="broad" name="codeBenchmark">
+								<option value="">None</option>
+								{BENCHMARK_OPTIONS.map((o) => (
+									<option key={o.code} value={o.code}>
+										{o.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<label className="text-sm font-medium text-slate-700">
+							Coupons and proceeds
+							<select className={field} defaultValue="cash" name="policyIncome">
+								{INCOME_OPTIONS.map((o) => (
+									<option key={o.policy} value={o.policy}>
+										{o.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<div className="sm:col-span-3">
+							{actionData?.error ? (
+								<p className="mb-2 text-sm text-red-700">{actionData.error}</p>
+							) : null}
+							<button
+								className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
+								disabled={busy}
+								type="submit"
+							>
+								Create portfolio
+							</button>
+						</div>
+					</Form>
+				</WriteGate>
 			</section>
 		</main>
 	);

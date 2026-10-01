@@ -8,7 +8,8 @@ import { data, Form, Link, redirect } from "react-router";
 import { LiabilityInputFields } from "@/components/LiabilityInputFields";
 import { money } from "@/lib/format";
 import { readLiabilityInput } from "@/lib/liabilityInput";
-import { requireOrganization } from "@/lib/session.server";
+import { WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.liabilities.$idLiabilityStream";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
@@ -23,7 +24,7 @@ export const loader = async ({
 	params,
 }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const stream = await getLiabilityStream({
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -39,7 +40,7 @@ export const action = async ({
 	params,
 }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const scope = {
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -135,54 +136,58 @@ export default function LiabilityStream({
 				<p className="mt-1 text-sm text-slate-600">
 					Saving replaces the whole schedule with what is below.
 				</p>
-				<Form
-					className="mt-4 space-y-3"
-					encType="multipart/form-data"
-					method="post"
-				>
-					<label className="block text-sm font-medium text-slate-700">
-						Name
-						<input
-							className={field}
-							defaultValue={stream.nameLiabilityStream}
-							maxLength={80}
-							name="name"
-							required
-						/>
-					</label>
-					<LiabilityInputFields defaultLines={lines} />
-					{actionData?.errors.length ? (
-						<ul className="space-y-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
-							{actionData.errors.map((e) => (
-								<li key={e}>{e}</li>
-							))}
-						</ul>
-					) : null}
-					{actionData?.saved ? (
-						<p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-							Saved.
-						</p>
-					) : null}
-					<button
-						className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-						type="submit"
+				<WriteGate to="edit liability streams">
+					<Form
+						className="mt-4 space-y-3"
+						encType="multipart/form-data"
+						method="post"
 					>
-						Save
-					</button>
-				</Form>
-				<Form className="mt-6 border-t border-slate-100 pt-4" method="post">
-					<input name="intent" type="hidden" value="delete" />
-					<label className="mr-3 text-sm text-slate-600">
-						<input className="mr-1" name="confirm" type="checkbox" value="yes" />
-						Delete permanently; saved plans keep their positions but lose the link
-					</label>
-					<button
-						className="text-sm text-red-700 underline underline-offset-4"
-						type="submit"
-					>
-						Delete this stream
-					</button>
-				</Form>
+						<label className="block text-sm font-medium text-slate-700">
+							Name
+							<input
+								className={field}
+								defaultValue={stream.nameLiabilityStream}
+								maxLength={80}
+								name="name"
+								required
+							/>
+						</label>
+						<LiabilityInputFields defaultLines={lines} />
+						{actionData?.errors.length ? (
+							<ul className="space-y-1 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+								{actionData.errors.map((e) => (
+									<li key={e}>{e}</li>
+								))}
+							</ul>
+						) : null}
+						{actionData?.saved ? (
+							<p className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+								Saved.
+							</p>
+						) : null}
+						<button
+							className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+							type="submit"
+						>
+							Save
+						</button>
+					</Form>
+				</WriteGate>
+				<WriteGate to="delete liability streams">
+					<Form className="mt-6 border-t border-slate-100 pt-4" method="post">
+						<input name="intent" type="hidden" value="delete" />
+						<label className="mr-3 text-sm text-slate-600">
+							<input className="mr-1" name="confirm" type="checkbox" value="yes" />
+							Delete permanently; saved plans keep their positions but lose the link
+						</label>
+						<button
+							className="text-sm text-red-700 underline underline-offset-4"
+							type="submit"
+						>
+							Delete this stream
+						</button>
+					</Form>
+				</WriteGate>
 			</section>
 		</main>
 	);

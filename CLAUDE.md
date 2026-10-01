@@ -495,6 +495,28 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
 - Shares are of the competitive award (dealers + direct + indirect). "High
   less median" is NOT the tail (that needs the when-issued yield).
 
+## The paid gate and the read-only demo (2026-10-01)
+
+- **The dashboard's portfolio tools need a paid plan** (Dylan). An account
+  without one tours a SHARED, READ-ONLY demo: organization `demo`
+  (`DEMO_ORGANIZATION_ID`), seeded by migration 0006 with five portfolios
+  (ladder, a Builder cash-flow match of the demo stream, TIPS and floaters,
+  long duration through 2022, a bill roll), the demo liability stream and a
+  saved plan. Shared rather than copied per sign-up: nothing written per
+  account, the same curated tour for everyone, nothing to untangle on paying.
+- **`requireDashboard`** (lib/session.server.ts) is the one switch: unpaid
+  pages read `idOrganization = "demo"`, and any non-GET from an unpaid account
+  is refused there with a 402 before an action runs. The forms are hidden too
+  (components/WriteGate.tsx, reading `isDemo` from the layout's loader), but
+  the server is what enforces it. Billing, keys and usage stay the account's
+  own (`idOrganizationOwn`). Markets pages and backtests are open to any
+  signed-in account: they are the tour.
+- **Refresh the demo** with `scripts/demo-seed.ts <new migration name>` into a
+  NEW migration; never edit an applied one.
+- **Checked by** `exercise-portfolios.ts --demo --email <an unpaid account>`
+  (staging: demo-check@saferate.com): the banner, all five portfolios value,
+  every write is a 402, the demo is unchanged after.
+
 ## Markets menu and landing page (2026-10-01)
 
 - **Pages:** Security Lookup (`/dashboard/securities`, search shared with
@@ -522,9 +544,8 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   before calling.
 - **Landing page:** the full suite, coverage from the constant, provenance
   in saferate.com's wording ("primary sources, free to anyone"; never
-  "public domain", an unchecked copyright claim). Open question for Dylan:
-  the dashboard needs sign-in but no subscription, so anyone signed up
-  gets the whole dashboard.
+  "public domain", an unchecked copyright claim). The call to action is the
+  demo tour; the tools need a plan (above).
 
 ## Rich / Cheap page (2026-10-01, `/dashboard/rich-cheap`)
 

@@ -9,7 +9,8 @@ import { PRODUCT_NAME } from "@markets/schema";
 import { data, Form, Link, redirect } from "react-router";
 import { describeSecurity, face, money, price } from "@/lib/format";
 import { orderLines } from "@/lib/orders";
-import { requireOrganization } from "@/lib/session.server";
+import { WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.plans.$idPlan";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
@@ -22,7 +23,7 @@ export const loader = async ({
 	params,
 }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const plan = await getBuilderPlan({
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -50,7 +51,7 @@ export const action = async ({
 	params,
 }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const scope = { db: env.DB, idOrganization: org.idOrganization };
 	const plan = await getBuilderPlan({ ...scope, idPlan: params.idPlan });
 	if (plan === null) throw data("No such plan.", { status: 404 });
@@ -121,15 +122,17 @@ export default function PlanPage({
 					>
 						Download order sheet (CSV)
 					</a>
-					<Form method="post">
-						<input name="intent" type="hidden" value="portfolio" />
-						<button
-							className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-							type="submit"
-						>
-							Track as a portfolio
-						</button>
-					</Form>
+					<WriteGate to="track plans as portfolios">
+						<Form method="post">
+							<input name="intent" type="hidden" value="portfolio" />
+							<button
+								className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+								type="submit"
+							>
+								Track as a portfolio
+							</button>
+						</Form>
+					</WriteGate>
 				</div>
 			</div>
 			<p className="mt-1 text-sm text-slate-600">
@@ -237,22 +240,24 @@ export default function PlanPage({
 			</section>
 
 			<section className="mt-10 border-t border-slate-100 pt-4">
-				<Form className="flex flex-wrap items-center gap-3" method="post">
-					<input name="intent" type="hidden" value="delete" />
-					<label className="text-sm text-slate-600">
-						<input className="mr-1" name="confirm" type="checkbox" value="yes" />
-						Delete this plan permanently
-					</label>
-					<button
-						className="text-sm text-red-700 underline underline-offset-4"
-						type="submit"
-					>
-						Delete
-					</button>
-					{actionData?.error ? (
-						<span className="text-sm text-red-700">{actionData.error}</span>
-					) : null}
-				</Form>
+				<WriteGate to="delete plans">
+					<Form className="flex flex-wrap items-center gap-3" method="post">
+						<input name="intent" type="hidden" value="delete" />
+						<label className="text-sm text-slate-600">
+							<input className="mr-1" name="confirm" type="checkbox" value="yes" />
+							Delete this plan permanently
+						</label>
+						<button
+							className="text-sm text-red-700 underline underline-offset-4"
+							type="submit"
+						>
+							Delete
+						</button>
+						{actionData?.error ? (
+							<span className="text-sm text-red-700">{actionData.error}</span>
+						) : null}
+					</Form>
+				</WriteGate>
 			</section>
 		</main>
 	);

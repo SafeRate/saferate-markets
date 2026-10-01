@@ -19,7 +19,8 @@ import {
 	price,
 	rate,
 } from "@/lib/format";
-import { requireOrganization } from "@/lib/session.server";
+import { WriteGate } from "@/components/WriteGate";
+import { requireDashboard } from "@/lib/session.server";
 import {
 	BUILDER_MODES,
 	LOT_PRESET_OPTIONS,
@@ -128,7 +129,7 @@ const hasRun = (params: URLSearchParams) => params.get("run") === "1";
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const params = new URL(request.url).searchParams;
 	const streams = await listLiabilityStreams({
 		db: env.DB,
@@ -162,7 +163,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 /** Save: re-run the plan server side from the same inputs and store that snapshot. */
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const form = await request.formData();
 	const params = new URLSearchParams(String(form.get("query") ?? ""));
 	const { inputs, stream, market, built } = await plan(
@@ -721,27 +722,29 @@ export default function Builder({
 							TreasuryDirect and the secondary market, which you can download or turn
 							into a tracked portfolio.
 						</p>
-						<Form className="mt-3 flex flex-wrap items-end gap-3" method="post">
-							<input name="query" type="hidden" value={query.toString()} />
-							<label className={label}>
-								Name
-								<input
-									className={field}
-									defaultValue={result.method}
-									maxLength={120}
-									name="namePlan"
-								/>
-							</label>
-							<button
-								className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-								type="submit"
-							>
-								Save plan
-							</button>
-							{actionData?.error ? (
-								<p className="text-sm text-red-700">{actionData.error}</p>
-							) : null}
-						</Form>
+						<WriteGate to="save plans and turn them into order sheets">
+							<Form className="mt-3 flex flex-wrap items-end gap-3" method="post">
+								<input name="query" type="hidden" value={query.toString()} />
+								<label className={label}>
+									Name
+									<input
+										className={field}
+										defaultValue={result.method}
+										maxLength={120}
+										name="namePlan"
+									/>
+								</label>
+								<button
+									className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+									type="submit"
+								>
+									Save plan
+								</button>
+								{actionData?.error ? (
+									<p className="text-sm text-red-700">{actionData.error}</p>
+								) : null}
+							</Form>
+						</WriteGate>
 					</section>
 				</>
 			) : null}

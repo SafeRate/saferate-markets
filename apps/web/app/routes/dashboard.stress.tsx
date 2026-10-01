@@ -6,7 +6,7 @@ import {
 import { PRODUCT_NAME } from "@markets/schema";
 import { Form, Link } from "react-router";
 import { money, number, percent } from "@/lib/format";
-import { requireOrganization } from "@/lib/session.server";
+import { requireDashboard } from "@/lib/session.server";
 import { analyseStress, type TCustomShock } from "@/services/stress.server";
 import type { Route } from "./+types/dashboard.stress";
 
@@ -23,7 +23,7 @@ const num = (raw: string | null) => {
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const portfolios = await listPortfolios({
 		db: env.DB,
 		idOrganization: org.idOrganization,

@@ -11,7 +11,7 @@ import { checkoutPlanById, PRODUCT_NAME } from "@markets/schema";
 import { Link } from "react-router";
 import { LineChart } from "@/components/LineChart";
 import { describeSecurity, money, percent, signClass } from "@/lib/format";
-import { requireOrganization } from "@/lib/session.server";
+import { requireDashboard } from "@/lib/session.server";
 import { valuePortfolio } from "@/services/portfolio.server";
 import type { Route } from "./+types/dashboard";
 
@@ -30,13 +30,16 @@ export const meta: Route.MetaFunction = () => [
  */
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
+	// Portfolios are the demo's for an unpaid account; plan, keys and usage are
+	// always the account's own.
 	const scope = { db: env.DB, idOrganization: org.idOrganization };
+	const own = { db: env.DB, idOrganization: org.idOrganizationOwn };
 	const period = currentPeriodMonth();
 	const [usage, subscription, activeKeys, portfolios] = await Promise.all([
-		getMonthlyUsage({ ...scope, limitMonths: 1 }),
-		getOrganizationSubscription(scope),
-		countActiveApiKeys(scope),
+		getMonthlyUsage({ ...own, limitMonths: 1 }),
+		getOrganizationSubscription(own),
+		countActiveApiKeys(own),
 		listPortfolios(scope),
 	]);
 	const thisMonth = usage.filter((u) => u.periodMonth === period);

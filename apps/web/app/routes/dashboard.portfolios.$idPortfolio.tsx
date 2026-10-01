@@ -13,7 +13,7 @@ import {
 	rate,
 	signClass,
 } from "@/lib/format";
-import { requireOrganization } from "@/lib/session.server";
+import { requireDashboard } from "@/lib/session.server";
 import { valuePortfolio } from "@/services/portfolio.server";
 import type { Route } from "./+types/dashboard.portfolios.$idPortfolio";
 
@@ -29,7 +29,7 @@ export const loader = async ({
 	params,
 }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireOrganization(request, env);
+	const org = await requireDashboard(request, env);
 	const portfolio = await getPortfolio({
 		db: env.DB,
 		idOrganization: org.idOrganization,
