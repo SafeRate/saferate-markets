@@ -495,6 +495,37 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
 - Shares are of the competitive award (dealers + direct + indirect). "High
   less median" is NOT the tail (that needs the when-issued yield).
 
+## Markets menu and landing page (2026-10-01)
+
+- **Pages:** Security Lookup (`/dashboard/securities`, search shared with
+  the trade picker in services/securitySearch.server.ts; `/:cusip` from
+  getSecurity), Curves (`/dashboard/curves`: each family's shape against a
+  week, a month and a year back; Treasury Rates stays as the tables),
+  Indices (`/dashboard/indices`, `/:code`), On / Off the Run
+  (`/dashboard/on-the-run`). Built from treasury-integration's notes on the
+  consumer pages (saferate-ai apps/consumer).
+- **Traps handled, each from data:** index returns end on the newest DAILY
+  valuation and chain from the base (packages/portfolio indexReturns.ts:
+  the daily series starts the day AFTER the base, 2008-10-01 at 100.35, so
+  the base is read off the first row); index analytics are one row per
+  duration basis (the Aggregate has three); the open snapshot's
+  rebalance_date is the period START; on-the-run premiums are struck on
+  residuals, not yields; a floater's price-row coupon is today's reset
+  rate, so floaters show no coupon; convexity is already divided by 100 in
+  the client. Amount outstanding is in DOLLARS (the 10-year: $138.5B), not
+  millions, which was measured, not assumed.
+- **Coverage starts 2008-09-02** (`TREASURY_COVERAGE_START`), checked
+  against production by treasury-integration; the index base is 2008-09-30.
+  The client throws on an earlier date: five one-day curve routes turned
+  that into a 500 until 2026-10-01 (now the documented 400; tests in
+  curveFamilies.test.ts fail on the old routes). Pages refuse such dates
+  before calling.
+- **Landing page:** the full suite, coverage from the constant, provenance
+  in saferate.com's wording ("primary sources, free to anyone"; never
+  "public domain", an unchecked copyright claim). Open question for Dylan:
+  the dashboard needs sign-in but no subscription, so anyone signed up
+  gets the whole dashboard.
+
 ## Rich / Cheap page (2026-10-01, `/dashboard/rich-cheap`)
 
 - The consumer site's internal page (saferate-ai, saferate.com/treasury/

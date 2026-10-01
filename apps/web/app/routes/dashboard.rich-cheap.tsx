@@ -59,10 +59,12 @@ const shortDate = (iso: string) =>
 		timeZone: "UTC",
 	});
 
-const signed = (value: number | null, digits: number) =>
-	value === null
-		? "—"
-		: `${value > 0 ? "+" : value < 0 ? "−" : ""}${Math.abs(value).toFixed(digits)}`;
+/** Signed to `digits`, rounded first so a -0.04 reads 0.0 rather than "−0.0". */
+const signed = (value: number | null, digits: number) => {
+	if (value === null) return "—";
+	const v = Number(value.toFixed(digits));
+	return `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(digits)}`;
+};
 
 const Rows = ({
 	rows,

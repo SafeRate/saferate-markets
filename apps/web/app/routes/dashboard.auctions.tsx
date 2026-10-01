@@ -69,8 +69,13 @@ const shortDate = (iso: string) => {
 	});
 };
 
-const signed = (value: number | null, format: (v: number) => string) =>
-	value === null ? "—" : `${value >= 0 ? "+" : "−"}${format(Math.abs(value))}`;
+/** Signed, with no sign on a figure that rounds to zero ("0.00", not "−0.00"). */
+const signed = (value: number | null, format: (v: number) => string) => {
+	if (value === null) return "—";
+	const text = format(Math.abs(value));
+	if (Number(text.replace(/[^0-9.]/g, "")) === 0) return text;
+	return `${value > 0 ? "+" : "−"}${text}`;
+};
 
 const security = (a: TShown) =>
 	a.kind === "Bill"

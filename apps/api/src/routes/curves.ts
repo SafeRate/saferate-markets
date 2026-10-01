@@ -107,6 +107,16 @@ export const registerCurveRoutes = (app: OpenAPIHono<AppEnv>) =>
 		const unbound = treasuryUnbound(c);
 		if (unbound) return unbound;
 		const { date } = c.req.valid("query");
+		// Before coverage the client refuses the date by throwing, which the
+		// catch below reported as a 500. Found 2026-10-01; the 400 is documented.
+		if (date !== undefined && date < TREASURY_COVERAGE_START)
+			return c.json(
+				{
+					error: "bad_request" as const,
+					message: `Coverage starts ${TREASURY_COVERAGE_START}; ${date} is before it.`,
+				},
+				400,
+			);
 
 		try {
 			const curve =

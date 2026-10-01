@@ -1246,6 +1246,48 @@ const exerciseMarkets = async () => {
 		"History: Note 10-Year",
 	);
 	await expectPage("rates", "/dashboard/rates", "Treasury Rates");
+	await expectPage(
+		"security lookup",
+		"/dashboard/securities?q=4.625+2035",
+		"91282CMM0",
+	);
+	for (const [what, cusip, marker] of [
+		["a note", "91282CMM0", "Key-rate durations"],
+		["a TIPS", "91282CRE3", "Real yield"],
+		["a floater", "91282CMJ7", "Discount margin"],
+		["a 30-year bond", "912810SP4", "held as STRIPS"],
+	])
+		await expectPage(
+			`security: ${what}`,
+			`/dashboard/securities/${cusip}`,
+			marker,
+		);
+	await expectPage("curves", "/dashboard/curves", "the change, in basis points");
+	await expectPage(
+		"curves, par, a past day",
+		"/dashboard/curves?date=2020-03-16&measure=par",
+		"Par yield",
+	);
+	await expectPage("indices", "/dashboard/indices", "SR-UST-TR-AGG");
+	for (const code of ["AGG", "FRN", "TIPS", "BILL"])
+		await expectPage(
+			`index ${code}`,
+			`/dashboard/indices/${code}`,
+			"Since inception",
+		);
+	await expectPage("on / off the run", "/dashboard/on-the-run", "On the run");
+	await expectPage(
+		"on / off the run, auction basis, 2015",
+		"/dashboard/on-the-run?date=2015-06-01&basis=auction",
+		"On the run",
+	);
+	const early = await get("/dashboard/curves?date=2007-01-03");
+	problems(early.text).some((p) => /Coverage starts/.test(p))
+		? pass("curves before coverage says where it starts")
+		: fail(
+				"curves before coverage",
+				problems(early.text).join(" | ") || `HTTP ${early.status}`,
+			);
 	await expectPage("rich / cheap", "/dashboard/rich-cheap", "scoreable");
 	await expectPage(
 		"rich / cheap on a past day",

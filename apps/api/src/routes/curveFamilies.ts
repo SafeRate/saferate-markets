@@ -214,6 +214,13 @@ const handleDay =
 	async (c: Context<AppEnv>, date: string | undefined) => {
 		const unbound = treasuryUnbound(c);
 		if (unbound) return unbound;
+		// Before coverage the client refuses the date by throwing, which the
+		// catch below reported as a 500. Found 2026-10-01; the 400 is documented.
+		if (date !== undefined && date < TREASURY_COVERAGE_START)
+			return badRange(
+				c,
+				`Coverage starts ${TREASURY_COVERAGE_START}; ${date} is before it.`,
+			);
 		try {
 			let on = date;
 			if (on === undefined) {

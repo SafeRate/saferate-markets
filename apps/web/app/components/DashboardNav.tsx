@@ -28,8 +28,12 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 	{
 		title: "Markets",
 		items: [
-			{ kind: "link", label: "Treasury Auctions", to: "/dashboard/auctions" },
+			{ kind: "link", label: "Security Lookup", to: "/dashboard/securities" },
 			{ kind: "link", label: "Treasury Rates", to: "/dashboard/rates" },
+			{ kind: "link", label: "Curves", to: "/dashboard/curves" },
+			{ kind: "link", label: "Indices", to: "/dashboard/indices" },
+			{ kind: "link", label: "Treasury Auctions", to: "/dashboard/auctions" },
+			{ kind: "link", label: "On / Off the Run", to: "/dashboard/on-the-run" },
 			{ kind: "link", label: "Rich / Cheap", to: "/dashboard/rich-cheap" },
 		],
 	},

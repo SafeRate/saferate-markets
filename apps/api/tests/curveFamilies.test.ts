@@ -168,3 +168,15 @@ describe("history", () => {
 		expect(status).not.toBe(200);
 	});
 });
+
+describe("a day before coverage", () => {
+	test("is a 400 that says where coverage starts, on every one-day curve", async () => {
+		// Found 2026-10-01 probing staging: the client refuses such a date by
+		// throwing, and these routes reported it as a 500.
+		for (const path of ["zero", "par", "real", "breakeven", "money-market"]) {
+			const response = await get(`/v1/curves/${path}?date=2007-01-03`);
+			expect(response.status).toBe(400);
+			expect(JSON.stringify(response.body)).toContain("Coverage starts");
+		}
+	});
+});
