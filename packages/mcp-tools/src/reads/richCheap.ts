@@ -238,3 +238,71 @@ export const rankRichCheap = (
 		ranked: scored.slice(0, filter.limit),
 	};
 };
+
+/**
+ * The maturity bands of the Safe Rate indices, for a day's rich/cheap at a
+ * glance. Lower bound inclusive, upper exclusive, so a security sits in one
+ * band. Built as the consumer site's internal relative-value page is
+ * (saferate-ai apps/consumer services/treasuryRelativeValue.ts, 2026-10-01).
+ */
+export const RICH_CHEAP_BANDS = [
+	{ key: "0001", label: "Under 1 year", minYears: 0, maxYears: 1 },
+	{ key: "0103", label: "1 to 3 years", minYears: 1, maxYears: 3 },
+	{ key: "0307", label: "3 to 7 years", minYears: 3, maxYears: 7 },
+	{ key: "0710", label: "7 to 10 years", minYears: 7, maxYears: 10 },
+	{ key: "1020", label: "10 to 20 years", minYears: 10, maxYears: 20 },
+	{
+		key: "20PL",
+		label: "20 years and over",
+		minYears: 20,
+		maxYears: Number.POSITIVE_INFINITY,
+	},
+] as const;
+
+/**
+ * Notes and bonds by band, the most unusually cheap and rich of each RANKED ON
+ * z (how unusual today's residual is for that security), not on the residual
+ * itself: the level is structure. On 2026-09-25 the richest bond by price was
+ * +91.8 cents with a z of -0.24, persistently rich and ordinary that day.
+ *
+ * `scoreable` counts every row with a z, a z of exactly 0 included (a
+ * security at its own average); it is in neither list, since it is neither.
+ * A null z is not zero: counted in `total`, never ranked.
+ *
+ * BILLS ARE APART. Their z is null by construction, so a z-ranked list would
+ * silently drop them; they are ranked by price residual instead, which
+ * answers a different question (how far from the curve, not how unusual).
+ * Price residual is positive when rich, so the cheapest are the most negative.
+ */
+export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
+	const coupons = rows.filter((row) => row.family !== "bill");
+	const bands = RICH_CHEAP_BANDS.map((band) => {
+		const inBand = coupons.filter(
+			(row) =>
+				row.yearsToMaturity >= band.minYears && row.yearsToMaturity < band.maxYears,
+		);
+		const all = rankRichCheap(inBand, { limit: 0 });
+		return {
+			...band,
+			total: inBand.length,
+			scoreable: inBand.length - all.unscoredCount,
+			cheap: rankRichCheap(inBand, { direction: "cheaper", limit: perSide })
+				.ranked,
+			rich: rankRichCheap(inBand, { direction: "richer", limit: perSide }).ranked,
+		};
+	});
+	const bills = rows.filter(
+		(row) => row.family === "bill" && Number.isFinite(row.priceResidualCents),
+	);
+	const byCents = [...bills].sort(
+		(a, b) => a.priceResidualCents - b.priceResidualCents,
+	);
+	return {
+		bands,
+		bills: {
+			total: bills.length,
+			cheap: byCents.slice(0, perSide),
+			rich: [...byCents].reverse().slice(0, perSide),
+		},
+	};
+};

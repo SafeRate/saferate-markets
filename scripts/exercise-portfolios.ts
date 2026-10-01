@@ -1246,6 +1246,19 @@ const exerciseMarkets = async () => {
 		"History: Note 10-Year",
 	);
 	await expectPage("rates", "/dashboard/rates", "Treasury Rates");
+	await expectPage("rich / cheap", "/dashboard/rich-cheap", "scoreable");
+	await expectPage(
+		"rich / cheap on a past day",
+		"/dashboard/rich-cheap?date=2025-06-02",
+		"Jun 2, 2025",
+	);
+	const weekend = await get("/dashboard/rich-cheap?date=2026-09-26");
+	problems(weekend.text).some((p) => /No curve analytics/.test(p))
+		? pass("rich / cheap on a Saturday says there is nothing", "")
+		: fail(
+				"rich / cheap on a Saturday",
+				problems(weekend.text).join(" | ") || `HTTP ${weekend.status}`,
+			);
 };
 
 const exerciseBacktests = async () => {

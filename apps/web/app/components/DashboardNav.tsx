@@ -30,6 +30,7 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 		items: [
 			{ kind: "link", label: "Treasury Auctions", to: "/dashboard/auctions" },
 			{ kind: "link", label: "Treasury Rates", to: "/dashboard/rates" },
+			{ kind: "link", label: "Rich / Cheap", to: "/dashboard/rich-cheap" },
 		],
 	},
 	{

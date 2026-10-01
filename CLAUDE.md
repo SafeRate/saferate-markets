@@ -495,6 +495,21 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
 - Shares are of the competitive award (dealers + direct + indirect). "High
   less median" is NOT the tail (that needs the when-issued yield).
 
+## Rich / Cheap page (2026-10-01, `/dashboard/rich-cheap`)
+
+- The consumer site's internal page (saferate-ai, saferate.com/treasury/
+  relative-value-private, basic auth) behind sign-in instead; nothing on it is
+  secret. Same inputs as `/v1/rich-cheap`: `readRichCheap` (analyticsOn joined
+  to pricesOn). `bandRichCheap` (mcp-tools reads/richCheap.ts) bands notes and
+  bonds on the index boundaries (lower bound inclusive) and gives the five
+  most unusually cheap and rich of each, RANKED ON z, not cents (cents is the
+  level, structure; tests/richCheapBands.test.ts fails if it sorts by cents).
+  Bills apart, by price residual, since their z is null by construction. A
+  null z is counted, never ranked; a z of 0 is scoreable and in neither list.
+- Every date from the data, never the calendar (treasury-integration's
+  warning, 2026-10-01: the September index rebalance had not published).
+- Web only: no API change, no migration.
+
 ## Strategy backtests (2026-09-29, `/dashboard/backtest`)
 
 - **Engine: packages/portfolio backtest.ts**, pure, data injected. The whole
