@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { bandRichCheap, type TRichCheapRow } from "../src/reads/richCheap";
+import {
+	bandRichCheap,
+	rankTipsRichCheap,
+	type TRichCheapRow,
+} from "../src/reads/richCheap";
 
 const row = (over: Partial<TRichCheapRow>): TRichCheapRow => ({
 	cusip: "91282C000",
@@ -91,5 +95,37 @@ describe("rich/cheap by band", () => {
 		const out = bandRichCheap([row({ yearsToMaturity: 3, zScore: 2 })]);
 		expect(out.bands.reduce((s, b) => s + b.total, 0)).toBe(1);
 		expect(out.bands.find((b) => b.key === "0307")?.total).toBe(1);
+	});
+});
+
+describe("rankTipsRichCheap", () => {
+	const tips = (cusip: string, years: number, z: number | null) =>
+		({
+			cusip,
+			family: "tips",
+			couponPercent: 1.875,
+			maturityDate: "2034-07-15",
+			yearsToMaturity: years,
+			price: 100,
+			yieldPercent: z === null ? null : 2.1,
+			residualBasisPoints: z === null ? null : z * 2,
+			priceResidualCents: 0,
+			zScore: z,
+			vsCurve: null,
+			vsHistory: null,
+		}) as TRichCheapRow;
+
+	test("ranks on z within TIPS, never a null as zero, and drops the under-a-year ones", () => {
+		const out = rankTipsRichCheap([
+			tips("A", 5, 2.5),
+			tips("B", 8, -3.1),
+			tips("C", 3, null),
+			tips("D", 0.5, 9),
+			tips("E", 12, 0.4),
+		]);
+		expect(out.total).toBe(4);
+		expect(out.scoreable).toBe(3);
+		expect(out.cheap.map((r) => r.cusip)).toEqual(["A", "E"]);
+		expect(out.rich.map((r) => r.cusip)).toEqual(["B"]);
 	});
 });

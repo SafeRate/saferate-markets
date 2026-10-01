@@ -306,3 +306,21 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 		},
 	};
 };
+
+/**
+ * TIPS on the real curve, ranked on z within TIPS only: never merged with the
+ * nominal bands. A TIPS z measures its residual to the fitted REAL curve, a
+ * nominal's to the nominal one, so the two residuals are different quantities;
+ * the z is comparable only as "how unusual is today for this security". The
+ * same one-year floor as the nominal bands (RICH_CHEAP_MIN_YEARS).
+ */
+export const rankTipsRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
+	const kept = rows.filter((row) => row.yearsToMaturity >= RICH_CHEAP_MIN_YEARS);
+	const all = rankRichCheap(kept, { limit: 0 });
+	return {
+		total: kept.length,
+		scoreable: kept.length - all.unscoredCount,
+		cheap: rankRichCheap(kept, { direction: "cheaper", limit: perSide }).ranked,
+		rich: rankRichCheap(kept, { direction: "richer", limit: perSide }).ranked,
+	};
+};

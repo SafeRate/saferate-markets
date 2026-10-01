@@ -1,6 +1,7 @@
 import {
 	bandRichCheap,
 	readLatestPriceDate,
+	rankTipsRichCheap,
 	readRichCheap,
 	type TRichCheapRow,
 } from "@markets/mcp-tools";
@@ -37,13 +38,24 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 			asked,
 			date: null,
 			banded: null,
+			tips: null,
 			unpriced: 0,
 		};
+	// The same day as the nominal lists, never a different one; a failed or
+	// empty TIPS read drops only its section.
+	const tipsDay = await readRichCheap(env, {
+		basis: "tips",
+		date: day.date,
+	}).catch(() => null);
 	return {
 		latest,
 		asked,
 		date: day.date,
 		banded: bandRichCheap(day.rows),
+		tips:
+			tipsDay !== null && tipsDay.date === day.date
+				? rankTipsRichCheap(tipsDay.rows)
+				: null,
 		unpriced: day.unpriced,
 	};
 };
@@ -70,10 +82,12 @@ const Rows = ({
 	rows,
 	tone,
 	showZ = true,
+	yieldLabel = "Yield",
 }: {
 	rows: TRichCheapRow[];
 	tone: "cheap" | "rich";
 	showZ?: boolean;
+	yieldLabel?: string;
 }) =>
 	rows.length === 0 ? (
 		<p className="px-2.5 py-3 text-xs text-slate-500">None today.</p>
@@ -82,7 +96,7 @@ const Rows = ({
 			<thead className="text-left uppercase tracking-wide text-slate-500">
 				<tr>
 					<th className={th}>Security</th>
-					<th className={`${th} text-right`}>Yield</th>
+					<th className={`${th} text-right`}>{yieldLabel}</th>
 					<th className={`${th} text-right`}>vs curve</th>
 					<th className={`${th} text-right`}>Cents</th>
 					{showZ ? <th className={`${th} text-right`}>z</th> : null}
@@ -125,12 +139,14 @@ const Pair = ({
 	cheap,
 	rich,
 	showZ = true,
+	yieldLabel,
 }: {
 	title: string;
 	note: string;
 	cheap: TRichCheapRow[];
 	rich: TRichCheapRow[];
 	showZ?: boolean;
+	yieldLabel?: string;
 }) => (
 	<section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
 		<div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
@@ -142,13 +158,13 @@ const Pair = ({
 				<p className="px-2.5 pt-2 text-xs font-semibold text-emerald-800">
 					{showZ ? "Unusually cheap" : "Cheapest to the curve"}
 				</p>
-				<Rows rows={cheap} showZ={showZ} tone="cheap" />
+				<Rows rows={cheap} showZ={showZ} tone="cheap" yieldLabel={yieldLabel} />
 			</div>
 			<div className="overflow-x-auto">
 				<p className="px-2.5 pt-2 text-xs font-semibold text-red-800">
 					{showZ ? "Unusually rich" : "Richest to the curve"}
 				</p>
-				<Rows rows={rich} showZ={showZ} tone="rich" />
+				<Rows rows={rich} showZ={showZ} tone="rich" yieldLabel={yieldLabel} />
 			</div>
 		</div>
 	</section>
@@ -163,8 +179,9 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 			</h1>
 			<p className="mt-2 text-sm text-muted-foreground">
 				Every Treasury note and bond against Safe Rate's fitted nominal curve
-				{d.date ? ` on ${shortDate(d.date)}` : ""}, banded by maturity, and ranked
-				by how unusual today's distance is for each security.
+				{d.date ? ` on ${shortDate(d.date)}` : ""}, banded by maturity, and every
+				TIPS against the fitted real curve, each ranked by how unusual today's
+				distance is for that security.
 			</p>
 
 			<Form className="mt-4 flex flex-wrap items-end gap-3" method="get">
@@ -203,6 +220,26 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 							title={band.label}
 						/>
 					))}
+					{d.tips && d.tips.total > 0 && d.tips.scoreable === 0 ? (
+						// "None today" would read as "nothing unusual": with no z at
+						// all, nothing was measured.
+						<section className="mt-6 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+							<h2 className="font-semibold text-neutral-900">TIPS</h2>
+							<p className="mt-1 text-sm text-slate-600">
+								No TIPS z-scores are published for {shortDate(d.date)} yet, so none of
+								the {d.tips.total} TIPS can be ranked. A missing score is not a score of
+								zero.
+							</p>
+						</section>
+					) : d.tips && d.tips.total > 0 ? (
+						<Pair
+							cheap={d.tips.cheap}
+							note={`${d.tips.scoreable} of ${d.tips.total} scoreable, against the real curve`}
+							rich={d.tips.rich}
+							title="TIPS"
+							yieldLabel="Real yield"
+						/>
+					) : null}
 					<Pair
 						cheap={d.banded.bills.cheap}
 						note={`${d.banded.bills.total} bills, by price residual`}
@@ -228,12 +265,20 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 							rich today and still cheaper than usual.
 						</p>
 						<p>
+							<strong>TIPS</strong> are measured against the fitted real (TIPS) curve,
+							on real yield, and ranked among themselves. A TIPS residual and a note's
+							are different quantities, distances from different curves, so the section
+							stands apart; what the z shares with the nominal lists is only its
+							question, how unusual today is for that security. TIPS inside a year of
+							maturity are left out, as notes and bonds are.
+						</p>
+						<p>
 							Under a year, the residuals are against the curve's extrapolation (its
 							fitted range starts at one year) and annualized over a short horizon, so
 							the z-scores there run larger and mean less. Bills have no z by
 							construction and are ranked by price residual instead, which says how far
-							from the curve, not how unusual. TIPS and floaters are priced off other
-							curves and are not here.
+							from the curve, not how unusual. Floating-rate notes are not here: they
+							are priced off their own spread, and that column has no z-scores yet.
 							{d.unpriced > 0
 								? ` ${d.unpriced} analyzed securit${d.unpriced === 1 ? "y has" : "ies have"} no price that day and ${d.unpriced === 1 ? "is" : "are"} left out.`
 								: ""}
