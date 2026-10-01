@@ -129,3 +129,39 @@ describe("rankTipsRichCheap", () => {
 		expect(out.rich.map((r) => r.cusip)).toEqual(["B"]);
 	});
 });
+
+describe("bills split on the score, not the type", () => {
+	const bill = (cusip: string, z: number | null, cents: number) =>
+		({
+			cusip,
+			family: "bill",
+			couponPercent: 0,
+			maturityDate: "2027-02-11",
+			yearsToMaturity: 0.4,
+			price: 98.5,
+			yieldPercent: 3.9,
+			residualBasisPoints: -cents,
+			priceResidualCents: cents,
+			zScore: z,
+			vsCurve: null,
+			vsHistory: null,
+		}) as TRichCheapRow;
+
+	test("a day whose bills carry z ranks them on z, not cents", () => {
+		const out = bandRichCheap([
+			bill("A", 2.2, 3),
+			bill("B", -1.5, -4),
+			bill("C", null, -9),
+		]);
+		expect(out.bills.byZ).toBe(true);
+		expect(out.bills.scoreable).toBe(2);
+		expect(out.bills.cheap.map((r) => r.cusip)).toEqual(["A"]);
+		expect(out.bills.rich.map((r) => r.cusip)).toEqual(["B"]);
+	});
+
+	test("a day with no bill z falls back to cents and says so", () => {
+		const out = bandRichCheap([bill("A", null, 3), bill("B", null, -4)]);
+		expect(out.bills.byZ).toBe(false);
+		expect(out.bills.cheap.map((r) => r.cusip)).toEqual(["B", "A"]);
+	});
+});

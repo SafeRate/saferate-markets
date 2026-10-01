@@ -282,9 +282,13 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 					) : null}
 					<Pair
 						cheap={d.banded.bills.cheap}
-						note={`${d.banded.bills.total} bills, by price residual`}
+						note={
+							d.banded.bills.byZ
+								? `${d.banded.bills.scoreable} of ${d.banded.bills.total} scoreable`
+								: `${d.banded.bills.total} bills, by price residual`
+						}
 						rich={d.banded.bills.rich}
-						showZ={false}
+						showZ={d.banded.bills.byZ}
 						title="Bills"
 					/>
 					<div className="mt-6 space-y-2 text-xs text-slate-500">
@@ -315,11 +319,12 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 						<p>
 							Under a year, the residuals are against the curve's extrapolation (its
 							fitted range starts at one year) and annualized over a short horizon, so
-							the z-scores there run larger and mean less. No z-scores are published
-							for bills yet, so for now they are ranked by price residual instead,
-							which says how far from the curve, not how unusual. Floating-rate notes
-							are not here: they are priced off their own spread, and that column has
-							no z-scores yet.
+							the z-scores there run larger and mean less.{" "}
+							{d.banded.bills.byZ
+								? "Bills are ranked on z among themselves, and are all under a year, so the same caution applies."
+								: `No bill z-scores are published for ${shortDate(d.date)}, so that day's bills are ranked by price residual instead, which says how far from the curve, not how unusual.`}{" "}
+							Floating-rate notes are not ranked here: they are priced off their own
+							spread rather than a curve.
 							{d.unpriced > 0
 								? ` ${d.unpriced} analyzed securit${d.unpriced === 1 ? "y has" : "ies have"} no price that day and ${d.unpriced === 1 ? "is" : "are"} left out.`
 								: ""}

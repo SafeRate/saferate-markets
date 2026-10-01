@@ -269,10 +269,11 @@ export const RICH_CHEAP_BANDS = [
  * security at its own average); it is in neither list, since it is neither.
  * A null z is not zero: counted in `total`, never ranked.
  *
- * BILLS ARE APART, FOR NOW. Every bill z is null, but not by design: upstream
- * treasuryBillPricing.ts writes a hardcoded null (treasury-integration,
- * 2026-10-01), so there is no reason to give for it beyond "not published".
- * A z-ranked list would silently drop them; they are ranked by price residual instead, which
+ * BILLS ARE APART, AND SPLIT ON THE SCORE, NOT THE TYPE. Bills were scored
+ * for years and stopped on 2026-08-14 upstream (treasury-integration,
+ * 2026-10-01: ~42 of 50 a day through 08-13, 0 since), so whether a day's
+ * bills carry z is a fact of the DAY. With any bill z, they rank on z like
+ * the bands (`byZ`); with none, a z-ranked list would silently drop them, so they are ranked by price residual instead, which
  * answers a different question (how far from the curve, not how unusual).
  * Price residual is positive when rich, so the cheapest are the most negative.
  */
@@ -296,6 +297,20 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 	const bills = rows.filter(
 		(row) => row.family === "bill" && Number.isFinite(row.priceResidualCents),
 	);
+	const billsScored =
+		bills.length - rankRichCheap(bills, { limit: 0 }).unscoredCount;
+	if (billsScored > 0)
+		return {
+			bands,
+			bills: {
+				total: bills.length,
+				scoreable: billsScored,
+				byZ: true as boolean,
+				cheap: rankRichCheap(bills, { direction: "cheaper", limit: perSide })
+					.ranked,
+				rich: rankRichCheap(bills, { direction: "richer", limit: perSide }).ranked,
+			},
+		};
 	const byCents = [...bills].sort(
 		(a, b) => a.priceResidualCents - b.priceResidualCents,
 	);
@@ -303,6 +318,8 @@ export const bandRichCheap = (rows: TRichCheapRow[], perSide = 5) => {
 		bands,
 		bills: {
 			total: bills.length,
+			scoreable: 0,
+			byZ: false as boolean,
 			cheap: byCents.slice(0, perSide),
 			rich: [...byCents].reverse().slice(0, perSide),
 		},
