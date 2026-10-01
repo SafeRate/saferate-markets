@@ -323,16 +323,16 @@ const PortfolioOverview = ({ d }: { d: TLoader }) => {
 			<div className="mt-4 grid gap-4 lg:grid-cols-5">
 				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
 					<p className="text-xs uppercase tracking-wide text-muted-foreground">
-						Growth of $1
+						Growth of $100
 					</p>
 					<LineChart
-						format={(value) => value.toFixed(3)}
+						format={(value) => `$${value.toFixed(2)}`}
 						height={160}
 						series={[
 							{
 								label: selected.namePortfolio,
 								className: "stroke-primary",
-								points: o.series.map((p) => ({ date: p.date, value: p.growth })),
+								points: o.series.map((p) => ({ date: p.date, value: p.growth * 100 })),
 							},
 							...(o.benchmark
 								? [
@@ -341,7 +341,7 @@ const PortfolioOverview = ({ d }: { d: TLoader }) => {
 											className: "stroke-slate-400",
 											points: o.series.map((p) => ({
 												date: p.date,
-												value: p.benchmarkGrowth,
+												value: p.benchmarkGrowth === null ? null : p.benchmarkGrowth * 100,
 											})),
 										},
 									]

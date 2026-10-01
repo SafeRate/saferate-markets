@@ -533,15 +533,15 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 				to={to}
 			/>
 
-			<Section title="Growth of $1">
+			<Section title="Growth of $100">
 				<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 					<LineChart
-						format={(value) => value.toFixed(3)}
+						format={(value) => `$${value.toFixed(2)}`}
 						series={[
 							{
 								label: portfolio.namePortfolio,
 								className: "stroke-primary",
-								points: v.series.map((p) => ({ date: p.date, value: p.growth })),
+								points: v.series.map((p) => ({ date: p.date, value: p.growth * 100 })),
 							},
 							...(v.benchmark
 								? [
@@ -550,7 +550,7 @@ export default function PortfolioPage({ loaderData }: Route.ComponentProps) {
 											className: "stroke-slate-400",
 											points: v.series.map((p) => ({
 												date: p.date,
-												value: p.benchmarkGrowth,
+												value: p.benchmarkGrowth === null ? null : p.benchmarkGrowth * 100,
 											})),
 										},
 									]

@@ -1173,12 +1173,12 @@ const exercisePortfolios = async (ids: Map<string, string>) => {
 				(await expectPage(
 					`${name}: tracking, ${attr} attribution`,
 					`/dashboard/portfolios/${id}?attr=${attr}`,
-					"Growth of $1",
+					"Growth of $100",
 				)) ?? tracking;
 		await expectPage(
 			`${name}: custom period`,
 			`/dashboard/portfolios/${id}?attr=custom&from=2026-03-31&to=2026-06-30`,
-			"Growth of $1",
+			"Growth of $100",
 		);
 		await expectPage(
 			`${name}: stress`,
@@ -1273,7 +1273,7 @@ const exerciseBacktests = async () => {
 			end: "2026-09-28",
 			frequency: "quarterly",
 		}),
-		"Growth of $1",
+		"Growth of $100",
 	);
 	await expectPage(
 		"backtest: a ladder, monthly over two years",

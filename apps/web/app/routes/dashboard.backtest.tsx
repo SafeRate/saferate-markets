@@ -133,7 +133,7 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 	const b = outcome.benchmark;
 	const axis = ok[0]?.series.map((p) => p.date) ?? [];
 	const on = (series: { date: string; growth: number }[]) => {
-		const byDate = new Map(series.map((p) => [p.date, p.growth]));
+		const byDate = new Map(series.map((p) => [p.date, p.growth * 100]));
 		return axis.map((date) => ({ date, value: byDate.get(date) ?? null }));
 	};
 	const single = outcome.results.length === 1 ? ok[0] : undefined;
@@ -159,10 +159,10 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 
 			<section className="mt-8 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
 				<p className="text-xs uppercase tracking-wide text-slate-500">
-					Growth of $1
+					Growth of $100
 				</p>
 				<LineChart
-					format={(v) => v.toFixed(2)}
+					format={(v) => `$${v.toFixed(0)}`}
 					series={[
 						...ok.map((r, i) => ({
 							label: r.name,
