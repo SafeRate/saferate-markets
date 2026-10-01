@@ -79,6 +79,10 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 			<p className="mt-3 text-muted-foreground">
 				We email you a link. No password to choose or forget.
 			</p>
+			<p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-slate-700">
+				New accounts start with a tour of the live demo.{" "}
+				<span className="font-semibold">No payment or credit card required.</span>
+			</p>
 
 			<Form className="mt-8 flex flex-col gap-3" method="post">
 				<label className="text-sm font-medium" htmlFor="email">
