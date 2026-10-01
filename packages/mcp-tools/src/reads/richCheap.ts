@@ -269,8 +269,10 @@ export const RICH_CHEAP_BANDS = [
  * security at its own average); it is in neither list, since it is neither.
  * A null z is not zero: counted in `total`, never ranked.
  *
- * BILLS ARE APART. Their z is null by construction, so a z-ranked list would
- * silently drop them; they are ranked by price residual instead, which
+ * BILLS ARE APART, FOR NOW. Every bill z is null, but not by design: upstream
+ * treasuryBillPricing.ts writes a hardcoded null (treasury-integration,
+ * 2026-10-01), so there is no reason to give for it beyond "not published".
+ * A z-ranked list would silently drop them; they are ranked by price residual instead, which
  * answers a different question (how far from the curve, not how unusual).
  * Price residual is positive when rich, so the cheapest are the most negative.
  */

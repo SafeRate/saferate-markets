@@ -556,7 +556,9 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
   bonds on the index boundaries (lower bound inclusive) and gives the five
   most unusually cheap and rich of each, RANKED ON z, not cents (cents is the
   level, structure; tests/richCheapBands.test.ts fails if it sorts by cents).
-  Bills apart, by price residual, since their z is null by construction. A
+  Bills apart, by price residual, since every bill z is null: NOT by design,
+  an upstream hardcoded null (treasuryBillPricing.ts, 2026-10-01), so the page
+  says only "not published yet". TIPS: own section on the real curve. A
   null z is counted, never ranked; a z of 0 is scoreable and in neither list.
 - Every date from the data, never the calendar (treasury-integration's
   warning, 2026-10-01: the September index rebalance had not published).
@@ -622,7 +624,8 @@ re-measured here):
 - **Rank on the z-score, not the cents.** z is against the security's OWN
   history; cents surfaces persistent structure (age, coupon), z surfaces change.
   The richest bond by cents on 2026-09-25 (+91.8c) had z -0.24.
-- **Null z is not zero, and every bill has one** (by construction). Sorting nulls
+- **Null z is not zero, and every bill has one** (an upstream hardcode, not a
+  property of bills; TIPS 09-28..30 were nulled the same way). Sorting nulls
   as 0 ranks all bills as ordinary: a claim, not an absence.
 - **`residual_basis_points` is nullable** near maturity (duration -> 0 blew a 41c
   gap up to 14,784 bp). Quote cents there.

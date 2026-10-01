@@ -315,10 +315,11 @@ export default function RichCheap({ loaderData }: Route.ComponentProps) {
 						<p>
 							Under a year, the residuals are against the curve's extrapolation (its
 							fitted range starts at one year) and annualized over a short horizon, so
-							the z-scores there run larger and mean less. Bills have no z by
-							construction and are ranked by price residual instead, which says how far
-							from the curve, not how unusual. Floating-rate notes are not here: they
-							are priced off their own spread, and that column has no z-scores yet.
+							the z-scores there run larger and mean less. No z-scores are published
+							for bills yet, so for now they are ranked by price residual instead,
+							which says how far from the curve, not how unusual. Floating-rate notes
+							are not here: they are priced off their own spread, and that column has
+							no z-scores yet.
 							{d.unpriced > 0
 								? ` ${d.unpriced} analyzed securit${d.unpriced === 1 ? "y has" : "ies have"} no price that day and ${d.unpriced === 1 ? "is" : "are"} left out.`
 								: ""}
