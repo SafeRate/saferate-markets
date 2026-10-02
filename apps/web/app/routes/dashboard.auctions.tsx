@@ -1,5 +1,5 @@
 import { PRODUCT_NAME } from "@markets/schema";
-import { Link } from "react-router";
+import { data, Link } from "react-router";
 import { LineChart } from "@/components/LineChart";
 import { number, percent, rate, signClass } from "@/lib/format";
 import { requireOrganization } from "@/lib/session.server";
@@ -18,13 +18,17 @@ export const meta: Route.MetaFunction = () => [
 /**
  * Auction results by term: the latest of each against that term's recent
  * record, what has been auctioned and not yet settled, what is announced, and
- * one term's history. From services/auctions.server.ts, which says what the
- * treasury service cannot yet show.
+ * one term's history. From services/auctions.server.ts.
  */
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
 	await requireOrganization(request, env);
 	const loaded = await loadAuctions(env);
+	if (loaded === null)
+		throw data(
+			"Auction data is unavailable: this deployment of Safe Rate's treasury service does not offer auctions by date.",
+			{ status: 503 },
+		);
 	const asked = new URL(request.url).searchParams.get("term");
 	const selected =
 		loaded.terms.find((t) => t.key === asked)?.key ??
@@ -78,11 +82,13 @@ const signed = (value: number | null, format: (v: number) => string) => {
 };
 
 const security = (a: TShown) =>
-	a.kind === "Bill"
-		? `Bill due ${shortDate(a.maturityDate)}`
-		: a.kind === "FRN"
-			? `FRN ${shortDate(a.maturityDate)}${a.spreadPercent === null ? "" : `, index + ${a.spreadPercent}%`}`
-			: `${a.couponPercent === null ? "" : `${a.couponPercent}% `}${shortDate(a.maturityDate)}`;
+	a.maturityDate === null
+		? `New ${a.kind === "Bill" ? `${a.securityTerm ?? a.term} bill` : `${a.term}${a.kind ? ` ${a.kind === "TIPS" ? "TIPS" : a.kind.toLowerCase()}` : ""}`}`
+		: a.kind === "Bill"
+			? `Bill due ${shortDate(a.maturityDate)}`
+			: a.kind === "FRN"
+				? `FRN ${shortDate(a.maturityDate)}${a.spreadPercent === null ? "" : `, index + ${a.spreadPercent}%`}`
+				: `${a.couponPercent === null ? "" : `${a.couponPercent}% `}${shortDate(a.maturityDate)}`;
 
 const Rate = ({ a }: { a: TShown }) => (
 	<>
@@ -141,7 +147,8 @@ const Pending = ({
 					key={`${a.cusip}${a.auctionDate}`}
 				>
 					<td className="px-3 py-2">
-						{a.kind} {a.kind === "Bill" ? (a.securityTerm ?? a.term) : a.term}
+						{a.kind ?? "New"}{" "}
+						{a.kind === "Bill" ? (a.securityTerm ?? a.term) : a.term}
 						{a.isReopening && a.kind !== "Bill" ? (
 							<span className="ml-1 text-xs text-slate-500">reopening</span>
 						) : null}
@@ -178,7 +185,7 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 
 			{d.announced.length > 0 ? (
 				<Section
-					note="Reopenings of securities already outstanding, announced and not yet held."
+					note="Announced and not yet held, new issues and reopenings alike."
 					title="Announced"
 				>
 					<Pending rows={d.announced} when="auction" />
@@ -423,11 +430,10 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 			) : null}
 
 			<p className="mt-10 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
-				Not shown yet: a new security's auction before the day it is held (Treasury
-				announces each 1 to 8 days ahead), and any short bill that is not a
-				reopening of a 17-, 26- or 52-week bill. Both need a read of auctions by
-				date from Safe Rate's treasury service, which is planned. Reopenings of
-				securities already outstanding appear as soon as they are announced. Bills
+				Every Treasury auction from the last 400 days and those announced, from Safe
+				Rate's record of Treasury's auction results. A new security that has not yet
+				been issued has no maturity or coupon on record (a new note's coupon is set
+				at its auction), so it is described by its offered term until it is. Bills
 				are grouped by the term offered, so a 4-week reopening of a 17-week bill is
 				a 4-week auction.
 			</p>

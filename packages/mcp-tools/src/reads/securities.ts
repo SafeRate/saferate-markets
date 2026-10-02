@@ -7,6 +7,7 @@ import {
 	ZPriceOnDate,
 	ZRunStatus,
 	ZSecurityAnalytics,
+	ZSecurityAuction,
 	ZSecurityDetail,
 	ZSecurityPrice,
 	ZTipsAnalytics,
@@ -146,4 +147,44 @@ export const readRunQueuesOn = async (
 				termYears(left[0].originalSecurityTerm) -
 					termYears(right[0].originalSecurityTerm),
 		);
+};
+
+/** One `auctionsBetween` row: the auction, its CUSIP, and what details exist. */
+const ZAuctionInWindow = z
+	.object({
+		cusip: z.string().min(1),
+		kind: z.enum(["Bill", "Bond", "FRN", "Note", "TIPS"]).nullable(),
+		maturity_date: z.string().nullable().default(null),
+		interest_rate: z.number().nullable().default(null),
+	})
+	.passthrough();
+
+/**
+ * Every auction with an auction date in [from, to], oldest first, from
+ * treasury-api's `auctionsBetween` (deployed 2026-10-02).
+ *
+ * A LEFT JOIN upstream: a NEW issue not yet in security_details still comes
+ * back, with `maturityDate` and `couponPercent` null (a new note's coupon is
+ * not set until its auction clears). Keep those rows; they are the announced
+ * new issues the old per-security fan-out could not see. `kind` is derived
+ * upstream from the auction itself and is null only when it cannot be told.
+ * `interest_rate` is a PERCENT, as on the detail row.
+ */
+export const readAuctionsBetween = async (
+	env: TEnv,
+	input: { from: string; to: string },
+) => {
+	const rows = z
+		.array(z.unknown())
+		.parse((await call(env, "auctionsBetween")(input)) ?? []);
+	return rows.map((raw) => {
+		const extra = ZAuctionInWindow.parse(raw);
+		return {
+			...ZSecurityAuction.parse(raw),
+			cusip: extra.cusip,
+			kind: extra.kind,
+			maturityDate: extra.maturity_date,
+			couponPercent: extra.interest_rate,
+		};
+	});
 };

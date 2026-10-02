@@ -1,8 +1,8 @@
 import {
+	readAuctionsBetween,
 	readLatestPriceDate,
-	readRunQueuesOn,
-	readSecurityDetail,
 	type TEnv,
+	TreasuryAbsent,
 } from "@markets/mcp-tools";
 import type {
 	TSecurityAuction,
@@ -10,26 +10,15 @@ import type {
 } from "@saferate/treasury-client/types";
 
 /**
- * Treasury auctions, from what the treasury service already exposes: the
- * auction-basis on-the-run queues name each term's recent securities, and
- * each security's record carries every auction of it (reopenings included).
+ * Treasury auctions, from treasury-api's `auctionsBetween` (one dated read of
+ * security_auctions, deployed 2026-10-02): 400 days back for the history and
+ * the averages, 60 ahead for what is announced. It replaced a fan-out over the
+ * on-the-run queues that could not see a NEW issue until its auction day and
+ * held only three prior 4-week auctions where six exist.
  *
- * WHAT THIS CANNOT SEE, said on the page. There is no "auctions between two
- * dates" read upstream, so an auction appears once its security is in a
- * queue: a NEW security's announced auction is invisible until the day it is
- * held (a reopening of a security already held shows as soon as it is
- * announced). The queues carry only the 17-, 26- and 52-week bills, but the
- * shorter bills are nearly all offered as REOPENINGS of those, so a 4-week
- * auction arrives in the record of the 17-week bill it reopens. A short bill
- * that is not one is missed. Both gaps want a dated auctions read in
- * treasury-api (requested 2026-10-01).
- *
- * WHEN SWITCHING TO IT: a new issue has no security_details row until it is
- * issued (measured 2026-10-01: exactly the two reopening = 0 auctions were
- * absent). A read that inner-joins details for `kind` drops every new issue,
- * the same hole for a different reason. Expect `kind` null for a security not
- * yet issued and keep the row: group it by the offered term, and check the
- * read returns a NEW announced issue before deleting this fan-out.
+ * NEW ISSUES ARE KEPT. The read left-joins security_details, so a security not
+ * yet issued comes back with maturity and coupon null (a new note's coupon is
+ * not set until its auction clears); the page describes it by its offered term.
  *
  * BILLS GROUP BY THE TERM OFFERED, everything else by original term. Found on
  * first render: grouping bills by their queue put a 4-week auction in the
@@ -38,53 +27,46 @@ import type {
  * the original.
  */
 
-/**
- * How many securities of each queue to read. Every tracked bill (upstream
- * ranks 0 to 10): each is reopened as several shorter terms, and those terms
- * need their own history. Six of each coupon queue gives six new issues and
- * their reopenings.
- */
-const depthOf = (kind: TSecurityKind) => (kind === "Bill" ? 11 : 6);
-
 /** The group an auction belongs to: bills by the term offered, the rest by original term. */
 export const groupOf = (auction: {
-	kind: TSecurityKind;
+	kind: TSecurityKind | null;
 	term: string;
 	securityTerm: string | null;
 }) =>
 	auction.kind === "Bill"
 		? `Bill ${auction.securityTerm ?? auction.term}`
-		: `${auction.kind} ${auction.term}`;
+		: `${auction.kind ?? "Other"} ${auction.term}`;
 
 const weeksOf = (key: string) => Number(key.match(/(\d+)-Week/)?.[1] ?? 999);
 
 export type TAuction = TSecurityAuction & {
 	cusip: string;
-	kind: TSecurityKind;
-	/** The queue it belongs to (the original term), for grouping. */
+	/** Derived upstream from the auction; null only when it cannot be told. */
+	kind: TSecurityKind | null;
+	/** The original term, for grouping coupons ("10-Year" for a reopening too). */
 	term: string;
+	/** Null for a new issue not yet in security_details (coupon not yet set). */
 	couponPercent: number | null;
-	maturityDate: string;
+	maturityDate: string | null;
 	spreadPercent: number | null;
 };
 
-/** Per isolate, keyed by the run date: auctions only change when a new day lands. */
-const detailCache = new Map<
-	string,
-	{ on: string; detail: Awaited<ReturnType<typeof readSecurityDetail>> }
->();
+/** How far back the history reaches, and forward the announcements. Six
+ *  priors of a monthly 52-week bill span most of a year, hence 400 days
+ *  (the same window saferate.com uses). */
+const BACK_DAYS = 400;
+const AHEAD_DAYS = 60;
 
-const cachedDetail = async (env: TEnv, cusip: string, on: string) => {
-	const hit = detailCache.get(cusip);
-	if (hit !== undefined && hit.on === on) return hit.detail;
-	const detail = await readSecurityDetail(env, cusip);
-	detailCache.set(cusip, { on, detail });
-	if (detailCache.size > 400) {
-		const oldest = detailCache.keys().next().value;
-		if (oldest !== undefined) detailCache.delete(oldest);
-	}
-	return detail;
-};
+/** Per isolate, keyed by the price date: auctions only change when a day lands. */
+let windowCache: { on: string; rows: TAuction[] } | null = null;
+
+const shiftDays = (iso: string, days: number) =>
+	new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000)
+		.toISOString()
+		.slice(0, 10);
+
+const KIND_ORDER: TSecurityKind[] = ["Bill", "Note", "Bond", "TIPS", "FRN"];
+const yearsOf = (term: string) => Number(term.match(/(\d+)-Year/)?.[1] ?? 999);
 
 /**
  * The rate an auction clears on, by family, in percent, with its name.
@@ -142,69 +124,60 @@ const mean = (xs: number[]) =>
 	xs.length === 0 ? null : xs.reduce((s, x) => s + x, 0) / xs.length;
 
 export const loadAuctions = async (env: TEnv) => {
-	// The run record follows the prices; the newest price day can lack it, as
-	// the /v1/on-the-run route allows for.
-	let on = await readLatestPriceDate(env);
-	let queues = await readRunQueuesOn(env, { date: on, basis: "auction" });
-	for (let step = 1; queues.length === 0 && step < 7; step += 1) {
-		on = new Date(Date.parse(`${on}T00:00:00Z`) - 86_400_000)
-			.toISOString()
-			.slice(0, 10);
-		queues = await readRunQueuesOn(env, { date: on, basis: "auction" });
-	}
-
-	const wanted = queues.flatMap((members) =>
-		members.slice(0, depthOf(members[0].securityKind)).map((member) => ({
-			cusip: member.cusip,
-			kind: member.securityKind,
-			term: member.originalSecurityTerm,
-		})),
-	);
-	const details = await Promise.all(
-		wanted.map(async (w) => ({
-			...w,
-			detail: await cachedDetail(env, w.cusip, on),
-		})),
-	);
-
-	const seen = new Set<string>();
-	const auctions: TAuction[] = [];
-	for (const { cusip, kind, term, detail } of details) {
-		if (detail === null) continue;
-		for (const auction of detail.auctions) {
-			const key = `${cusip}|${auction.auctionDate}`;
-			if (seen.has(key)) continue;
-			seen.add(key);
-			auctions.push({
-				...auction,
-				cusip,
-				kind,
-				term,
-				couponPercent: detail.couponPercent ?? null,
-				maturityDate: detail.maturityDate,
-				spreadPercent: detail.spread ?? null,
+	const on = await readLatestPriceDate(env);
+	let auctions: TAuction[];
+	if (windowCache !== null && windowCache.on === on) auctions = windowCache.rows;
+	else {
+		try {
+			const rows = await readAuctionsBetween(env, {
+				from: shiftDays(on, -BACK_DAYS),
+				to: shiftDays(on, AHEAD_DAYS),
 			});
+			auctions = rows.map((row) => ({
+				...row,
+				term: row.originalSecurityTerm,
+				spreadPercent: null,
+			}));
+		} catch (error) {
+			// A treasury-api without the method is a deploy gap, not "no auctions":
+			// say so on the page rather than render an empty schedule.
+			if (error instanceof TreasuryAbsent) return null;
+			throw error;
 		}
+		auctions.sort(
+			(a, b) =>
+				b.auctionDate.localeCompare(a.auctionDate) ||
+				a.cusip.localeCompare(b.cusip),
+		);
+		windowCache = { on, rows: auctions };
 	}
-	auctions.sort((a, b) => b.auctionDate.localeCompare(a.auctionDate));
 
-	// Bills: every term offered, shortest first. The rest: the queues, in order.
+	// Bills: every term offered, shortest first. The rest: by kind, then length,
+	// from the auctions themselves (the queues no longer feed this page).
 	const billKeys = [
 		...new Set(auctions.filter((a) => a.kind === "Bill").map(groupOf)),
 	].sort((a, b) => weeksOf(a) - weeksOf(b));
+	const couponTerms = [
+		...new Map(
+			auctions
+				.filter((a) => a.kind !== "Bill")
+				.map((a) => [groupOf(a), { kind: a.kind, term: a.term }] as const),
+		),
+	]
+		.map(([key, t]) => ({ key, ...t }))
+		.sort(
+			(a, b) =>
+				(a.kind === null ? 99 : KIND_ORDER.indexOf(a.kind)) -
+					(b.kind === null ? 99 : KIND_ORDER.indexOf(b.kind)) ||
+				yearsOf(a.term) - yearsOf(b.term),
+		);
 	const terms = [
 		...billKeys.map((key) => ({
-			kind: "Bill" as TSecurityKind,
+			kind: "Bill" as TSecurityKind | null,
 			term: key.slice("Bill ".length),
 			key,
 		})),
-		...queues
-			.filter((members) => members[0].securityKind !== "Bill")
-			.map((members) => ({
-				kind: members[0].securityKind,
-				term: members[0].originalSecurityTerm,
-				key: `${members[0].securityKind} ${members[0].originalSecurityTerm}`,
-			})),
+		...couponTerms,
 	];
 	const ofTerm = (key: string) => auctions.filter((a) => groupOf(a) === key);
 
