@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { getRichCheap } from "./tools/getRichCheap";
+import { getTreasuryAuctions } from "./tools/getTreasuryAuctions";
 import { getSavingsBondRates } from "./tools/getSavingsBondRates";
 import { getTreasuryCurve } from "./tools/getTreasuryCurve";
 import { getTreasuryDebt } from "./tools/getTreasuryDebt";
@@ -12,6 +13,7 @@ import { priceTreasurySecurity } from "./tools/priceTreasurySecurity";
 import type { TDepsTreasury } from "./tools/shared";
 import { valueSavingsBond } from "./tools/valueSavingsBond";
 
+export * from "./reads/auctions";
 export * from "./reads/indices";
 export * from "./reads/richCheap";
 export * from "./reads/securities";
@@ -56,6 +58,7 @@ export const TREASURY_TOOL_NAMES = [
 	"get_treasury_index",
 	"get_treasury_debt",
 	"get_treasury_rich_cheap",
+	"get_treasury_auctions",
 ] as const;
 export type TTreasuryToolName = (typeof TREASURY_TOOL_NAMES)[number];
 
@@ -508,6 +511,72 @@ export function registerTreasuryTools(
 		},
 		wrap("get_treasury_rich_cheap", async (args) => {
 			const result = await getRichCheap(args, deps);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		}),
+	);
+
+	server.registerTool(
+		"get_treasury_auctions",
+		{
+			description:
+				"U.S. Treasury auctions: what is announced, what has just been auctioned, and the results (clearing rate, bid-to-cover, high less median, dealer, direct and indirect shares). Use for 'what auctions are this week', 'how did the 10-year auction go', 'is demand for 2-year notes weakening'. view 'schedule' (default) lists auctions in a window, by default the last two weeks plus everything announced; view 'latest_by_term' gives each term's latest result with its change against up to six previous auctions. New securities appear when announced, before they are issued, with maturity and coupon null. Read how_to_read before quoting a rate: a bill's headline is its discount rate.",
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: false,
+			},
+			inputSchema: z.object({
+				view: z
+					.enum(["schedule", "latest_by_term"])
+					.optional()
+					.describe(
+						"schedule (default): auctions in a date window. latest_by_term: each term's most recent result with changes.",
+					),
+				from: z
+					.string()
+					.regex(/^\d{4}-\d{2}-\d{2}$/)
+					.optional()
+					.describe(
+						"schedule only: first auction date, YYYY-MM-DD. Default two weeks back.",
+					),
+				to: z
+					.string()
+					.regex(/^\d{4}-\d{2}-\d{2}$/)
+					.optional()
+					.describe(
+						"schedule only: last auction date, YYYY-MM-DD. Default 60 days ahead, which covers everything announced.",
+					),
+				kind: z
+					.enum(["Bill", "Note", "Bond", "TIPS", "FRN"])
+					.optional()
+					.describe("Only this kind of security."),
+				term: z
+					.string()
+					.max(40)
+					.optional()
+					.describe(
+						'schedule only: one term, e.g. "4-Week", "10-Year". Bills are by the term offered.',
+					),
+				status: z
+					.enum(["announced", "auctioned", "settled"])
+					.optional()
+					.describe(
+						"schedule only: announced (not yet held), auctioned (held, not yet issued) or settled.",
+					),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(200)
+					.optional()
+					.describe("schedule only: how many to return, newest first. Default 40."),
+			}),
+		},
+		wrap("get_treasury_auctions", async (args) => {
+			const result = await getTreasuryAuctions(args, deps);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
 			};

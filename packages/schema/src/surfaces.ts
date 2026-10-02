@@ -61,6 +61,22 @@ export const API_SURFACES: readonly TApiSurface[] = [
 		],
 	},
 	{
+		group: "Auctions",
+		tool: "get_treasury_auctions",
+		routes: [
+			{
+				path: "/v1/auctions",
+				what:
+					"Auctions in a date window: announced, auctioned and settled, with results",
+			},
+			{
+				path: "/v1/auctions/latest",
+				what:
+					"Each term's latest result, with changes against up to six previous auctions",
+			},
+		],
+	},
+	{
 		group: "Indices",
 		tool: "get_treasury_index",
 		routes: [

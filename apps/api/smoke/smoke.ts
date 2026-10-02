@@ -32,6 +32,7 @@ import {
 } from "../src/routes/curveFamilies";
 import { ZBillPriceOut, ZCouponPriceOut } from "../src/routes/pricing";
 import { ZDebtOut, ZStripsOut } from "../src/routes/debt";
+import { ZAuctionsLatestOut, ZAuctionsOut } from "../src/routes/auctions";
 import { ZRichCheapOut } from "../src/routes/richCheap";
 import {
 	ZEeBondValueOut,
@@ -435,6 +436,55 @@ await expectStatus(
 	404,
 );
 
+// ── Auctions ────────────────────────────────────────────────────────────────
+// A recent as_of, a non-empty schedule newest first, held bills quoting both
+// rates, and terms whose changes average up to six priors (some exactly six,
+// or the window is too short). Empty on a normal week is absence wearing a 200.
+const schedule = await check("/v1/auctions", ZAuctionsOut);
+if (schedule) {
+	const dates = schedule.auctions.map((a) => a.auction_date);
+	const heldBills = schedule.auctions.filter(
+		(a) => a.kind === "Bill" && a.status !== "announced",
+	);
+	const detail = `${schedule.count} auctions ${schedule.from}..${schedule.to}, as of ${schedule.as_of}`;
+	if (schedule.as_of < daysAgo(7)) fail("auctions as_of", detail);
+	else if (schedule.count === 0) fail("auctions", `none: ${detail}`);
+	else if (!dates.every((d, i) => i === 0 || dates[i - 1] >= d))
+		fail("auctions order", "not newest first");
+	else if (
+		heldBills.length === 0 ||
+		heldBills.some(
+			(a) =>
+				a.clearing_rate.measure !== "discount" ||
+				a.clearing_rate.high_percent === null ||
+				a.clearing_rate.investment_rate_percent === null,
+		)
+	)
+		fail(
+			"auctions bill rates",
+			"a held bill without discount and investment rate",
+		);
+	else pass("auctions schedule", detail);
+}
+const latest = await check("/v1/auctions/latest", ZAuctionsLatestOut);
+if (latest) {
+	const counts = latest.terms.map((t) => t.bid_to_cover_compared_with);
+	const detail = `${latest.terms.length} terms, compared with ${Math.min(...counts)}..${Math.max(...counts)} priors`;
+	if (latest.terms.length < 10)
+		fail("auctions latest", `too few terms: ${detail}`);
+	else if (counts.some((n) => n > 6))
+		fail("auctions latest", `over six: ${detail}`);
+	else if (!counts.includes(6))
+		fail("auctions latest", `none reach six: ${detail}`);
+	else pass("auctions latest by term", detail);
+}
+await expectStatus(
+	"auctions window over 400 days is a 400",
+	"/v1/auctions?from=2024-01-01&to=2026-01-01",
+	{},
+	400,
+);
+
 // ── The published contract ──────────────────────────────────────────────────
 const spec = (await (
 	await request("/openapi.json", { auth: false })
@@ -471,6 +521,8 @@ for (const [name, args] of [
 	["get_treasury_index", { code: "broad" }],
 	["list_treasury_securities", {}],
 	["get_treasury_rich_cheap", {}],
+	["get_treasury_auctions", {}],
+	["get_treasury_auctions", { view: "latest_by_term" }],
 ] as const) {
 	const call = await mcp("tools/call", { name, arguments: args });
 	const result = call.body?.result;

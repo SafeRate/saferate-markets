@@ -471,20 +471,35 @@ projected income. CSV import matches columns BY NAME with custodian aliases,
    and the stored upcoming_auctions feed.
 5. Trade Execution: order-sheet history now, IBKR later.
 
-## Treasury Auctions (2026-09-29, `/dashboard/auctions`)
+## Treasury Auctions (2026-09-29; one read and an API, 2026-10-02)
 
-- **From what treasury-api already serves; no deploy.** The auction-basis
-  on-the-run queues (runStatusOn) name each term's securities; each one's
-  `security(cusip)` carries every auction of it. services/auctions.server.ts
-  reads 11 of each bill queue and 6 of each coupon queue, cached per isolate
-  by run date: about 100 detail reads, 1.5 s cold, 0.3 s warm on staging.
+- **One reader, one analysis, three surfaces.** packages/mcp-tools
+  reads/auctions.ts: `readAuctionsBetween` (treasury-api `auctionsBetween`,
+  a dated read of security_auctions LEFT JOINED to security_details),
+  `analyseAuctions` (terms, latest by term, announced, settling, history) and
+  `publishAuction` / `publishLatestByTerm` (the snake_case record). The
+  dashboard page, `GET /v1/auctions` + `/v1/auctions/latest`, and the
+  `get_treasury_auctions` MCP tool all use them, so they cannot disagree.
+- **400 days back, 60 ahead** (`loadAuctionWindow`, cached per isolate by
+  price date). Six priors of a monthly 52-week bill need most of a year;
+  saferate.com uses the same. The REST list defaults to 30 back / 60 ahead and
+  refuses a window over 400 days.
+- **New issues are kept**, maturity and coupon null until issued (a new note's
+  coupon is set at its auction). The old fan-out over the on-the-run queues
+  could not see them, and held only 3 prior 4-week auctions where 6 exist.
+- **Changes average up to six priors, each counted apart**
+  (`coverComparedWith`, `dealersComparedWith`), shown beside each change.
+  tests: 912797VP9 on the real 4-week history must give +0.00 and -0.8863 pt
+  over six, saferate.com's figures (proved failing at seven priors).
 - **Bills group by the term OFFERED** (`securityTerm`), coupons by original
-  term. The queues hold only 17/26/52-week bills, but 4/6/8/13-week bills are
-  nearly all reopenings of those, so they arrive through them. Grouping bills
-  by queue (the first render) put a 4-week auction in the 17-week row.
-- **Cannot see yet, and says so on the page:** a new security's auction before
-  it is held (a reopening shows once announced), and a short bill that is not
-  a reopening. Both want a dated auctions read in treasury-api.
+  term: a 4-week reopening of a 17-week bill is a 4-week auction; a reopened
+  10-year is a 10-year ("9-Year 11-Month" as offered).
+- **Bills lead with the discount rate**, investment rate beside it (agreed with
+  saferate.com 2026-10-02): the discount rate is Treasury's headline and the
+  only bill rate with a median, so high-less-median is on it.
+- **A treasury-api without the method** is TreasuryAbsent: a 503 that says so
+  (REST), the readable deploy-skew error (MCP), a 503 page (dashboard). Never an
+  empty schedule.
 - **The client keeps the full auction row** (treasury PR #10: bidder classes,
   allocation, low/median/high rates, discount rate / margin, price). Merged
   2026-09-29; vendored from treasury main 9101f2a. The REST route

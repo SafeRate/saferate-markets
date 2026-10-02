@@ -50,7 +50,10 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		announced: loaded.announced.map(describe),
 		settling: loaded.settling.map(describe),
 		selected,
-		history: selected === null ? [] : loaded.historyOf(selected).map(describe),
+		history:
+			selected === null
+				? []
+				: loaded.historyOf(selected).slice(0, 16).map(describe),
 	};
 };
 
@@ -87,7 +90,7 @@ const security = (a: TShown) =>
 		: a.kind === "Bill"
 			? `Bill due ${shortDate(a.maturityDate)}`
 			: a.kind === "FRN"
-				? `FRN ${shortDate(a.maturityDate)}${a.spreadPercent === null ? "" : `, index + ${a.spreadPercent}%`}`
+				? `FRN ${shortDate(a.maturityDate)}`
 				: `${a.couponPercent === null ? "" : `${a.couponPercent}% `}${shortDate(a.maturityDate)}`;
 
 const Rate = ({ a }: { a: TShown }) => (
