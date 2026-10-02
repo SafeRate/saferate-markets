@@ -88,6 +88,11 @@ const Rate = ({ a }: { a: TShown }) => (
 	<>
 		{a.rate.value === null ? "—" : rate(a.rate.value)}
 		<span className="ml-1 text-xs text-slate-500">{a.rate.label}</span>
+		{a.rate.investment === null ? null : (
+			<span className="block text-xs text-slate-500">
+				{rate(a.rate.investment)} investment
+			</span>
+		)}
 	</>
 );
 

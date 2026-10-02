@@ -86,24 +86,36 @@ const cachedDetail = async (env: TEnv, cusip: string, on: string) => {
 	return detail;
 };
 
-/** The rate an auction clears on, by family, in percent, with its name. */
+/**
+ * The rate an auction clears on, by family, in percent, with its name.
+ *
+ * Bills lead with the DISCOUNT rate, with the investment rate beside it
+ * (agreed with saferate.com, 2026-10-02, so both sites quote the same figure
+ * first): the discount rate is what Treasury's results lead with and the only
+ * bill rate with a published median, so high-less-median is computed on it;
+ * the investment rate is coupon-equivalent, the one comparable with a note's
+ * yield. `investment` is null for every other family.
+ */
 export const clearingRate = (auction: TAuction) => {
 	if (auction.kind === "Bill")
 		return {
-			label: "discount rate",
+			label: "discount",
 			value: auction.highDiscountRate,
 			median: auction.medianDiscountRate,
+			investment: auction.highInvestmentRate,
 		};
 	if (auction.kind === "FRN")
 		return {
 			label: "discount margin",
 			value: auction.highDiscountMargin,
 			median: null,
+			investment: null,
 		};
 	return {
 		label: auction.kind === "TIPS" ? "real yield" : "yield",
 		value: auction.highYield,
 		median: auction.medianYield,
+		investment: null,
 	};
 };
 
