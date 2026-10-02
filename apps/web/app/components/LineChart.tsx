@@ -1,6 +1,14 @@
+import { useEffect, useRef, useState } from "react";
+
 /**
  * A small dependency-free SVG line chart: one or two series on a shared y axis,
- * dates along x. Enough for a growth-of-$1 comparison; not a charting library.
+ * dates along x. Enough for a growth-of-$100 comparison; not a charting library.
+ *
+ * DRAWN AT ITS CONTAINER'S WIDTH. The viewBox width follows the measured box
+ * (720 until the first measurement, the same on server and client), so labels
+ * stay at their real size in a half-width card or on a phone. It once had a
+ * fixed 720 viewBox and a 480px minimum, which put a scrollbar under every
+ * chart narrower than that and hid its right-hand label (Curves, 2026-10-02).
  */
 
 type TSeries = {
@@ -18,6 +26,20 @@ export const LineChart = ({
 	format: (value: number) => string;
 	height?: number;
 }) => {
+	const box = useRef<HTMLDivElement>(null);
+	const [width, setWidth] = useState(720);
+	useEffect(() => {
+		const el = box.current;
+		if (!el) return;
+		const measure = () => {
+			const w = Math.round(el.clientWidth);
+			if (w > 0) setWidth(w);
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, []);
 	const all = series.flatMap((s) =>
 		s.points.filter((p) => p.value !== null).map((p) => p.value as number),
 	);
@@ -27,8 +49,7 @@ export const LineChart = ({
 			<p className="text-sm text-slate-500">Not enough history to chart yet.</p>
 		);
 	}
-	const width = 720;
-	const pad = { top: 12, right: 12, bottom: 24, left: 64 };
+	const pad = { top: 12, right: 12, bottom: 24, left: 56 };
 	const min = Math.min(...all);
 	const max = Math.max(...all);
 	const span = max - min || Math.abs(max) * 0.01 || 1;
@@ -46,10 +67,11 @@ export const LineChart = ({
 			.map((xy, i) => `${i === 0 ? "M" : "L"}${xy}`)
 			.join(" ");
 	return (
-		<div className="overflow-x-auto">
+		<div className="min-w-0" ref={box}>
 			<svg
 				aria-label="Chart"
-				className="w-full min-w-[480px]"
+				className="block w-full"
+				height={height}
 				role="img"
 				viewBox={`0 0 ${width} ${height}`}
 			>

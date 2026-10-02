@@ -196,12 +196,14 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 					<>
 						Bidder shares are of the competitive award: dealers, direct and indirect
 						bidders, leaving out the Fed's SOMA rollover and non-competitive bids,
-						which do not bid on price. Changes are against the average of that term's
-						previous six auctions. Dealers take what others do not, so a higher dealer
-						share is weaker demand at the price; indirect bidders are the usual proxy
-						for foreign and real-money buyers. High less median is how far the stop
-						sat above the middle of the accepted bids; it is not the tail, which is
-						measured against the when-issued yield Safe Rate does not hold.
+						which do not bid on price. Changes are against the average of up to six of
+						that term's previous auctions; the number averaged is shown beside each,
+						and is fewer where Safe Rate holds less of that term's history. Dealers
+						take what others do not, so a higher dealer share is weaker demand at the
+						price; indirect bidders are the usual proxy for foreign and real-money
+						buyers. High less median is how far the stop sat above the middle of the
+						accepted bids; it is not the tail, which is measured against the
+						when-issued yield Safe Rate does not hold.
 					</>
 				}
 				title="Latest result, by term"
@@ -253,12 +255,24 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 										{number(a.bidToCoverRatio)}
 										<div className={`text-xs ${signClass(row.coverVsPrior)}`}>
 											{signed(row.coverVsPrior, (v) => v.toFixed(2))}
+											{row.coverVsPrior === null ? null : (
+												<span className="text-slate-400">
+													{" "}
+													· {row.coverComparedWith} prior
+												</span>
+											)}
 										</div>
 									</td>
 									<td className={`${td} text-right`}>
 										{percent(a.shares?.dealers ?? null, 1)}
 										<div className={`text-xs ${signClass(-(row.dealersVsPrior ?? 0))}`}>
 											{signed(row.dealersVsPrior, (v) => `${(v * 100).toFixed(1)} pt`)}
+											{row.dealersVsPrior === null ? null : (
+												<span className="text-slate-400">
+													{" "}
+													· {row.dealersComparedWith} prior
+												</span>
+											)}
 										</div>
 									</td>
 									<td className={`${td} text-right`}>

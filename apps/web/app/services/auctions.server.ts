@@ -219,9 +219,10 @@ export const loadAuctions = async (env: TEnv) => {
 			.map(bidderShares)
 			.filter((s): s is NonNullable<typeof s> => s !== null);
 		const cover = latest.bidToCoverRatio;
-		const priorCover = mean(
-			prior.map((a) => a.bidToCoverRatio).filter((x): x is number => x !== null),
-		);
+		const priorCovers = prior
+			.map((a) => a.bidToCoverRatio)
+			.filter((x): x is number => x !== null);
+		const priorCover = mean(priorCovers);
 		const priorDealers = mean(priorShares.map((s) => s.dealers));
 		const rate = clearingRate(latest);
 		return [
@@ -232,7 +233,13 @@ export const loadAuctions = async (env: TEnv) => {
 				auction: latest,
 				rate,
 				shares,
+				// How many prior auctions each change actually averaged: up to six,
+				// fewer when the fan-out holds fewer of that term (a 4-week bill's
+				// history is only as deep as the 17-week bills it reopens). Shown
+				// beside each change, since "vs six" over three is a false label.
 				comparedWith: prior.length,
+				coverComparedWith: priorCovers.length,
+				dealersComparedWith: priorShares.length,
 				coverVsPrior:
 					cover === null || priorCover === null ? null : cover - priorCover,
 				dealersVsPrior:
