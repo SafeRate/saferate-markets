@@ -8,7 +8,8 @@ import { NavLink, useLocation } from "react-router";
 
 type TItem =
 	| { kind: "link"; label: string; to: string; end?: boolean }
-	| { kind: "soon"; label: string };
+	| { kind: "soon"; label: string }
+	| { kind: "signOut"; label: string };
 
 const SECTIONS: { title: string | null; items: TItem[] }[] = [
 	{
@@ -47,7 +48,9 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 		title: "Account",
 		items: [
 			{ kind: "link", label: "API & MCP", to: "/dashboard/keys" },
+			{ kind: "link", label: "Documentation", to: "/docs" },
 			{ kind: "link", label: "Billing", to: "/dashboard/billing" },
+			{ kind: "signOut", label: "Sign out" },
 		],
 	},
 ];
@@ -66,6 +69,15 @@ const Items = ({ section }: { section: (typeof SECTIONS)[number] }) =>
 				<NavLink className={linkClass} end={item.end} to={item.to}>
 					{item.label}
 				</NavLink>
+			) : item.kind === "signOut" ? (
+				<form action="/sign-out" method="post">
+					<button
+						className={`${linkClass({ isActive: false })} w-full text-left`}
+						type="submit"
+					>
+						{item.label}
+					</button>
+				</form>
 			) : (
 				<span
 					aria-disabled="true"

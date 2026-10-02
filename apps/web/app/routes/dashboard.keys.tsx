@@ -122,6 +122,14 @@ const DashboardKeys = ({ loaderData, actionData }: Route.ComponentProps) => {
 				shown once, at creation. Only a hash of it is stored, so we cannot show it
 				to you again.
 			</p>
+			<p className="mt-3 text-sm">
+				<a className="text-primary underline underline-offset-4" href="/docs">
+					Read the API and MCP documentation
+				</a>{" "}
+				<span className="text-muted-foreground">
+					for every endpoint, the MCP tools, and how to connect Claude.
+				</span>
+			</p>
 
 			{actionData?.status === "created" ? (
 				<section className="mt-8 rounded-lg border border-primary bg-muted/40 p-4">

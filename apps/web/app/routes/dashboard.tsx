@@ -1,13 +1,5 @@
-import {
-	countActiveApiKeys,
-	currentPeriodMonth,
-	getMonthlyUsage,
-	getOrganizationSubscription,
-	isEntitled,
-	listPortfolios,
-	listTransactions,
-} from "@markets/persistence";
-import { checkoutPlanById, PRODUCT_NAME } from "@markets/schema";
+import { listPortfolios, listTransactions } from "@markets/persistence";
+import { PRODUCT_NAME } from "@markets/schema";
 import { Link } from "react-router";
 import { LineChart } from "@/components/LineChart";
 import { describeSecurity, money, percent, signClass } from "@/lib/format";
@@ -31,20 +23,10 @@ export const meta: Route.MetaFunction = () => [
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
 	const org = await requireDashboard(request, env);
-	// Portfolios are the demo's for an unpaid account; plan, keys and usage are
-	// always the account's own.
+	// Portfolios are the demo's for an unpaid account. Plan, keys and usage
+	// live on API & MCP and Billing, not here.
 	const scope = { db: env.DB, idOrganization: org.idOrganization };
-	const own = { db: env.DB, idOrganization: org.idOrganizationOwn };
-	const period = currentPeriodMonth();
-	const [usage, subscription, activeKeys, portfolios] = await Promise.all([
-		getMonthlyUsage({ ...own, limitMonths: 1 }),
-		getOrganizationSubscription(own),
-		countActiveApiKeys(own),
-		listPortfolios(scope),
-	]);
-	const thisMonth = usage.filter((u) => u.periodMonth === period);
-	const count = (surface: "rest" | "mcp") =>
-		thisMonth.find((u) => u.surface === surface)?.countRequests ?? 0;
+	const portfolios = await listPortfolios(scope);
 
 	const asked = new URL(request.url).searchParams.get("portfolio");
 	const selected =
@@ -69,16 +51,8 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 				});
 
 	return {
-		hasPlan: isEntitled(subscription),
-		planName: isEntitled(subscription)
-			? (checkoutPlanById(subscription?.idPlan)?.name ?? "Unknown plan")
-			: null,
 		email: org.email,
 		organizationName: org.nameOrganization,
-		activeKeys,
-		period,
-		restRequests: count("rest"),
-		mcpRequests: count("mcp"),
 		portfolios: portfolios.map((p) => ({
 			idPortfolio: p.idPortfolio,
 			namePortfolio: p.namePortfolio,
@@ -417,52 +391,6 @@ export default function Dashboard({ loaderData }: Route.ComponentProps) {
 			<p className="mt-2 text-sm text-muted-foreground">Signed in as {d.email}.</p>
 
 			<PortfolioOverview d={d} />
-
-			<section className="mt-10 rounded-lg border border-border p-4 text-sm">
-				<p className="text-xs uppercase tracking-wide text-muted-foreground">
-					Account
-				</p>
-				<p className="mt-2">
-					{d.hasPlan ? (
-						`${d.planName}, active.`
-					) : (
-						<>
-							No plan yet, so API keys will be refused.{" "}
-							<a className={link} href="/dashboard/billing">
-								Subscribe
-							</a>
-						</>
-					)}{" "}
-					<span className="text-muted-foreground">
-						API this month ({d.period}):{" "}
-						<span className="tabular">{d.restRequests.toLocaleString("en-US")}</span>{" "}
-						REST and{" "}
-						<span className="tabular">{d.mcpRequests.toLocaleString("en-US")}</span>{" "}
-						MCP requests on{" "}
-						<span className="tabular">{d.activeKeys.toLocaleString("en-US")}</span>{" "}
-						active key{d.activeKeys === 1 ? "" : "s"}.
-					</span>
-				</p>
-				<div className="mt-3 flex flex-wrap gap-6">
-					<a className={link} href="/dashboard/keys">
-						API &amp; MCP
-					</a>
-					<a className={link} href="/dashboard/billing">
-						Billing
-					</a>
-					<a className={link} href="/docs">
-						Docs
-					</a>
-					<form action="/sign-out" method="post">
-						<button
-							className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
-							type="submit"
-						>
-							Sign out
-						</button>
-					</form>
-				</div>
-			</section>
 		</main>
 	);
 }
