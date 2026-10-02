@@ -1,6 +1,7 @@
 import { PRODUCT_NAME } from "@markets/schema";
 import { REBALANCE_LABEL, STRATEGIES } from "@markets/portfolio";
-import { Form } from "react-router";
+import { Form, useNavigation } from "react-router";
+import { RunningNotice } from "@/components/RunningNotice";
 import { LineChart } from "@/components/LineChart";
 import { money, percent, signClass } from "@/lib/format";
 import { BENCHMARK_OPTIONS } from "@/lib/portfolioOptions";
@@ -299,6 +300,11 @@ const Results = ({ outcome }: { outcome: NonNullable<TLoader["outcome"]> }) => {
 
 export default function Backtest({ loaderData }: Route.ComponentProps) {
 	const { form, limits, outcome } = loaderData;
+	const navigation = useNavigation();
+	const running =
+		navigation.state === "loading" &&
+		navigation.location.pathname === "/dashboard/backtest" &&
+		new URLSearchParams(navigation.location.search).has("run");
 	return (
 		<main className="max-w-6xl">
 			<h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
@@ -397,19 +403,24 @@ export default function Backtest({ loaderData }: Route.ComponentProps) {
 				</label>
 				<div className="sm:col-span-2 lg:col-span-4">
 					<button
-						className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+						className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
+						disabled={running}
 						type="submit"
 					>
-						Run the backtest
+						{running ? "Running…" : "Run the backtest"}
 					</button>
 					<span className="ml-3 text-xs text-slate-500">
-						Prices from {limits.earliest} to {limits.latest}. A long monthly run can
-						take several seconds.
+						Prices from {limits.earliest} to {limits.latest}. A run can take up to 30
+						seconds.
 					</span>
 				</div>
 			</Form>
 
-			{outcome ? <Results outcome={outcome} /> : null}
+			{running ? (
+				<RunningNotice title="Running the backtest" upToSeconds={30} />
+			) : outcome ? (
+				<Results outcome={outcome} />
+			) : null}
 		</main>
 	);
 }

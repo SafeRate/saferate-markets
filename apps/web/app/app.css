@@ -111,3 +111,13 @@ body {
 .tabular {
 	font-variant-numeric: tabular-nums;
 }
+
+/* RunningNotice's indeterminate bar: a third-width slug sweeping across. */
+@keyframes running-bar {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(300%);
+	}
+}

@@ -5,6 +5,7 @@ import {
 } from "@markets/persistence";
 import { PRODUCT_NAME } from "@markets/schema";
 import { Form, Link, useNavigation } from "react-router";
+import { RunningNotice } from "@/components/RunningNotice";
 import { money, number, percent } from "@/lib/format";
 import { requireDashboard } from "@/lib/session.server";
 import { analyseStress, type TCustomShock } from "@/services/stress.server";
@@ -273,38 +274,6 @@ const TsaySection = ({
 	);
 };
 
-/** Shown while a run is loading this page; the button it sits beside is disabled. */
-const Running = () => (
-	<p
-		aria-live="polite"
-		className="mt-6 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-slate-700"
-	>
-		<svg
-			aria-hidden="true"
-			className="h-5 w-5 animate-spin text-primary"
-			fill="none"
-			viewBox="0 0 24 24"
-		>
-			<circle
-				className="opacity-25"
-				cx="12"
-				cy="12"
-				r="10"
-				stroke="currentColor"
-				strokeWidth="4"
-			/>
-			<path
-				className="opacity-90"
-				d="M22 12a10 10 0 0 0-10-10"
-				stroke="currentColor"
-				strokeLinecap="round"
-				strokeWidth="4"
-			/>
-		</svg>
-		Running the stress test. This can take up to 10 seconds.
-	</p>
-);
-
 export default function Stress({ loaderData }: Route.ComponentProps) {
 	const { portfolios, portfolio, custom, analysis } = loaderData;
 	const navigation = useNavigation();
@@ -356,7 +325,7 @@ export default function Stress({ loaderData }: Route.ComponentProps) {
 		return (
 			<main className="max-w-6xl">
 				{header}
-				<Running />
+				<RunningNotice title="Running the stress test" upToSeconds={10} />
 			</main>
 		);
 	if (portfolio !== null && analysis === null)
