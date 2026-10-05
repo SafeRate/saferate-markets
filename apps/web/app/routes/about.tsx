@@ -1,4 +1,6 @@
 import { CONTACT_ADDRESS, PRODUCT_NAME } from "@markets/schema";
+import { JsonLd } from "@/components/JsonLd";
+import { FOUNDER_JSON_LD, ORGANIZATION_ID } from "@/lib/jsonLd";
 import type { Route } from "./+types/about";
 
 export const meta: Route.MetaFunction = () => [
@@ -67,6 +69,18 @@ const STORY = [
 export default function About() {
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
+			<JsonLd
+				data={{
+					"@context": "https://schema.org",
+					"@type": "AboutPage",
+					url: "https://saferate.markets/about",
+					name: "About Safe Rate Markets",
+					mainEntity: { "@id": ORGANIZATION_ID },
+				}}
+			/>
+			{FOUNDER_JSON_LD.map((person) => (
+				<JsonLd data={person} key={person["@id"]} />
+			))}
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				About
 			</p>

@@ -9,6 +9,8 @@ import {
 } from "react-router";
 import { PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import Analytics from "@/components/Analytics";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE_JSON_LD } from "@/lib/jsonLd";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { resolveTrackingTools } from "@/lib/analytics";
 import { isAnalyticsPermitted } from "@/lib/privacyChoices";
@@ -62,6 +64,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 					type="font/woff"
 				/>
 				<Links />
+				{/* Site-wide schema.org nodes, here and not in root `meta`, which a
+				    page's own meta replaces (lib/jsonLd.ts). */}
+				{SITE_JSON_LD.map((node) => (
+					<JsonLd data={node} key={String(node["@id"])} />
+				))}
 			</head>
 			<body className="flex min-h-screen flex-col bg-white font-sans text-slate-900 antialiased">
 				<SiteHeader />

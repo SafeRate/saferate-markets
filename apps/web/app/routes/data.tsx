@@ -1,6 +1,8 @@
 import { TREASURY_URLS } from "@markets/mcp-tools";
 import { API_SURFACES, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
+import { JsonLd } from "@/components/JsonLd";
+import { datasetJsonLd, ORGANIZATION_ID } from "@/lib/jsonLd";
 import type { Route } from "./+types/data";
 
 export const meta: Route.MetaFunction = () => [
@@ -140,10 +142,39 @@ const DATASETS: TDataset[] = [
 const surfacesOf = (names: string[]) =>
 	API_SURFACES.filter((s) => names.includes(s.group));
 
+const slugOf = (title: string) => title.toLowerCase().replace(/[^a-z]+/g, "-");
+
+/** The catalog and one Dataset per set, for search engines and Dataset Search. */
+const catalogJsonLd = () => {
+	const web = SITE_HOSTS.production.web;
+	return {
+		"@context": "https://schema.org",
+		"@type": "DataCatalog",
+		"@id": `${web}/data#catalog`,
+		name: "Safe Rate Markets U.S. Treasury data",
+		url: `${web}/data`,
+		publisher: { "@id": ORGANIZATION_ID },
+		dataset: DATASETS.map((d) =>
+			datasetJsonLd({
+				id: `${web}/data#${slugOf(d.title)}`,
+				name: `U.S. Treasury ${d.title.toLowerCase()} (Safe Rate)`,
+				description: `${d.what} Source: ${d.source}`,
+				url: `${web}/data#${slugOf(d.title)}`,
+				temporalStart: d.since ? TREASURY_COVERAGE_START : undefined,
+				keywords: ["U.S. Treasury", "Treasuries", "fixed income", d.title],
+				apiPaths: surfacesOf(d.surfaces)
+					.flatMap((s) => s.routes.map((r) => r.path))
+					.filter((path) => !path.includes("{")),
+			}),
+		),
+	};
+};
+
 export default function Data() {
 	const api = SITE_HOSTS.production.api;
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
+			<JsonLd data={catalogJsonLd()} />
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				Data
 			</p>
@@ -176,7 +207,7 @@ export default function Data() {
 					return (
 						<section
 							className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-							id={d.title.toLowerCase().replace(/[^a-z]+/g, "-")}
+							id={slugOf(d.title)}
 							key={d.title}
 						>
 							<div className="flex flex-wrap items-baseline justify-between gap-2">

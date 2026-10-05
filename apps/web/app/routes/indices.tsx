@@ -1,6 +1,8 @@
 import { readDailyLevelsOn, readLatestLevels } from "@markets/mcp-tools";
 import { CONTACT_ADDRESS, PRODUCT_NAME } from "@markets/schema";
 import { INDEX_META, INDEX_SLUG } from "@saferate/treasury-client/types";
+import { JsonLd } from "@/components/JsonLd";
+import { datasetJsonLd } from "@/lib/jsonLd";
 import type { Route } from "./+types/indices";
 
 export const meta: Route.MetaFunction = () => [
@@ -144,6 +146,23 @@ export default function Indices({ loaderData }: Route.ComponentProps) {
 	const asOf = rows?.[0]?.date ?? null;
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
+			<JsonLd
+				data={datasetJsonLd({
+					id: "https://saferate.markets/indices#dataset",
+					name: "Safe Rate U.S. Treasury Total Return Indices",
+					description:
+						"Eleven total-return indices of the U.S. Treasury market (broad, maturity bands, bills, TIPS, floating-rate and aggregate), valued every business day from Treasury's end-of-day prices, market-value weighted on float par and rebalanced monthly: daily levels, returns, analytics and constituents.",
+					url: "https://saferate.markets/indices",
+					temporalStart: "2008-09-30",
+					keywords: [
+						"U.S. Treasury index",
+						"bond index",
+						"total return",
+						"benchmark",
+					],
+					apiPaths: ["/v1/indices"],
+				})}
+			/>
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				Indices
 			</p>
