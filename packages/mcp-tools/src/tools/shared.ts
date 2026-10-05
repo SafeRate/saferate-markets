@@ -43,6 +43,7 @@ export const SITE_ORIGIN = "https://saferate.com";
 
 /** Canonical treasury pages, so a response can point at the reviewed page. */
 export const TREASURY_URLS = {
+	auctions: `${SITE_ORIGIN}/treasury/auctions`,
 	calculator: `${SITE_ORIGIN}/treasury/calculator`,
 	curves: `${SITE_ORIGIN}/treasury/curves`,
 	home: `${SITE_ORIGIN}/treasury`,
@@ -50,6 +51,7 @@ export const TREASURY_URLS = {
 	marketStatistics: `${SITE_ORIGIN}/treasury/market-statistics`,
 	methodology: `${SITE_ORIGIN}/treasury/curves/methodology`,
 	onTheRun: `${SITE_ORIGIN}/treasury/on-the-run`,
+	rates: `${SITE_ORIGIN}/treasury/rates`,
 	savingsBonds: `${SITE_ORIGIN}/treasury/savings-bonds`,
 	securities: `${SITE_ORIGIN}/treasury/securities`,
 	strips: `${SITE_ORIGIN}/treasury/strips`,

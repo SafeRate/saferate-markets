@@ -23,9 +23,9 @@ export const SiteHeader = () => (
 			<div className="flex items-center gap-3 text-sm font-medium text-slate-600 sm:gap-6">
 				<a
 					className="hidden transition-colors hover:text-slate-900 sm:inline"
-					href="/docs/indices"
+					href="/data"
 				>
-					Indices
+					Data
 				</a>
 				<a
 					className="hidden transition-colors hover:text-slate-900 sm:inline"
@@ -35,6 +35,12 @@ export const SiteHeader = () => (
 				</a>
 				<a className="transition-colors hover:text-slate-900" href="/pricing">
 					Pricing
+				</a>
+				<a
+					className="hidden transition-colors hover:text-slate-900 sm:inline"
+					href="/about"
+				>
+					About
 				</a>
 				<a
 					className="whitespace-nowrap rounded-full bg-primary px-3 py-2 font-semibold sm:px-4 text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
@@ -57,7 +63,16 @@ export const SiteFooter = () => (
 				Source data is published by the U.S. Department of the Treasury. Figures are
 				end-of-day records, not live prices, and nothing here is investment advice.
 			</p>
-			<span className="flex gap-4 text-[13px] text-slate-400">
+			<span className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-slate-400">
+				<a className="hover:text-slate-900" href="/data">
+					Data
+				</a>
+				<a className="hover:text-slate-900" href="/about">
+					About
+				</a>
+				<a className="hover:text-slate-900" href="/docs">
+					Docs
+				</a>
 				<a className="hover:text-slate-900" href="/terms">
 					Terms
 				</a>

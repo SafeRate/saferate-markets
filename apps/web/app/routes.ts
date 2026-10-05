@@ -9,6 +9,8 @@ import { index, layout, route } from "@react-router/dev/routes";
  */
 export default [
 	index("./routes/_index.tsx"),
+	route("about", "./routes/about.tsx"),
+	route("data", "./routes/data.tsx"),
 	route("docs", "./routes/docs.tsx"),
 	route("docs/indices", "./routes/docs.indices.tsx"),
 	route("pricing", "./routes/pricing.tsx"),
