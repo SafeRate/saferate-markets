@@ -313,10 +313,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				/>
 				<div className="relative mx-auto grid grid-cols-1 max-w-6xl items-center gap-12 px-6 py-16 md:py-24 lg:grid-cols-[1.05fr_1fr]">
 					<div>
-						<p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">
-							Portfolio management for U.S. Treasuries
-						</p>
-						<h1 className="mt-5 text-4xl font-semibold leading-[1.05] tracking-tight text-neutral-900 md:text-[3.4rem]">
+						<h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-neutral-900 md:text-[3.4rem]">
 							The full suite for your Treasury portfolio.
 						</h1>
 						<p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
