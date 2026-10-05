@@ -1,4 +1,5 @@
 import { resolveMarketsEnv } from "@markets/schema";
+import { canonicalOrigin } from "@/lib/canonicalOrigin";
 import type { Route } from "./+types/robots";
 
 /**
@@ -12,7 +13,7 @@ import type { Route } from "./+types/robots";
  * the real site in an index. The sitemap URL is this host's own.
  */
 export const loader = ({ request, context }: Route.LoaderArgs) => {
-	const origin = new URL(request.url).origin;
+	const origin = canonicalOrigin(context.cloudflare.env, request);
 	const production =
 		resolveMarketsEnv(context.cloudflare.env.MARKETS_ENV) === "production";
 	const body = production

@@ -7,6 +7,7 @@ import {
 import {
 	CHECKOUT_PLANS,
 	checkoutPlanById,
+	ALTERNATE_HOSTS,
 	PRODUCT_NAME,
 	REDIRECT_HOSTS,
 	resolveMarketsEnv,
@@ -57,7 +58,10 @@ const ZAuthEnv = z.object({
 type TAuthEnv = z.infer<typeof ZAuthEnv>;
 
 /** Every origin this app is served from, derived rather than typed twice. */
-const TRUSTED_ORIGINS: string[] = Object.values(SITE_HOSTS).map((h) => h.web);
+const TRUSTED_ORIGINS: string[] = [
+	...Object.values(SITE_HOSTS).map((h) => h.web),
+	...ALTERNATE_HOSTS.map((host) => `https://${host}`),
+];
 
 /**
  * Statuses after which a subscription no longer exists for us. Anything else is

@@ -13,6 +13,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { SITE_JSON_LD } from "@/lib/jsonLd";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { resolveTrackingTools } from "@/lib/analytics";
+import { canonicalOrigin } from "@/lib/canonicalOrigin";
 import { isAnalyticsPermitted } from "@/lib/privacyChoices";
 import type { Route } from "./+types/root";
 import "@/app.css";
@@ -27,6 +28,9 @@ export const loader = ({ request, context }: Route.LoaderArgs) => ({
 	trackingTools: isAnalyticsPermitted(request)
 		? resolveTrackingTools(context.cloudflare.env)
 		: [],
+	// saferate.markets on production even when markets.saferate.com served the
+	// page (ALTERNATE_HOSTS), so search engines index one address.
+	canonical: `${canonicalOrigin(context.cloudflare.env, request)}${new URL(request.url).pathname}`,
 });
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -55,6 +59,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 					content={`${SITE_HOSTS.production.web}/og.png`}
 					name="twitter:image"
 				/>
+				{rootData?.canonical ? (
+					<link href={rootData.canonical} rel="canonical" />
+				) : null}
 				<link href="/favicon.ico" rel="icon" />
 				<link
 					as="font"

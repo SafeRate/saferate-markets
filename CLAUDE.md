@@ -697,3 +697,17 @@ so its "latest" curve is stale; switch it too if that starts to mislead.
   Accept: text/markdown on the public paths to concat(path, ".txt"), 302.
   "Markdown for Agents" and "Bot Preference Sync" stay OFF: our twins replace
   the first; the second would write Cloudflare's bot blocks into robots.txt.
+
+## markets.saferate.com serves the site (2026-10-05)
+
+- saferate.markets was registered 2026-09-28; a fund of funds' Cloudflare
+  Gateway blocked it (the "New Domains" category, under 30 days). So
+  markets.saferate.com (saferate.com, 2014) moved from REDIRECT_HOSTS to
+  ALTERNATE_HOSTS: it SERVES the production site. saferate.markets stays
+  canonical: `<link rel="canonical">` on every page, and the sitemap,
+  robots.txt, llms.txt and twin canonicals all use canonicalOrigin()
+  (lib/canonicalOrigin.ts), which is saferate.markets on production whatever
+  the host. Auth trusts the alternate origin and builds magic links from the
+  host in use; cookies are per host, so a session on one is not on the other.
+- Production sends HSTS (1 year, includeSubDomains, not preloaded);
+  /.well-known/security.txt is a route so its Expires is always 180 days out.

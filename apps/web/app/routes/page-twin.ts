@@ -6,6 +6,7 @@ import {
 	data,
 	StaticRouterProvider,
 } from "react-router";
+import { canonicalOrigin } from "@/lib/canonicalOrigin";
 import { htmlToMarkdown } from "@/lib/htmlToMarkdown";
 import { PUBLIC_PAGE_MODULES } from "@/lib/publicPageModules.server";
 import { pageOfTwinPath } from "@/lib/publicPages";
@@ -54,7 +55,7 @@ export const loader = async (args: Route.LoaderArgs) => {
 			hydrate: false,
 		}),
 	);
-	const canonical = `${url.origin}${path}`;
+	const canonical = `${canonicalOrigin(args.context.cloudflare.env, args.request)}${path}`;
 	const body = `> The markdown version of ${canonical}\n\n${htmlToMarkdown(html, url.origin)}\n`;
 	return new Response(body, {
 		headers: {

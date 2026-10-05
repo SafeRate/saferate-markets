@@ -1,4 +1,5 @@
 import { PUBLIC_TWIN_PATHS } from "@/lib/publicPages";
+import { canonicalOrigin } from "@/lib/canonicalOrigin";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -7,8 +8,8 @@ import type { Route } from "./+types/sitemap";
  * missing from another. The HTML pages only: each twin names its page as
  * canonical, so listing the twins would list duplicates.
  */
-export const loader = ({ request }: Route.LoaderArgs) => {
-	const origin = new URL(request.url).origin;
+export const loader = ({ request, context }: Route.LoaderArgs) => {
+	const origin = canonicalOrigin(context.cloudflare.env, request);
 	const urls = PUBLIC_TWIN_PATHS.map(
 		(path) => `  <url><loc>${origin}${path}</loc></url>`,
 	).join("\n");

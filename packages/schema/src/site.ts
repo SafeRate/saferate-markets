@@ -44,8 +44,22 @@ export const REDIRECT_HOSTS = [
 	"www.saferate.markets",
 	"saferate.market",
 	"www.saferate.market",
-	"markets.saferate.com",
 ] as const;
+
+/**
+ * Hosts that SERVE the production site rather than redirect to it, with
+ * saferate.markets still the canonical address (every page says so, and the
+ * sitemap, robots.txt and llms.txt name only it).
+ *
+ * markets.saferate.com, from 2026-10-05: saferate.markets was registered on
+ * 2026-09-28, and a fund of funds' Cloudflare Gateway blocked it, almost
+ * certainly as a "New Domain" (registered under 30 days). saferate.com dates
+ * from 2014, so an institution whose filter distrusts a new domain can use the
+ * site under the established one. Sign-in builds its links from the host in
+ * use (auth.server.ts), and session cookies are per host, so a session here
+ * stays here.
+ */
+export const ALTERNATE_HOSTS = ["markets.saferate.com"] as const;
 
 /**
  * Unknown or missing is DEVELOPMENT, never production. A value that failed to

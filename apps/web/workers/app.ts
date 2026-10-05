@@ -57,6 +57,14 @@ export default {
 				url.pathname === "/sign-out";
 			if (!isProduction || isPrivate)
 				headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+			// HTTPS only, remembered for a year, on every production host and its
+			// subdomains: a trust signal for web filters as much as a protection.
+			// Not preloaded, which is hard to undo.
+			if (isProduction)
+				headers.set(
+					"Strict-Transport-Security",
+					"max-age=31536000; includeSubDomains",
+				);
 			// Nothing here is meant to be framed, and the dashboard shows keys.
 			headers.set("X-Frame-Options", "DENY");
 			headers.set("Content-Security-Policy", "frame-ancestors 'none'");

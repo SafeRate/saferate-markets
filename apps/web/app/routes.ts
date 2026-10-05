@@ -20,6 +20,7 @@ export default [
 	route("privacy-choices", "./routes/privacy-choices.tsx"),
 	route("terms", "./routes/terms.tsx"),
 	route("robots.txt", "./routes/robots.ts"),
+	route(".well-known/security.txt", "./routes/security-txt.ts"),
 	route("sitemap.xml", "./routes/sitemap.ts"),
 	route("llms.txt", "./routes/llms.ts"),
 	route("sign-in", "./routes/sign-in.tsx"),

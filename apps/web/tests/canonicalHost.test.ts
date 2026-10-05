@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { REDIRECT_HOSTS, SITE_HOSTS } from "@markets/schema";
+import { ALTERNATE_HOSTS, REDIRECT_HOSTS, SITE_HOSTS } from "@markets/schema";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalHostRedirect } from "../app/lib/canonicalHost";
@@ -38,7 +38,14 @@ describe("canonicalHostRedirect", () => {
 
 	// A redirect host the Worker does not claim never reaches this code, so the
 	// list and wrangler's production routes must be the same set.
-	test("the production web Worker claims exactly the apex and REDIRECT_HOSTS", () => {
+	test("an alternate host serves the site: it is not redirected", () => {
+		for (const host of ALTERNATE_HOSTS)
+			expect(
+				canonicalHostRedirect(new Request(`https://${host}/indices`)),
+			).toBeNull();
+	});
+
+	test("the production web Worker claims exactly the apex, REDIRECT_HOSTS and ALTERNATE_HOSTS", () => {
 		const raw = readFileSync(join(import.meta.dir, "../wrangler.jsonc"), "utf8");
 		const config = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, "")) as {
 			env: { production: { routes: { pattern: string }[] } };
@@ -47,6 +54,7 @@ describe("canonicalHostRedirect", () => {
 		const expected = [
 			new URL(SITE_HOSTS.production.web).hostname,
 			...REDIRECT_HOSTS,
+			...ALTERNATE_HOSTS,
 		].sort();
 		expect(claimed).toEqual(expected);
 	});

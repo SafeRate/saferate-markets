@@ -1,6 +1,7 @@
 import { API_SURFACES, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import { pageMetaOf } from "@/lib/publicPageModules.server";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
+import { canonicalOrigin } from "@/lib/canonicalOrigin";
 import type { Route } from "./+types/llms";
 
 /**
@@ -9,8 +10,8 @@ import type { Route } from "./+types/llms";
  * (lib/publicPageModules.server.ts), and the API and MCP, whose routes and
  * tools come from API_SURFACES. Nothing here is a second copy of a page.
  */
-export const loader = ({ request }: Route.LoaderArgs) => {
-	const origin = new URL(request.url).origin;
+export const loader = ({ request, context }: Route.LoaderArgs) => {
+	const origin = canonicalOrigin(context.cloudflare.env, request);
 	const api = SITE_HOSTS.production.api;
 	const pages = PUBLIC_TWIN_PATHS.map((path) => {
 		const { title, description } = pageMetaOf(path);
