@@ -14,6 +14,11 @@ import type { Route } from "./+types/privacy";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: `Privacy policy | ${LEGAL_ENTITY.nameProduct}` },
+	{
+		name: "description",
+		content:
+			"How Safe Rate Markets handles personal information: what it collects, why, who it shares it with, and the choices you have.",
+	},
 ];
 
 /**

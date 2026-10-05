@@ -3,6 +3,11 @@ import type { Route } from "./+types/pricing";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: `Pricing | ${PRODUCT_NAME}` },
+	{
+		name: "description",
+		content:
+			"Plans for Safe Rate Markets: Individual, Team and Enterprise, each with the full portfolio dashboard and the REST API and MCP server. Enterprise adds firm-wide use, redistribution and index licenses.",
+	},
 ];
 
 /**

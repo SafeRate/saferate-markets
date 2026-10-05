@@ -1,4 +1,4 @@
-import { createElement, type ComponentType } from "react";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
 	createStaticHandler,
@@ -7,17 +7,8 @@ import {
 	StaticRouterProvider,
 } from "react-router";
 import { htmlToMarkdown } from "@/lib/htmlToMarkdown";
-import { pageOfTwinPath, type TPublicTwinPath } from "@/lib/publicPages";
-import * as about from "./about";
-import * as capabilities from "./capabilities";
-import * as dataPage from "./data";
-import * as docs from "./docs";
-import * as docsIndices from "./docs.indices";
-import * as home from "./_index";
-import * as indices from "./indices";
-import * as pricing from "./pricing";
-import * as privacy from "./privacy";
-import * as terms from "./terms";
+import { PUBLIC_PAGE_MODULES } from "@/lib/publicPageModules.server";
+import { pageOfTwinPath } from "@/lib/publicPages";
 import type { Route } from "./+types/page-twin";
 
 /**
@@ -43,31 +34,12 @@ import type { Route } from "./+types/page-twin";
  * as saferate.com's markdownResponse does, so a search engine consolidates on
  * the page rather than indexing the twin as a duplicate.
  */
-
-type TPageModule = {
-	default: ComponentType;
-	loader?: (args: Route.LoaderArgs) => unknown;
-};
-
-const PAGES: Record<TPublicTwinPath, TPageModule> = {
-	"/": home as unknown as TPageModule,
-	"/data": dataPage as unknown as TPageModule,
-	"/indices": indices as unknown as TPageModule,
-	"/capabilities": capabilities as unknown as TPageModule,
-	"/about": about as unknown as TPageModule,
-	"/pricing": pricing as unknown as TPageModule,
-	"/docs": docs as unknown as TPageModule,
-	"/docs/indices": docsIndices as unknown as TPageModule,
-	"/terms": terms as unknown as TPageModule,
-	"/privacy": privacy as unknown as TPageModule,
-};
-
 export const loader = async (args: Route.LoaderArgs) => {
 	const url = new URL(args.request.url);
 	const path = pageOfTwinPath(url.pathname);
 	if (path === null) throw data("Not found", { status: 404 });
-	const page = PAGES[path];
-	const loaderData = page.loader ? await page.loader(args) : undefined;
+	const page = PUBLIC_PAGE_MODULES[path];
+	const loaderData = page.loader ? await page.loader(args as never) : undefined;
 	if (loaderData instanceof Response) return loaderData;
 
 	const handler = createStaticHandler([

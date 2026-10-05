@@ -17,6 +17,11 @@ import type { Route } from "./+types/terms";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: `Terms of service | ${LEGAL_ENTITY.nameProduct}` },
+	{
+		name: "description",
+		content:
+			"The terms of service for Safe Rate Markets: the plans, what each license permits, and the rules for using its Treasury data and indices.",
+	},
 ];
 
 /**

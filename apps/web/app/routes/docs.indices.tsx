@@ -8,6 +8,11 @@ import type { Route } from "./+types/docs.indices";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: `Indices in the API | ${PRODUCT_NAME}` },
+	{
+		name: "description",
+		content:
+			"The Safe Rate Treasury indices in the API: endpoints for daily levels, returns, analytics and constituents, with the date and unit conventions to know.",
+	},
 ];
 
 /**

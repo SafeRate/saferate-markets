@@ -8,6 +8,11 @@ import type { Route } from "./+types/docs";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: `Docs | ${PRODUCT_NAME}` },
+	{
+		name: "description",
+		content:
+			"The Safe Rate Markets REST API and MCP server: every endpoint and tool for Treasury curves, securities, analytics, rich/cheap, auctions, indices, the public debt and savings bonds.",
+	},
 ];
 
 /**

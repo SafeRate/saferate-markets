@@ -19,6 +19,9 @@ export default [
 	route("privacy", "./routes/privacy.tsx"),
 	route("privacy-choices", "./routes/privacy-choices.tsx"),
 	route("terms", "./routes/terms.tsx"),
+	route("robots.txt", "./routes/robots.ts"),
+	route("sitemap.xml", "./routes/sitemap.ts"),
+	route("llms.txt", "./routes/llms.ts"),
 	route("sign-in", "./routes/sign-in.tsx"),
 	// Markdown twins of the public pages (lib/publicPages.ts): one route module,
 	// one route per path, ids kept distinct. "/.txt" is what the Cloudflare

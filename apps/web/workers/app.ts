@@ -1,4 +1,5 @@
 import { createRequestHandler } from "react-router";
+import { resolveMarketsEnv } from "@markets/schema";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
 import { getAuth } from "@/services/auth.server";
@@ -42,10 +43,20 @@ export default {
 			const response = await requestHandler(request, {
 				cloudflare: { env, ctx },
 			});
-			// A header rather than a meta tag, so it covers every response including
-			// ones with no HTML head. The site stays out of search until launch.
+			// Production is open to search engines and AI agents (Dylan,
+			// 2026-10-05: "we want to welcome everything"), apart from the
+			// signed-in dashboard and sign-in, which hold nothing for an index.
+			// Every other environment stays out of search entirely, so staging
+			// never competes with the real site. A header rather than a meta tag,
+			// so it covers responses with no HTML head (the .txt twins too).
 			const headers = new Headers(response.headers);
-			headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+			const isProduction = resolveMarketsEnv(env.MARKETS_ENV) === "production";
+			const isPrivate =
+				url.pathname.startsWith("/dashboard") ||
+				url.pathname === "/sign-in" ||
+				url.pathname === "/sign-out";
+			if (!isProduction || isPrivate)
+				headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
 			// Nothing here is meant to be framed, and the dashboard shows keys.
 			headers.set("X-Frame-Options", "DENY");
 			headers.set("Content-Security-Policy", "frame-ancestors 'none'");
