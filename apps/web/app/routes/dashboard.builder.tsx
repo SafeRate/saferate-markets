@@ -39,7 +39,7 @@ import {
 import type { Route } from "./+types/dashboard.builder";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Portfolio Builder — ${PRODUCT_NAME}` },
+	{ title: `Portfolio Builder | ${PRODUCT_NAME}` },
 ];
 
 const numberFrom = (raw: string | null, fallback: number | null) => {

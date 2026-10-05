@@ -14,7 +14,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.rates";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Treasury Rates — ${PRODUCT_NAME}` },
+	{ title: `Treasury Rates | ${PRODUCT_NAME}` },
 ];
 
 /**

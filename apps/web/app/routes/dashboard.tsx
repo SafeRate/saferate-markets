@@ -8,7 +8,7 @@ import { valuePortfolio } from "@/services/portfolio.server";
 import type { Route } from "./+types/dashboard";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Dashboard — ${PRODUCT_NAME}` },
+	{ title: `Dashboard | ${PRODUCT_NAME}` },
 ];
 
 /**

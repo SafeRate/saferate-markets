@@ -12,7 +12,7 @@ import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.liabilities";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Liabilities — ${PRODUCT_NAME}` },
+	{ title: `Liabilities | ${PRODUCT_NAME}` },
 ];
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {

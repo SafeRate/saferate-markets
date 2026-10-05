@@ -7,7 +7,7 @@ import {
 import type { Route } from "./+types/docs.indices";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Indices — ${PRODUCT_NAME}` },
+	{ title: `Indices in the API | ${PRODUCT_NAME}` },
 ];
 
 /**

@@ -6,7 +6,7 @@ import { searchSecurities } from "@/services/securitySearch.server";
 import type { Route } from "./+types/dashboard.securities";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Security Lookup — ${PRODUCT_NAME}` },
+	{ title: `Security Lookup | ${PRODUCT_NAME}` },
 ];
 
 /** Find any Treasury by CUSIP, coupon, maturity or kind; each opens its own page. */

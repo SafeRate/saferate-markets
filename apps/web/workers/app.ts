@@ -1,5 +1,6 @@
 import { createRequestHandler } from "react-router";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
+import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
 import { getAuth } from "@/services/auth.server";
 
 declare module "react-router" {
@@ -48,6 +49,18 @@ export default {
 			// Nothing here is meant to be framed, and the dashboard shows keys.
 			headers.set("X-Frame-Options", "DENY");
 			headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+			// Each public page names its markdown twin, so an agent that does not
+			// know to ask for Accept: text/markdown can still find it.
+			const page = PUBLIC_TWIN_PATHS.find((p) => p === url.pathname);
+			if (
+				page !== undefined &&
+				response.status === 200 &&
+				(response.headers.get("Content-Type") ?? "").includes("text/html")
+			)
+				headers.append(
+					"Link",
+					`<${url.origin}${twinPathOf(page)}>; rel="alternate"; type="text/markdown"`,
+				);
 			return new Response(response.body, {
 				status: response.status,
 				statusText: response.statusText,

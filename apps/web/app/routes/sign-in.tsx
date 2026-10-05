@@ -4,7 +4,7 @@ import { getAuth } from "@/services/auth.server";
 import type { Route } from "./+types/sign-in";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Sign in — ${PRODUCT_NAME}` },
+	{ title: `Sign in | ${PRODUCT_NAME}` },
 ];
 
 /**

@@ -11,7 +11,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.keys";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `API keys — ${PRODUCT_NAME}` },
+	{ title: `API keys | ${PRODUCT_NAME}` },
 ];
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {

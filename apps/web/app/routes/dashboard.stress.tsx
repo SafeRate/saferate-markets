@@ -12,7 +12,7 @@ import { analyseStress, type TCustomShock } from "@/services/stress.server";
 import type { Route } from "./+types/dashboard.stress";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Stress Testing — ${PRODUCT_NAME}` },
+	{ title: `Stress Testing | ${PRODUCT_NAME}` },
 ];
 
 const num = (raw: string | null) => {

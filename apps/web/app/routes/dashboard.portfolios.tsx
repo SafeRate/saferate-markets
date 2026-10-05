@@ -14,7 +14,7 @@ import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.portfolios";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Portfolio Tracking — ${PRODUCT_NAME}` },
+	{ title: `Portfolio Tracking | ${PRODUCT_NAME}` },
 ];
 
 export const loader = async ({ request, context }: Route.LoaderArgs) => {

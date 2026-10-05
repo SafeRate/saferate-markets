@@ -9,7 +9,7 @@ import {
 import type { Route } from "./+types/privacy-choices";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Privacy choices — ${PRODUCT_NAME}` },
+	{ title: `Privacy choices | ${PRODUCT_NAME}` },
 ];
 
 /**

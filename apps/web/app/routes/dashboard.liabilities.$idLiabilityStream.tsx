@@ -14,7 +14,7 @@ import type { Route } from "./+types/dashboard.liabilities.$idLiabilityStream";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
 	{
-		title: `${loaded?.stream.nameLiabilityStream ?? "Liabilities"} — ${PRODUCT_NAME}`,
+		title: `${loaded?.stream.nameLiabilityStream ?? "Liabilities"} | ${PRODUCT_NAME}`,
 	},
 ];
 

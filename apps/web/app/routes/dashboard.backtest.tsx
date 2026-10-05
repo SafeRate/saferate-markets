@@ -16,7 +16,7 @@ import {
 import type { Route } from "./+types/dashboard.backtest";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Strategy Backtests — ${PRODUCT_NAME}` },
+	{ title: `Strategy Backtests | ${PRODUCT_NAME}` },
 ];
 
 /**

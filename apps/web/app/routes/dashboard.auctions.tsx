@@ -12,7 +12,7 @@ import {
 import type { Route } from "./+types/dashboard.auctions";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Treasury Auctions — ${PRODUCT_NAME}` },
+	{ title: `Treasury Auctions | ${PRODUCT_NAME}` },
 ];
 
 /**

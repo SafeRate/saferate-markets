@@ -38,7 +38,7 @@ import { loadSecurities, validateNewTrades } from "@/services/portfolio.server";
 import type { Route } from "./+types/dashboard.portfolios.$idPortfolio.transactions";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Trades — ${PRODUCT_NAME}` },
+	{ title: `Trades | ${PRODUCT_NAME}` },
 ];
 
 const MAX_CSV_BYTES = 1_000_000;

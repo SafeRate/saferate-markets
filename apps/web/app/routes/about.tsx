@@ -2,7 +2,7 @@ import { CONTACT_ADDRESS, PRODUCT_NAME } from "@markets/schema";
 import type { Route } from "./+types/about";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `About — ${PRODUCT_NAME}` },
+	{ title: `About | ${PRODUCT_NAME}` },
 	{
 		name: "description",
 		content:

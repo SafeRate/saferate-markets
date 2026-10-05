@@ -8,7 +8,7 @@ import {
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
 import type { Route } from "./+types/_index";
 
-const TITLE = `${PRODUCT_NAME} — Portfolio management for U.S. Treasuries`;
+const TITLE = `Portfolio management for U.S. Treasuries | ${PRODUCT_NAME}`;
 const DESCRIPTION =
 	"Institutional-grade tools to track, build, stress-test, backtest and trade U.S. Treasury portfolios, on every Treasury priced daily since September 2008, from primary sources with no data license to pay for. With a REST API and an MCP server.";
 

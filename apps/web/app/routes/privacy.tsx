@@ -13,7 +13,7 @@ import { Callout, LegalPage, LegalSection } from "@/components/LegalPage";
 import type { Route } from "./+types/privacy";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Privacy policy — ${LEGAL_ENTITY.nameProduct}` },
+	{ title: `Privacy policy | ${LEGAL_ENTITY.nameProduct}` },
 ];
 
 /**

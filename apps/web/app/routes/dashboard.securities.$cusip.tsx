@@ -10,7 +10,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.securities.$cusip";
 
 export const meta: Route.MetaFunction = ({ data: d }) => [
-	{ title: `${d?.cusip ?? "Security"} — ${PRODUCT_NAME}` },
+	{ title: `${d?.cusip ?? "Security"} | ${PRODUCT_NAME}` },
 ];
 
 /**

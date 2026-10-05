@@ -4,7 +4,7 @@ import { INDEX_META, INDEX_SLUG } from "@saferate/treasury-client/types";
 import type { Route } from "./+types/indices";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Indices — ${PRODUCT_NAME}` },
+	{ title: `Indices | ${PRODUCT_NAME}` },
 	{
 		name: "description",
 		content:

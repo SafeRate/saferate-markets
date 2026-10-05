@@ -14,7 +14,7 @@ import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.plans.$idPlan";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
-	{ title: `${loaded?.plan.namePlan ?? "Plan"} — ${PRODUCT_NAME}` },
+	{ title: `${loaded?.plan.namePlan ?? "Plan"} | ${PRODUCT_NAME}` },
 ];
 
 export const loader = async ({

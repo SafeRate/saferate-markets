@@ -13,7 +13,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.curves";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Curves — ${PRODUCT_NAME}` },
+	{ title: `Curves | ${PRODUCT_NAME}` },
 ];
 
 /**

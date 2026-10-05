@@ -12,7 +12,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.rich-cheap";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Rich / Cheap — ${PRODUCT_NAME}` },
+	{ title: `Rich / Cheap | ${PRODUCT_NAME}` },
 ];
 
 /**

@@ -12,7 +12,7 @@ import { cancelNow, switchPathFor } from "@/services/billing.server";
 import type { Route } from "./+types/dashboard.billing";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Billing — ${PRODUCT_NAME}` },
+	{ title: `Billing | ${PRODUCT_NAME}` },
 ];
 
 /**

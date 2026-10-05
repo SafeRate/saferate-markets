@@ -6,7 +6,7 @@ import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.execution";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Trade Execution — ${PRODUCT_NAME}` },
+	{ title: `Trade Execution | ${PRODUCT_NAME}` },
 ];
 
 const METHOD_LABEL: Record<string, string> = {

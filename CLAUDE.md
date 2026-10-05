@@ -658,3 +658,24 @@ read-only, so binding production cannot write anything.
 The cost: a treasury-api deploy reaches markets staging and production at the
 same moment, with no rehearsal. **Local dev still binds treasury-api-staging**,
 so its "latest" curve is stale; switch it too if that starts to mislead.
+
+## Markdown twins (2026-10-05, `<page>.txt`)
+
+- **Every public page has a `.txt` twin**: lib/publicPages.ts `PUBLIC_TWIN_PATHS`
+  is the one list (/, /data, /indices, /capabilities, /about, /pricing, /docs,
+  /docs/indices, /terms, /privacy). The dashboard has none: it is behind
+  sign-in.
+- **The twin is the page**: routes/page-twin.ts runs the page's own loader,
+  renders its own component in a one-route static data router (a bare
+  MemoryRouter 500s: the framework's component wrapper reads props through
+  useLoaderData), and converts the markup (lib/htmlToMarkdown.ts, a converter
+  for our own markup, not a general one). So a twin cannot drift from its page.
+- Served `text/markdown` with `Link: rel="canonical"` to the HTML page (as
+  saferate.com's markdownResponse); every public HTML page sends
+  `Link: <...txt>; rel="alternate"; type="text/markdown"` (workers/app.ts).
+- **The Cloudflare rule** (Dylan's, in the dashboard) redirects
+  `Accept: text/markdown` on exactly those paths to `concat(path, ".txt")`,
+  so `/` lands on `/.txt`, which serves the home page. A page added to the
+  rule but not to PUBLIC_TWIN_PATHS would send an agent to a 404: add both.
+- New public page: add it to PUBLIC_TWIN_PATHS, to page-twin.ts's PAGES, to
+  routes.ts as `<path>.txt`, and to the rule's path list.

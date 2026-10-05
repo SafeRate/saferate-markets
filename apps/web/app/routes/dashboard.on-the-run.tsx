@@ -11,7 +11,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.on-the-run";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `On / Off the Run — ${PRODUCT_NAME}` },
+	{ title: `On / Off the Run | ${PRODUCT_NAME}` },
 ];
 
 /**

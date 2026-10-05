@@ -16,7 +16,7 @@ import { Callout, LegalPage, LegalSection } from "@/components/LegalPage";
 import type { Route } from "./+types/terms";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Terms of service — ${LEGAL_ENTITY.nameProduct}` },
+	{ title: `Terms of service | ${LEGAL_ENTITY.nameProduct}` },
 ];
 
 /**

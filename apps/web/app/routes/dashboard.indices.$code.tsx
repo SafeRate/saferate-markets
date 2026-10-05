@@ -14,7 +14,7 @@ import { requireOrganization } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.indices.$code";
 
 export const meta: Route.MetaFunction = ({ data: d }) => [
-	{ title: `${d?.name ?? "Index"} — ${PRODUCT_NAME}` },
+	{ title: `${d?.name ?? "Index"} | ${PRODUCT_NAME}` },
 ];
 
 /**

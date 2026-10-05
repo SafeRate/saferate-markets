@@ -4,7 +4,7 @@ import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
 import type { Route } from "./+types/data";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Data — ${PRODUCT_NAME}` },
+	{ title: `Data | ${PRODUCT_NAME}` },
 	{
 		name: "description",
 		content:

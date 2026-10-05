@@ -20,6 +20,24 @@ export default [
 	route("privacy-choices", "./routes/privacy-choices.tsx"),
 	route("terms", "./routes/terms.tsx"),
 	route("sign-in", "./routes/sign-in.tsx"),
+	// Markdown twins of the public pages (lib/publicPages.ts): one route module,
+	// one route per path, ids kept distinct. "/.txt" is what the Cloudflare
+	// rule makes of "/".
+	route(".txt", "./routes/page-twin.ts", { id: "twin:.txt" }),
+	route("index.txt", "./routes/page-twin.ts", { id: "twin:index.txt" }),
+	route("data.txt", "./routes/page-twin.ts", { id: "twin:data.txt" }),
+	route("indices.txt", "./routes/page-twin.ts", { id: "twin:indices.txt" }),
+	route("capabilities.txt", "./routes/page-twin.ts", {
+		id: "twin:capabilities.txt",
+	}),
+	route("about.txt", "./routes/page-twin.ts", { id: "twin:about.txt" }),
+	route("pricing.txt", "./routes/page-twin.ts", { id: "twin:pricing.txt" }),
+	route("docs.txt", "./routes/page-twin.ts", { id: "twin:docs.txt" }),
+	route("docs/indices.txt", "./routes/page-twin.ts", {
+		id: "twin:docs/indices.txt",
+	}),
+	route("terms.txt", "./routes/page-twin.ts", { id: "twin:terms.txt" }),
+	route("privacy.txt", "./routes/page-twin.ts", { id: "twin:privacy.txt" }),
 	route("sign-out", "./routes/sign-out.tsx"),
 	layout("./routes/dashboard.layout.tsx", [
 		route("dashboard", "./routes/dashboard.tsx"),

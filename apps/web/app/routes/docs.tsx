@@ -7,7 +7,7 @@ import {
 import type { Route } from "./+types/docs";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Docs — ${PRODUCT_NAME}` },
+	{ title: `Docs | ${PRODUCT_NAME}` },
 ];
 
 /**

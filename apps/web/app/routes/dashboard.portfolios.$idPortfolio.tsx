@@ -19,7 +19,7 @@ import type { Route } from "./+types/dashboard.portfolios.$idPortfolio";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
 	{
-		title: `${loaded?.portfolio.namePortfolio ?? "Portfolio"} — ${PRODUCT_NAME}`,
+		title: `${loaded?.portfolio.namePortfolio ?? "Portfolio"} | ${PRODUCT_NAME}`,
 	},
 ];
 
