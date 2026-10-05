@@ -112,7 +112,7 @@ const DATASETS: TDataset[] = [
 		pages: [{ label: "Indices", to: "/dashboard/indices" }],
 		surfaces: ["Indices"],
 		interactive: [{ label: "Total return indices", href: TREASURY_URLS.indices }],
-		more: { label: "Index methodology", to: "/docs/indices" },
+		more: { label: "Indices for institutions", to: "/indices" },
 	},
 	{
 		title: "The public debt",
