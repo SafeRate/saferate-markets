@@ -122,3 +122,11 @@ else
 	doppler run --project saferate-markets --config "$DOPPLER_CONFIG" -- \
 		bunx wrangler deploy --config "$CONFIG" --message "$GIT_SHA" --tag "$ENVIRONMENT"
 fi
+
+# Tell IndexNow (Bing, Yandex and others) the public pages may have changed.
+# Production only, and AFTER the deploy: it checks the key file is live first.
+# Never fails the deploy: a refused or failed submission is reported, and the
+# pages are still in the sitemap and found by Cloudflare's Crawler Hints.
+if [ "$ENVIRONMENT" = "production" ]; then
+	( cd ../.. && bun scripts/indexnow.ts ) || echo "warning: IndexNow submission did not go through (see above); the deploy itself succeeded." >&2
+fi

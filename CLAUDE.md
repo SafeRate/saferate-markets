@@ -679,3 +679,21 @@ so its "latest" curve is stale; switch it too if that starts to mislead.
   rule but not to PUBLIC_TWIN_PATHS would send an agent to a 404: add both.
 - New public page: add it to PUBLIC_TWIN_PATHS, to page-twin.ts's PAGES, to
   routes.ts as `<path>.txt`, and to the rule's path list.
+
+## Search and agents: robots, sitemap, llms.txt, IndexNow (2026-10-05)
+
+- Production welcomes everything (Dylan): robots.txt allows all with
+  `Content-Signal: search=yes, ai-input=yes, ai-train=yes`, keeps out only
+  /dashboard and /api/auth/, names /sitemap.xml. No `noindex` on public pages
+  (the dashboard and sign-in keep it). Every non-production host disallows all
+  and keeps `noindex`, so staging never competes in an index.
+- sitemap.xml and llms.txt come from PUBLIC_TWIN_PATHS; llms.txt reads each
+  page's own meta description (lib/publicPageModules.server.ts).
+- IndexNow: the key (lib/indexNow.ts) is PUBLIC by design and served at
+  `/<key>.txt` from apps/web/public; a test holds the two equal. deploy-web.sh
+  runs scripts/indexnow.ts after every PRODUCTION deploy (never fails the
+  deploy); Cloudflare Crawler Hints is also on for the zone.
+- Cloudflare (Dylan's dashboard): Redirect Rule "Redirect Markdown" sends
+  Accept: text/markdown on the public paths to concat(path, ".txt"), 302.
+  "Markdown for Agents" and "Bot Preference Sync" stay OFF: our twins replace
+  the first; the second would write Cloudflare's bot blocks into robots.txt.
