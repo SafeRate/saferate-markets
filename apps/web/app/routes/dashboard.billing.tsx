@@ -357,7 +357,7 @@ export default function Billing({
 				, including what each plan licenses (section 4).
 			</p>
 			<p className="mt-3 text-sm text-slate-600">
-				Firm-wide use, redistribution or a benchmark license:{" "}
+				Firm-wide use, redistribution or an index license:{" "}
 				<a className="text-primary underline underline-offset-4" href="/pricing">
 					see Enterprise
 				</a>

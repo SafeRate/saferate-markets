@@ -8,7 +8,7 @@ import { z } from "zod";
  *
  *   Individual  $10/mo   one person, their own account, 60/min
  *   Team        $100/mo  a firm's internal use and client reporting, 300/min
- *   Enterprise  custom   firm-wide, redistribution, benchmark licence, SLA
+ *   Enterprise  custom   firm-wide, redistribution, index license, SLA
  *
  * The line between plans is WHO the data is for (the market-data convention):
  *
@@ -18,9 +18,11 @@ import { z } from "zod";
  *    (attributed) and its own staff's agents, e.g. an analyst's Claude using the
  *    MCP server.
  *  - Enterprise is anything serving THEIR customers: public display, feeds, an
- *    agent or app their clients use. The benchmark licence (an index inside a
- *    financial product) is a named add-on here, not folded into redistribution:
- *    it is a different deal and can carry regulatory obligations.
+ *    agent or app their clients use. The index license (an ETF, fund or product
+ *    built to TRACK an index) is a named add-on here, not folded into
+ *    redistribution: it is a different deal and can carry regulatory
+ *    obligations. Benchmarking, naming an index as a fund's benchmark in a
+ *    prospectus included, is free (saferate.com's terms; Dylan, 2026-10-05).
  *
  * The beta codes (BETA_CODES) are listed below with the plans each covers.
  *
@@ -111,7 +113,7 @@ export const PLANS = [
 			"Bulk and history exports",
 			"Security review and DPA",
 			"Redistribution: your website, app, terminal or feed, and agents your customers use",
-			"Benchmark license: an index inside a fund or financial product",
+			"Index license: an ETF, fund or product built to track an index",
 		],
 		sale: { kind: "contact" },
 	},

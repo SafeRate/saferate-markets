@@ -69,7 +69,7 @@ export const LIABILITY = {
  * One date for both documents: they reference each other, and different dates
  * would make "as amended" ambiguous.
  */
-export const LEGAL_EFFECTIVE_DATE = "2026-09-28";
+export const LEGAL_EFFECTIVE_DATE = "2026-10-05";
 
 export const legalEffectiveDateLabel = () =>
 	new Date(`${LEGAL_EFFECTIVE_DATE}T00:00:00Z`).toLocaleDateString("en-US", {
@@ -135,9 +135,9 @@ export const PROHIBITED_USES: readonly {
 }[] = [
 	{
 		rule:
-			"Do not use the data beyond your plan: showing it to the public, putting it inside a product or feed your customers use, or using an index inside a financial product, without an Enterprise agreement.",
+			"Do not use the data beyond your plan: showing it to the public, putting it inside a product or feed your customers use, or launching a product built to track an index, without an Enterprise agreement. Naming an index as a benchmark is free.",
 		origin: "our_policy",
-		why: "The plans are priced by who the data is for. Redistribution and benchmark use are different licenses, set out on the pricing page.",
+		why: "The plans are priced by who the data is for. Redistribution and products that track an index are different licenses, set out on the pricing page.",
 	},
 	{
 		rule:

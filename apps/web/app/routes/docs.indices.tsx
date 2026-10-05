@@ -210,11 +210,12 @@ export default function IndicesGuide({ loaderData }: Route.ComponentProps) {
 				>
 					saferate.com/treasury/indices
 				</a>
-				. Using an index in your own analysis or client reporting is covered by your
-				plan. Using one inside a financial product, as a fund benchmark or in a
-				product whose payout references a level, needs a{" "}
+				. Benchmarking is free: using an index in your own analysis and client
+				reporting, or naming one as a fund's benchmark, a prospectus included. A
+				product built to track an index, such as an ETF or index fund, or one whose
+				payout references an index level, needs an{" "}
 				<a className="text-primary underline underline-offset-4" href="/pricing">
-					benchmark license
+					index license
 				</a>
 				.
 			</P>

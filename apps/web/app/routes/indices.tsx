@@ -19,10 +19,11 @@ export const meta: Route.MetaFunction = () => [
  * quoted from saferate.com/treasury/indices, read 2026-10-05, and linked
  * rather than restated at length, so there is one version of the methodology.
  *
- * LICENSING IS NOT STATED HERE. saferate.com says naming an index as a
- * benchmark is free and only a product that tracks one is charged; Markets'
- * /docs/indices says a fund benchmark needs a benchmark license. Until Dylan
- * settles which, this page points to pricing and a conversation.
+ * LICENSING, as saferate.com states it and Dylan confirmed (2026-10-05):
+ * benchmarking is free, naming an index in a prospectus included; a product
+ * built to TRACK an index (an ETF, an index fund, a product whose payout
+ * references a level) needs an index license. The same wording is in
+ * /docs/indices, the terms, plans.ts and legal.ts.
  *
  * The live table is optional: a failed read drops it, never the page.
  */
@@ -299,14 +300,14 @@ export default function Indices({ loaderData }: Route.ComponentProps) {
 					Talk to us about an index
 				</h2>
 				<p className="mt-2 max-w-3xl text-slate-300">
-					A custom index, independent verification, or using an index inside a fund
-					or financial product: write to{" "}
-					<span className="font-medium text-white">{CONTACT_ADDRESS}</span>. Using
-					the published indices in your own analysis and reporting is part of every{" "}
+					Benchmarking against the indices is free, naming one as a fund's benchmark
+					in a prospectus included. An ETF, index fund or other product built to
+					track one needs an{" "}
 					<a className="text-sky-300 underline underline-offset-4" href="/pricing">
-						plan
+						index license
 					</a>
-					.
+					. For that, a custom index or independent verification, write to{" "}
+					<span className="font-medium text-white">{CONTACT_ADDRESS}</span>.
 				</p>
 			</section>
 		</main>

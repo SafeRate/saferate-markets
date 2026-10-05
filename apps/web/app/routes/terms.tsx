@@ -187,8 +187,10 @@ export default function Terms() {
 					On Team, excerpts in your own client reports and presentations must be
 					attributed to Safe Rate and must not amount to a copy of the feed. Showing
 					the data to the public, or inside a product, feed, app or agent your
-					customers use, and using an index inside a financial product, need an
-					Enterprise agreement.
+					customers use, and launching a product built to track an index (an ETF, an
+					index fund, or a product whose payout references an index level), need an
+					Enterprise agreement. Naming an index as a benchmark, a prospectus
+					included, does not.
 				</p>
 			</LegalSection>
 
