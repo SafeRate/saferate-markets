@@ -12,7 +12,7 @@ import {
 	PRODUCT_NAME,
 	REDIRECT_HOSTS,
 	resolveMarketsEnv,
-	SENDER_ADDRESS,
+	senderFor,
 	SITE_HOSTS,
 } from "@markets/schema";
 import { betterAuth } from "better-auth";
@@ -180,7 +180,7 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 							});
 							const result = await provider.send({
 								to: CONTACT_ADDRESS,
-								from: SENDER_ADDRESS,
+								from: senderFor(baseURL),
 								...notice,
 							});
 							if (result.status !== "sent")
@@ -209,7 +209,7 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 					});
 					const result = await provider.send({
 						to: email,
-						from: SENDER_ADDRESS,
+						from: senderFor(baseURL),
 						subject: `Sign in to ${PRODUCT_NAME}`,
 						...magicLinkEmail(url),
 					});
