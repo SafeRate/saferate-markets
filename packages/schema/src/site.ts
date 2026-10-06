@@ -71,5 +71,27 @@ export const resolveMarketsEnv = (value: unknown): TMarketsEnv => {
 };
 
 export const SENDER_ADDRESS = "noreply@notifications.saferate.markets";
+
+/**
+ * The sender for a sign-in link built on `siteAddress`: the saferate.com
+ * sending domain when the visitor is on markets.saferate.com (ALTERNATE_HOSTS),
+ * so an institution whose filters distrust the new saferate.markets domain
+ * gets mail from the same established domain as the site (Dylan, 2026-10-06).
+ * notifications.saferate.com is saferate.com's own sending domain, onboarded
+ * in the same Cloudflare account (saferate-ai's apps send magic links from it).
+ * Everything else keeps SENDER_ADDRESS.
+ */
+export const SENDER_ADDRESS_SAFERATE_COM = "noreply@notifications.saferate.com";
+
+export const senderFor = (siteAddress: string) => {
+	try {
+		const host = new URL(siteAddress).hostname;
+		return host === "saferate.com" || host.endsWith(".saferate.com")
+			? SENDER_ADDRESS_SAFERATE_COM
+			: SENDER_ADDRESS;
+	} catch {
+		return SENDER_ADDRESS;
+	}
+};
 export const CONTACT_ADDRESS = "team@saferate.com";
 export const PRODUCT_NAME = "Safe Rate Markets";
