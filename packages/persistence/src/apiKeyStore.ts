@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateApiKey, sha256Hex } from "./apiKeys";
+import { TRIAL } from "@markets/schema";
 import { ENTITLED_STATUSES_SQL } from "./subscriptions";
 
 /**
@@ -116,9 +117,9 @@ export const ZApiKeyAuthenticated = z.object({
 	idApiKey: z.string(),
 	idOrganization: z.string(),
 	lastUsedAt: z.number().nullable(),
-	/** 0/1 from SQL. Whether the organization has a live subscription. */
+	/** 0/1 from SQL. A live subscription, or a trial still running (TRIAL). */
 	isEntitled: z.union([z.literal(0), z.literal(1)]).transform(Boolean),
-	/** The live subscription's plan id, or null. Decides the rate limit. */
+	/** The live subscription's plan id, else the trial's, else null. Decides the rate limit. */
 	idPlan: z.string().nullable(),
 });
 export type TApiKeyAuthenticated = z.infer<typeof ZApiKeyAuthenticated>;
@@ -138,7 +139,8 @@ const ZInputAuthenticateApiKey = z.object({
  * expiresAt so that revoking a key mid-rotation still kills it at once.
  *
  * ENTITLEMENT rides in the same query, as `isEntitled`, so the hot path is still
- * one read. It is a LEFT join and a flag rather than an inner join, so the
+ * one read. A running trial (organizations.trialEndsAt, TRIAL in @markets/schema)
+ * entitles too, on the trial's plan; a subscription's plan wins when both exist. It is a LEFT join and a flag rather than an inner join, so the
  * middleware can tell "not a key" (401) from "a real key whose organization has
  * no live subscription" (402, with where to subscribe). Telling those apart is
  * not an oracle: only someone holding the key learns anything.
@@ -152,16 +154,20 @@ export async function authenticateApiKey(
 		.prepare(
 			/* sql */ `
 			select k.idApiKey, k.idOrganization, k.lastUsedAt,
-			       case when s.idOrganization is not null then 1 else 0 end
+			       case when s.idOrganization is not null
+			              or o.trialEndsAt > ?2 then 1 else 0 end
 			         as isEntitled,
-			       s.idPlan
+			       coalesce(s.idPlan,
+			                case when o.trialEndsAt > ?2 then '${TRIAL.idPlan}' end)
+			         as idPlan
 			from apiKeys k
 			left join organizationSubscriptions s
 			       on s.idOrganization = k.idOrganization
 			      and s.endedAt is null
 			      and s.statusSubscription in (${ENTITLED_STATUSES_SQL})
-			where k.hashApiKey = ? and k.revokedAt is null
-			  and (k.expiresAt is null or k.expiresAt > ?)
+			left join organizations o on o.idOrganization = k.idOrganization
+			where k.hashApiKey = ?1 and k.revokedAt is null
+			  and (k.expiresAt is null or k.expiresAt > ?2)
 			limit 1
 		`,
 		)

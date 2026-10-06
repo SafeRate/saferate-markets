@@ -6,6 +6,7 @@
 		".": "./src/index.ts"
 	},
 	"dependencies": {
+		"@markets/schema": "workspace:*",
 		"zod": "^4.6.5"
 	}
 }

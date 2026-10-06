@@ -1,5 +1,11 @@
 import { readPricesOn } from "@markets/mcp-tools";
-import { FREE_TIER, PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
+import {
+	FREE_TIER,
+	PLANS,
+	PRODUCT_NAME,
+	SITE_HOSTS,
+	TRIAL,
+} from "@markets/schema";
 import {
 	getCurvesWithPriorOn,
 	getDebtSummaryOn,
@@ -328,7 +334,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 								className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:bg-primary/90"
 								href="/sign-in"
 							>
-								Tour the live demo
+								Start a free {TRIAL.days}-day trial
 							</a>
 							<a
 								className="rounded-full border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary"
@@ -338,9 +344,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							</a>
 						</div>
 						<p className="mt-3 text-sm text-slate-500">
-							The demo needs just your email.{" "}
+							{TRIAL.days} days of Team, starting with a tour of the live demo, with
+							just your email.{" "}
 							<span className="font-medium text-slate-700">
-								No payment or credit card required to tour it.
+								No payment or credit card required.
 							</span>
 						</p>
 					</div>
@@ -509,7 +516,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						Plans
 					</h2>
 					<p className="mt-3 max-w-2xl text-slate-600">
-						Start free while your Treasuries are worth under $
+						Every new account gets {TRIAL.days} days of Team, free, with no card.
+						After that, stay free while your Treasuries are worth under $
 						{FREE_TIER.maxValueUsd.toLocaleString("en-US")}. Paid plans add the REST
 						API and MCP, and differ in limits and in who may use them.
 					</p>
@@ -556,15 +564,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							See it on today's market.
 						</h2>
 						<p className="mt-2 text-slate-400">
-							Sample portfolios, a liability stream and a plan, live. The demo needs no
-							payment or credit card.
+							Sample portfolios, a liability stream and a plan, live, then {TRIAL.days}{" "}
+							days of Team on your own. No payment or credit card required.
 						</p>
 					</div>
 					<a
 						className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5 hover:bg-sky-100"
 						href="/sign-in"
 					>
-						Tour the live demo
+						Start a free trial
 					</a>
 				</div>
 			</section>

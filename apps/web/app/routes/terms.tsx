@@ -7,6 +7,7 @@ import {
 	LIABILITY,
 	MATERIAL_CHANGE_NOTICE_DAYS,
 	FREE_TIER,
+	TRIAL,
 	PLANS,
 	PROHIBITED_USES,
 	RETENTION_AFTER_TERMINATION,
@@ -197,6 +198,12 @@ export default function Terms() {
 						</tbody>
 					</table>
 				</div>
+				<p>
+					New accounts get a <strong className="text-neutral-900">trial</strong> of
+					Team for {TRIAL.days} days, at no charge and without payment details, on
+					Team's terms. When it ends without a subscription, the account is on Free;
+					nothing is deleted, but use past Free's limits stops until you subscribe.
+				</p>
 				<p>
 					<strong className="text-neutral-900">Individual</strong> is for a natural
 					person using the data on their own account. Using it for an employer or for

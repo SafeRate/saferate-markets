@@ -1,3 +1,4 @@
+import { TRIAL, TRIAL_MS, trialLastDay } from "@markets/schema";
 /**
  * Magic-link email body. Plain text AND HTML, both required.
  *
@@ -74,12 +75,15 @@ export const signupNoticeEmail = (input: {
 		timeStyle: "short",
 	});
 	const host = new URL(input.siteAddress).host;
+	// The organization, and so the trial, starts on their first dashboard visit,
+	// moments after this; the last day is the same.
+	const plan = `Plan: ${TRIAL.days}-day Team trial, no card, through ${trialLastDay(input.createdAt.getTime() + TRIAL_MS)}. Then the free plan unless they subscribe.`;
 	const lines = [
 		`${input.email} signed up for Safe Rate Markets.`,
 		"",
 		`When: ${when} Eastern`,
 		`Signed up on: ${host}`,
-		"Plan: none yet, so they see the read-only demo until they subscribe.",
+		plan,
 	];
 	return {
 		subject: `New Safe Rate Markets sign-up: ${input.email}`,
@@ -92,7 +96,7 @@ export const signupNoticeEmail = (input: {
     <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">${escapeHtml(input.email)}</h1>
     <p style="margin:0 0 6px;font-size:15px;color:#475569">When: ${escapeHtml(when)} Eastern</p>
     <p style="margin:0 0 6px;font-size:15px;color:#475569">Signed up on: ${escapeHtml(host)}</p>
-    <p style="margin:0;font-size:15px;color:#475569">Plan: none yet, so they see the read-only demo until they subscribe.</p>
+    <p style="margin:0;font-size:15px;color:#475569">${escapeHtml(plan)}</p>
   </div>
 </body>
 </html>`,

@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from "@markets/schema";
+import { PRODUCT_NAME, TRIAL } from "@markets/schema";
 import { Form, useNavigation } from "react-router";
 import { getAuth } from "@/services/auth.server";
 import type { Route } from "./+types/sign-in";
@@ -80,7 +80,8 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 				We email you a link. No password to choose or forget.
 			</p>
 			<p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-slate-700">
-				New accounts start with a tour of the live demo.{" "}
+				New accounts get {TRIAL.days} days of Team, starting with a tour of the live
+				demo.{" "}
 				<span className="font-semibold">No payment or credit card required.</span>
 			</p>
 

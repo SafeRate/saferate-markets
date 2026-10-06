@@ -7,7 +7,9 @@
  *
  * Flags: --email <address> (default dylan@saferate.com), --seed-only,
  * --demo (as an account with NO paid plan: tour the read-only demo and
- * check every write is refused; use with --email of an unpaid account),
+ * check every write is refused, then the free tier, then the Team trial; the
+ * account's trial is ended for the first two, and left ended; use with
+ * --email of an unpaid account),
  * --exercise-only, --keep (leave the "Script test" stream, plan and portfolio),
  * --testing (also seed the twenty "Test NN" portfolios built to break things,
  * and run the import break tests), --only <text> (exercise only portfolios
@@ -1791,12 +1793,88 @@ const exerciseFreeTier = async () => {
 	);
 };
 
+// ── The trial (--demo): Team for 30 days, no free-tier limits ────────────────
+
+/**
+ * Set when EMAIL's Team trial ends (epoch ms; 0 ends it now). Visits the
+ * dashboard first, because the organization, and so the trial, is created
+ * there on the first visit.
+ */
+const setTrialEnd = async (trialEndsAt: number) => {
+	await get("/dashboard");
+	const [result] = d1(
+		`update organizations set trialEndsAt = ${trialEndsAt} where idOrganization in (select m.idOrganization from organizationMembers m join user u on u.id = m.idUser where u.email = ${sqlString(EMAIL)})`,
+	);
+	const changes = (result as unknown as { meta?: { changes?: number } }).meta
+		?.changes;
+	if (changes !== 1)
+		throw new Error(`setting ${EMAIL}'s trial changed ${changes} rows, not 1`);
+};
+
+const exerciseTrial = async () => {
+	heading(`The Team trial, as ${EMAIL}`);
+	await setTrialEnd(Date.now() + 30 * 86_400_000);
+	await expectPage(
+		"in the demo, the banner says the trial is running",
+		"/dashboard",
+		"Team trial is running",
+	);
+	const created: string[] = [];
+	for (const i of [1, 2, 3]) {
+		const id = await createPortfolio(`Trial test ${i}`, "SHRT", "cash");
+		if (id) created.push(id);
+	}
+	created.length === 3
+		? pass("a trial account creates a third portfolio")
+		: fail("a trial account creates a third portfolio", `${created.length} made`);
+	await expectPage(
+		"the dashboard shows the trial, not the free plan",
+		"/dashboard/portfolios",
+		"Team trial, 30 days left.",
+	);
+	await expectPage(
+		"billing shows the trial",
+		"/dashboard/billing",
+		"Team trial, through",
+	);
+	if (created[0]) {
+		const large = await post(`/dashboard/portfolios/${created[0]}/transactions`, {
+			intent: "add",
+			cusip: "91282CMM0",
+			side: "buy",
+			tradeDate: "2026-09-01",
+			faceAmount: "200000",
+			cleanPrice: "96",
+		});
+		problems(large.text).length === 0 && large.status < 400
+			? pass("a trade past $100,000 is accepted on the trial")
+			: fail(
+					"a trade past $100,000 is accepted on the trial",
+					`HTTP ${large.status} ${problems(large.text).join("; ")}`,
+				);
+	}
+	for (const [i, id] of created.entries())
+		await post(`/dashboard/portfolios/${id}/transactions`, {
+			intent: "deletePortfolio",
+			confirmName: `Trial test ${i + 1}`,
+		});
+	await setTrialEnd(0);
+	await expectPage(
+		"with the trial ended and no portfolios, the account is back in the demo",
+		"/dashboard",
+		"Start your own portfolio",
+	);
+};
+
 // ── Run ──────────────────────────────────────────────────────────────────────
 
 await signIn();
 if (flag("demo")) {
+	// The demo and free-tier checks are for an account with no trial running.
+	await setTrialEnd(0);
 	await exerciseDemo();
 	await exerciseFreeTier();
+	await exerciseTrial();
 	await exerciseMarkets();
 	console.info(
 		failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`,

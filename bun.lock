@@ -81,6 +81,7 @@
       "name": "@markets/persistence",
       "version": "0.0.1",
       "dependencies": {
+        "@markets/schema": "workspace:*",
         "zod": "^4.6.5",
       },
     },
