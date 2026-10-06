@@ -6,6 +6,7 @@ import {
 	LEGAL_ENTITY,
 	LIABILITY,
 	MATERIAL_CHANGE_NOTICE_DAYS,
+	FREE_TIER,
 	PLANS,
 	PROHIBITED_USES,
 	RETENTION_AFTER_TERMINATION,
@@ -161,6 +162,20 @@ export default function Terms() {
 							</tr>
 						</thead>
 						<tbody>
+							<tr className="border-t border-slate-100 align-top">
+								<td className="px-4 py-2 font-medium text-neutral-900">
+									{FREE_TIER.name}
+								</td>
+								<td className="px-4 py-2">Free</td>
+								<td className="px-4 py-2">
+									<p>{FREE_TIER.summary}</p>
+									<ul className="mt-1 list-disc pl-5">
+										{FREE_TIER.permits.map((line) => (
+											<li key={line}>{line}</li>
+										))}
+									</ul>
+								</td>
+							</tr>
 							{PLANS.map((plan) => (
 								<tr className="border-t border-slate-100 align-top" key={plan.id}>
 									<td className="px-4 py-2 font-medium text-neutral-900">{plan.name}</td>

@@ -1,4 +1,4 @@
-import { PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
+import { FREE_TIER, PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 
 /**
  * schema.org JSON-LD for Markets.
@@ -54,26 +54,36 @@ export const SITE_JSON_LD: Record<string, unknown>[] = [
 		description:
 			"Portfolio management for U.S. Treasuries: tracking and attribution, cash-flow matching and immunization, stress testing, value at risk, backtesting and trade execution, on every Treasury priced daily since September 2008, with a REST API and an MCP server.",
 		publisher: organizationRef,
-		offers: PLANS.flatMap((plan) =>
-			plan.sale.kind === "checkout"
-				? [
-						{
-							"@type": "Offer",
-							name: plan.name,
-							description: plan.summary,
-							price: plan.sale.priceUsdMonthly,
-							priceCurrency: "USD",
-							priceSpecification: {
-								"@type": "UnitPriceSpecification",
+		offers: [
+			{
+				"@type": "Offer",
+				name: FREE_TIER.name,
+				description: FREE_TIER.summary,
+				price: 0,
+				priceCurrency: "USD",
+				url: `${WEB}/pricing`,
+			},
+			...PLANS.flatMap((plan) =>
+				plan.sale.kind === "checkout"
+					? [
+							{
+								"@type": "Offer",
+								name: plan.name,
+								description: plan.summary,
 								price: plan.sale.priceUsdMonthly,
 								priceCurrency: "USD",
-								unitCode: "MON",
+								priceSpecification: {
+									"@type": "UnitPriceSpecification",
+									price: plan.sale.priceUsdMonthly,
+									priceCurrency: "USD",
+									unitCode: "MON",
+								},
+								url: `${WEB}/pricing`,
 							},
-							url: `${WEB}/pricing`,
-						},
-					]
-				: [],
-		),
+						]
+					: [],
+			),
+		],
 	},
 ];
 

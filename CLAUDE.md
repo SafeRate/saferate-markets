@@ -711,3 +711,23 @@ so its "latest" curve is stale; switch it too if that starts to mislead.
   host in use; cookies are per host, so a session on one is not on the other.
 - Production sends HSTS (1 year, includeSubDomains, not preloaded);
   /.well-known/security.txt is a route so its Expires is always 180 days out.
+
+## The free tier (2026-10-06, FREE_TIER in @markets/schema)
+
+- Three tiers in requireDashboard (lib/session.server.ts): PAID (own org, no
+  limits); FREE (unpaid with a portfolio of its own: own org, writes allowed
+  within the limits); DEMO (unpaid with none: the demo org, read-only). The
+  one write the demo allows is creating a first portfolio
+  (`requireDashboard(..., { startsFreeTier: true })` on /dashboard/portfolios),
+  which goes into the account's own org and starts the free tier. Deleting
+  every portfolio puts an account back in the demo.
+- Limits (services/freeTier.server.ts): two portfolios; total value at most
+  $100,000, valued as the dashboard values it (holdings at the latest close
+  plus cash), WITH the incoming trades, checked in the trades `store` funnel
+  (add and import) and when a plan is tracked as a portfolio. Market moves
+  past the cap block new trades, never viewing. Deleting is never limited.
+- Not a Stripe plan and not in PLANS: no API or MCP (the API already refuses
+  an unentitled organization's keys). Shown first on Pricing, the home page,
+  the terms' plan table and the JSON-LD offers.
+- exercise-portfolios.ts --demo walks it end to end on an unpaid account and
+  deletes what it made, leaving the account in the demo.

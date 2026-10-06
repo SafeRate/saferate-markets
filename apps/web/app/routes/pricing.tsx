@@ -1,4 +1,9 @@
-import { CONTACT_ADDRESS, PLANS, PRODUCT_NAME } from "@markets/schema";
+import {
+	CONTACT_ADDRESS,
+	FREE_TIER,
+	PLANS,
+	PRODUCT_NAME,
+} from "@markets/schema";
 import type { Route } from "./+types/pricing";
 
 export const meta: Route.MetaFunction = () => [
@@ -30,7 +35,28 @@ export default function Pricing() {
 				history back to 2008.
 			</p>
 
-			<section className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+			<section className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+				<div className="flex flex-col rounded-xl border border-primary/30 bg-white p-6 shadow-sm">
+					<h2 className="text-lg font-semibold text-neutral-900">
+						{FREE_TIER.name}
+					</h2>
+					<p className="mt-2 text-3xl font-semibold text-neutral-900">
+						$0
+						<span className="text-base font-normal text-slate-500">/month</span>
+					</p>
+					<p className="mt-2 text-sm text-slate-600">{FREE_TIER.summary}</p>
+					<ul className="mt-4 flex-1 list-disc space-y-1.5 pl-5 text-sm text-slate-600 marker:text-primary">
+						{FREE_TIER.permits.map((line) => (
+							<li key={line}>{line}</li>
+						))}
+					</ul>
+					<a
+						className="mt-6 rounded-full border border-primary px-5 py-2 text-center text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
+						href="/sign-in"
+					>
+						Start free
+					</a>
+				</div>
 				{PLANS.map((plan) => (
 					<div
 						className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"

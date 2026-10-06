@@ -1,5 +1,5 @@
 import { readPricesOn } from "@markets/mcp-tools";
-import { PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
+import { FREE_TIER, PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import {
 	getCurvesWithPriorOn,
 	getDebtSummaryOn,
@@ -509,10 +509,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						Plans
 					</h2>
 					<p className="mt-3 max-w-2xl text-slate-600">
-						Every plan includes the full dashboard for your own portfolios; plans
-						differ in API and MCP limits and in who may use them.
+						Start free while your Treasuries are worth under $
+						{FREE_TIER.maxValueUsd.toLocaleString("en-US")}. Paid plans add the REST
+						API and MCP, and differ in limits and in who may use them.
 					</p>
-					<div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+					<div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+						<div className="rounded-2xl border border-primary/30 bg-white p-6 shadow-sm">
+							<h3 className="font-semibold text-neutral-900">{FREE_TIER.name}</h3>
+							<p className="mt-1 text-sm text-slate-600">{FREE_TIER.summary}</p>
+							<p className="mt-4 text-2xl font-semibold text-neutral-900">
+								$0
+								<span className="text-sm font-normal text-slate-500">/month</span>
+							</p>
+						</div>
 						{PLANS.map((plan) => (
 							<div
 								className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"

@@ -1,3 +1,4 @@
+import { FREE_TIER } from "@markets/schema";
 import { createPortfolio, listPortfolios } from "@markets/persistence";
 import { INCOME_POLICY_LABEL } from "@markets/portfolio";
 import { PRODUCT_NAME } from "@markets/schema";
@@ -9,7 +10,8 @@ import {
 	parseBenchmark,
 	parsePolicy,
 } from "@/lib/portfolioOptions";
-import { WriteGate } from "@/components/WriteGate";
+import { useIsDemo } from "@/components/WriteGate";
+import { freePortfolioLimitProblem } from "@/services/freeTier.server";
 import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.portfolios";
 
@@ -30,10 +32,19 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const org = await requireDashboard(request, env);
+	// Creating a first portfolio is how an unpaid account leaves the demo and
+	// starts the free tier, so this is the one write the demo allows.
+	const org = await requireDashboard(request, env, { startsFreeTier: true });
 	const form = await request.formData();
 	const namePortfolio = String(form.get("namePortfolio") ?? "").trim();
 	if (namePortfolio === "") return { error: "Give the portfolio a name." };
+	if (org.tier !== "paid") {
+		const problem = await freePortfolioLimitProblem({
+			db: env.DB,
+			idOrganization: org.idOrganization,
+		});
+		if (problem) return { error: problem };
+	}
 	const idPortfolio = await createPortfolio({
 		db: env.DB,
 		idOrganization: org.idOrganization,
@@ -52,6 +63,7 @@ export default function Portfolios({
 	actionData,
 }: Route.ComponentProps) {
 	const { portfolios } = loaderData;
+	const isDemo = useIsDemo();
 	const busy = useNavigation().state !== "idle";
 	return (
 		<main className="max-w-4xl">
@@ -108,49 +120,61 @@ export default function Portfolios({
 				</p>
 			)}
 
-			<section className="mt-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-				<h2 className="font-semibold text-neutral-900">New portfolio</h2>
-				<WriteGate to="create your own portfolios">
-					<Form className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3" method="post">
-						<label className="text-sm font-medium text-slate-700">
-							Name
-							<input className={field} maxLength={80} name="namePortfolio" required />
-						</label>
-						<label className="text-sm font-medium text-slate-700">
-							Benchmark
-							<select className={field} defaultValue="broad" name="codeBenchmark">
-								<option value="">None</option>
-								{BENCHMARK_OPTIONS.map((o) => (
-									<option key={o.code} value={o.code}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<label className="text-sm font-medium text-slate-700">
-							Coupons and proceeds
-							<select className={field} defaultValue="cash" name="policyIncome">
-								{INCOME_OPTIONS.map((o) => (
-									<option key={o.policy} value={o.policy}>
-										{o.label}
-									</option>
-								))}
-							</select>
-						</label>
-						<div className="sm:col-span-3">
-							{actionData?.error ? (
-								<p className="mb-2 text-sm text-red-700">{actionData.error}</p>
-							) : null}
-							<button
-								className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
-								disabled={busy}
-								type="submit"
-							>
-								Create portfolio
-							</button>
-						</div>
-					</Form>
-				</WriteGate>
+			<section
+				className="mt-10 scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+				id="new"
+			>
+				<h2 className="font-semibold text-neutral-900">
+					{isDemo ? "Start your own portfolio, free" : "New portfolio"}
+				</h2>
+				{isDemo ? (
+					<p className="mt-1 text-sm text-slate-600">
+						Free for up to {FREE_TIER.maxPortfolios} portfolios worth $
+						{FREE_TIER.maxValueUsd.toLocaleString("en-US")} in total. Creating one
+						switches the dashboard from the demo to your own Treasuries.
+					</p>
+				) : null}
+				{/* Not a WriteGate: creating a first portfolio is how the demo starts
+				    the free tier, so the form shows in the demo too. */}
+				<Form className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3" method="post">
+					<label className="text-sm font-medium text-slate-700">
+						Name
+						<input className={field} maxLength={80} name="namePortfolio" required />
+					</label>
+					<label className="text-sm font-medium text-slate-700">
+						Benchmark
+						<select className={field} defaultValue="broad" name="codeBenchmark">
+							<option value="">None</option>
+							{BENCHMARK_OPTIONS.map((o) => (
+								<option key={o.code} value={o.code}>
+									{o.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<label className="text-sm font-medium text-slate-700">
+						Coupons and proceeds
+						<select className={field} defaultValue="cash" name="policyIncome">
+							{INCOME_OPTIONS.map((o) => (
+								<option key={o.policy} value={o.policy}>
+									{o.label}
+								</option>
+							))}
+						</select>
+					</label>
+					<div className="sm:col-span-3">
+						{actionData?.error ? (
+							<p className="mb-2 text-sm text-red-700">{actionData.error}</p>
+						) : null}
+						<button
+							className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
+							disabled={busy}
+							type="submit"
+						>
+							Create portfolio
+						</button>
+					</div>
+				</Form>
 			</section>
 		</main>
 	);

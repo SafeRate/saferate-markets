@@ -1660,14 +1660,9 @@ const exerciseDemo = async () => {
 		"/dashboard/backtest?run=1&strategy=ladder",
 		"Rungs filled",
 	);
-	heading("Every write is refused");
+	heading("Every write to the demo is refused");
 	const first = ids.values().next().value as string;
 	for (const [what, path, fields] of [
-		[
-			"create a portfolio",
-			"/dashboard/portfolios",
-			{ namePortfolio: "Mine", codeBenchmark: "AGG", policyIncome: "cash" },
-		],
 		[
 			"add a trade to a demo portfolio",
 			`/dashboard/portfolios/${first}/transactions`,
@@ -1707,11 +1702,101 @@ const exerciseDemo = async () => {
 		: fail("the demo is unchanged afterwards", `${after.size} portfolios`);
 };
 
+/**
+ * The free tier (FREE_TIER: two portfolios, $100,000), on the same unpaid
+ * account: creating a first portfolio leaves the demo; a small trade is
+ * accepted and one that would pass the cap refused; a third portfolio is
+ * refused. Everything it creates is deleted at the end, so the account is back
+ * in the demo for the next run.
+ */
+const exerciseFreeTier = async () => {
+	heading(`The free tier, as ${EMAIL}`);
+	const created: string[] = [];
+	const firstId = await createPortfolio("Free tier test 1", "SHRT", "cash");
+	if (firstId === null) {
+		fail("creating a first portfolio starts the free tier", "no redirect to it");
+		return;
+	}
+	created.push(firstId);
+	pass("creating a first portfolio starts the free tier", firstId);
+	await expectPage(
+		"the dashboard shows the free plan, not the demo",
+		"/dashboard/portfolios",
+		"Free plan.",
+	);
+	const trade = (faceAmount: string) => ({
+		intent: "add",
+		cusip: "91282CMM0",
+		side: "buy",
+		tradeDate: "2026-09-01",
+		faceAmount,
+		cleanPrice: "96",
+	});
+	const small = await post(
+		`/dashboard/portfolios/${firstId}/transactions`,
+		trade("10000"),
+	);
+	problems(small.text).length === 0 && small.status < 400
+		? pass("a $10,000 trade is accepted")
+		: fail(
+				"a $10,000 trade is accepted",
+				`HTTP ${small.status} ${problems(small.text).join("; ")}`,
+			);
+	const large = await post(
+		`/dashboard/portfolios/${firstId}/transactions`,
+		trade("200000"),
+	);
+	problems(large.text).some((p) => p.includes("over the free plan"))
+		? pass("a trade past $100,000 is refused", problems(large.text)[0])
+		: fail(
+				"a trade past $100,000 is refused",
+				`HTTP ${large.status} ${problems(large.text).join("; ") || "no refusal shown"}`,
+			);
+	const secondId = await createPortfolio("Free tier test 2", "SHRT", "cash");
+	if (secondId) created.push(secondId);
+	secondId
+		? pass("a second portfolio is allowed")
+		: fail("a second portfolio is allowed", "no redirect");
+	const third = await post("/dashboard/portfolios", {
+		namePortfolio: "Free tier test 3",
+		codeBenchmark: "SHRT",
+		policyIncome: "cash",
+	});
+	third.location === null && third.text.includes("up to 2 portfolios")
+		? pass("a third portfolio is refused")
+		: fail(
+				"a third portfolio is refused",
+				`HTTP ${third.status} ${third.location ?? ""}`,
+			);
+	if (third.location) {
+		const id = idFrom(
+			third.location,
+			/\/dashboard\/portfolios\/([^/]+)\/transactions/,
+		);
+		if (id) created.push(id);
+	}
+
+	heading("Back to the demo");
+	for (const [i, id] of created.entries()) {
+		const name = `Free tier test ${i + 1}`;
+		await post(`/dashboard/portfolios/${id}/transactions`, {
+			intent: "deletePortfolio",
+			confirmName: name,
+		});
+	}
+	await expectPage(
+		"with no portfolios of its own, the account is back in the demo",
+		"/dashboard",
+		"Start your own portfolio",
+	);
+};
+
 // ── Run ──────────────────────────────────────────────────────────────────────
 
 await signIn();
 if (flag("demo")) {
 	await exerciseDemo();
+	await exerciseFreeTier();
 	await exerciseMarkets();
 	console.info(
 		failures === 0 ? "\nAll checks passed." : `\n${failures} check(s) failed.`,

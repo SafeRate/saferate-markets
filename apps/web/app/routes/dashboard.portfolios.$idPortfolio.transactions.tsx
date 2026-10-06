@@ -35,6 +35,7 @@ import {
 import { useIsDemo, WriteGate } from "@/components/WriteGate";
 import { requireDashboard } from "@/lib/session.server";
 import { loadSecurities, validateNewTrades } from "@/services/portfolio.server";
+import { freeValueLimitProblem } from "@/services/freeTier.server";
 import type { Route } from "./+types/dashboard.portfolios.$idPortfolio.transactions";
 
 export const meta: Route.MetaFunction = () => [
@@ -127,6 +128,15 @@ export const action = async ({
 		const problems = await validateNewTrades({ env, existing, incoming });
 		if (problems.length > 0)
 			return { intent, ok: false as const, errors: problems };
+		if (org.tier === "free") {
+			const problem = await freeValueLimitProblem({
+				env,
+				idOrganization: org.idOrganization,
+				idPortfolio: portfolio.idPortfolio,
+				incoming: incoming.map(({ label: _label, ...t }) => t),
+			});
+			if (problem) return { intent, ok: false as const, errors: [problem] };
+		}
 		const stored = await addTransactions({
 			...scope,
 			idUser: org.idUser,

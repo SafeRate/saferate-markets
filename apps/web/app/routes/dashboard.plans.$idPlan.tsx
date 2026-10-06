@@ -11,6 +11,10 @@ import { describeSecurity, face, money, price } from "@/lib/format";
 import { orderLines } from "@/lib/orders";
 import { WriteGate } from "@/components/WriteGate";
 import { requireDashboard } from "@/lib/session.server";
+import {
+	freePortfolioLimitProblem,
+	freeValueLimitProblem,
+} from "@/services/freeTier.server";
 import type { Route } from "./+types/dashboard.plans.$idPlan";
 
 export const meta: Route.MetaFunction = ({ data: loaded }) => [
@@ -66,6 +70,29 @@ export const action = async ({
 	if (intent === "portfolio") {
 		// A paper portfolio: the plan's buys at its limit prices, on its price
 		// date, settling when it would have. Adjust the trades to what was filled.
+		const incoming = plan.positions.map((p) => ({
+			cusip: p.cusip,
+			side: "buy" as const,
+			tradeDate: plan.asOf,
+			settleDate: plan.settleDate,
+			faceAmount: p.faceAmount,
+			cleanPrice: p.planPrice,
+			account: null,
+		}));
+		if (org.tier === "free") {
+			const problem =
+				(await freePortfolioLimitProblem({
+					db: env.DB,
+					idOrganization: org.idOrganization,
+				})) ??
+				(await freeValueLimitProblem({
+					env,
+					idOrganization: org.idOrganization,
+					idPortfolio: "new",
+					incoming,
+				}));
+			if (problem) return { error: problem };
+		}
 		const idPortfolio = await createPortfolio({
 			...scope,
 			namePortfolio: plan.namePlan,
@@ -77,15 +104,7 @@ export const action = async ({
 			idPortfolio,
 			idUser: org.idUser,
 			source: "manual",
-			transactions: plan.positions.map((p) => ({
-				cusip: p.cusip,
-				side: "buy" as const,
-				tradeDate: plan.asOf,
-				settleDate: plan.settleDate,
-				faceAmount: p.faceAmount,
-				cleanPrice: p.planPrice,
-				account: null,
-			})),
+			transactions: incoming,
 		});
 		return redirect(`/dashboard/portfolios/${idPortfolio}/transactions`);
 	}

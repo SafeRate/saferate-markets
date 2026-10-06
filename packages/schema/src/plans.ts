@@ -193,3 +193,30 @@ export const BETA_PLANS: readonly TPlanId[] = [
 
 /** What a card statement says. Stripe allows 22 characters. */
 export const STATEMENT_DESCRIPTOR = "SAFE RATE MARKETS";
+
+/**
+ * The free tier (Dylan, 2026-10-06): one person's own Treasuries, in the
+ * dashboard, while what they track is worth under $100,000. NOT a Stripe plan
+ * and not in PLANS: there is nothing to check out, no subscription row, and no
+ * API or MCP (an unpaid organization's keys are refused by the API already).
+ *
+ * An unpaid account sees the read-only demo until it creates its first
+ * portfolio, and its own portfolios from then on (lib/session.server.ts).
+ *
+ * The cap is the portfolios' VALUE as the dashboard reports it (holdings at the
+ * latest close, plus any cash), checked whenever trades are added, so matured
+ * bills drop out and a bill roll is not counted twice. Rising past it with the
+ * market blocks new trades, never viewing.
+ */
+export const FREE_TIER = {
+	name: "Free",
+	summary: "For one person's own Treasuries, worth under $100,000.",
+	permits: [
+		"Your own portfolios in the dashboard, up to two",
+		"Every dashboard tool: tracking, stress testing, the builder, backtests",
+		"Holdings worth up to $100,000 in total",
+		"No API or MCP access; those come with Individual",
+	],
+	maxPortfolios: 2,
+	maxValueUsd: 100_000,
+} as const;

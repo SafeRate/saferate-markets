@@ -69,7 +69,7 @@ export const LIABILITY = {
  * One date for both documents: they reference each other, and different dates
  * would make "as amended" ambiguous.
  */
-export const LEGAL_EFFECTIVE_DATE = "2026-10-05";
+export const LEGAL_EFFECTIVE_DATE = "2026-10-06";
 
 export const legalEffectiveDateLabel = () =>
 	new Date(`${LEGAL_EFFECTIVE_DATE}T00:00:00Z`).toLocaleDateString("en-US", {

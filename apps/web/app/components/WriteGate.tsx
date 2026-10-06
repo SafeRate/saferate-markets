@@ -1,3 +1,4 @@
+import { FREE_TIER } from "@markets/schema";
 import { useRouteLoaderData } from "react-router";
 
 /**
@@ -18,9 +19,16 @@ export const DemoNotice = ({ to }: { to: string }) => (
 		This is the read-only demo.{" "}
 		<a
 			className="font-medium text-primary underline underline-offset-4"
+			href="/dashboard/portfolios#new"
+		>
+			Start your own portfolio
+		</a>{" "}
+		(free under ${FREE_TIER.maxValueUsd.toLocaleString("en-US")}) or{" "}
+		<a
+			className="font-medium text-primary underline underline-offset-4"
 			href="/dashboard/billing"
 		>
-			Subscribe
+			subscribe
 		</a>{" "}
 		to {to}.
 	</p>
