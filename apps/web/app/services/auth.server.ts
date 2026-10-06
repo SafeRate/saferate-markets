@@ -150,6 +150,14 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 		secret: env.BETTER_AUTH_SECRET,
 		database: createD1Adapter({ db: env.DB }),
 		trustedOrigins: TRUSTED_ORIGINS,
+		/*
+		 * Our own cookie names. saferate.com and myapp.saferate.com set Better
+		 * Auth's default `__Secure-better-auth.session_token` on `.saferate.com`,
+		 * so on markets.saferate.com the browser sent their session alongside ours
+		 * under the same name: a magic link verified, then the dashboard bounced
+		 * to sign-in. Found 2026-10-06; an incognito window signed in fine.
+		 */
+		advanced: { cookiePrefix: "saferate-markets" },
 		emailAndPassword: { enabled: false },
 		session: {
 			expiresIn: 60 * 60 * 24 * 30,
