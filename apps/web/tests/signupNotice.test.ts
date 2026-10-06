@@ -63,6 +63,9 @@ test("the notice names the address, the time in Eastern and the host, escaping t
 	expect(notice.subject).toBe("New Safe Rate Markets sign-up: a<b>@example.com");
 	expect(notice.text).toContain("Oct 5, 2026, 12:16 PM Eastern");
 	expect(notice.text).toContain("Signed up on: markets.saferate.com");
+	expect(notice.text).toContain(
+		"Plan: 30-day Team trial, no card, through November 4.",
+	);
 	expect(notice.html).toContain("a&lt;b&gt;@example.com");
 	expect(notice.html).not.toContain("a<b>");
 });

@@ -79,7 +79,7 @@ export const action = async ({
 			cleanPrice: p.planPrice,
 			account: null,
 		}));
-		if (org.tier === "free") {
+		if (org.isLimited) {
 			const problem =
 				(await freePortfolioLimitProblem({
 					db: env.DB,

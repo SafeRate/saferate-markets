@@ -53,7 +53,7 @@ export const apiKeyAuth = () =>
 			return c.json(
 				{
 					error: "payment_required" as const,
-					message: `This key's organization has no active subscription. Subscribe at ${dashboard.replace("/keys", "/billing")}; the same key will then work.`,
+					message: `This key's organization has no active subscription, and no trial running. Subscribe at ${dashboard.replace("/keys", "/billing")}; the same key will then work.`,
 				},
 				402,
 			);

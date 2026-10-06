@@ -1,3 +1,4 @@
+import { TRIAL_MS } from "@markets/schema";
 import { z } from "zod";
 
 /**
@@ -38,7 +39,7 @@ export async function ensureOrganization(_input: TInputEnsureOrganization) {
 			.prepare(
 				/* sql */ `
 				select o.idOrganization, o.nameOrganization, o.slug,
-				       o.idStripeCustomer
+				       o.idStripeCustomer, o.trialEndsAt
 				from organizations o
 				join organizationMembers m on m.idOrganization = o.idOrganization
 				where m.idUser = ?
@@ -70,11 +71,13 @@ export async function ensureOrganization(_input: TInputEnsureOrganization) {
 				.prepare(
 					/* sql */ `
 					insert into organizations
-						(idOrganization, nameOrganization, slug, createdAt, updatedAt)
-					values (?, ?, ?, ?, ?)
+						(idOrganization, nameOrganization, slug, trialEndsAt, createdAt,
+						 updatedAt)
+					values (?, ?, ?, ?, ?, ?)
 				`,
 				)
-				.bind(idOrganization, base, slug, now, now),
+				// Every new organization starts the Team trial (TRIAL).
+				.bind(idOrganization, base, slug, now + TRIAL_MS, now, now),
 			db
 				.prepare(
 					/* sql */ `
@@ -96,6 +99,7 @@ export async function ensureOrganization(_input: TInputEnsureOrganization) {
 		nameOrganization: base,
 		slug,
 		idStripeCustomer: null,
+		trialEndsAt: now + TRIAL_MS,
 	};
 }
 

@@ -38,7 +38,7 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 	const form = await request.formData();
 	const namePortfolio = String(form.get("namePortfolio") ?? "").trim();
 	if (namePortfolio === "") return { error: "Give the portfolio a name." };
-	if (org.tier !== "paid") {
+	if (org.isLimited) {
 		const problem = await freePortfolioLimitProblem({
 			db: env.DB,
 			idOrganization: org.idOrganization,

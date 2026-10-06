@@ -3,7 +3,10 @@ import {
 	BETA_PLANS,
 	CHECKOUT_PLANS,
 	checkoutPlanById,
+	isTrialActive,
 	PRODUCT_NAME,
+	TRIAL,
+	trialLastDay,
 } from "@markets/schema";
 import { Form, redirect, useNavigation } from "react-router";
 import { requireOrganization } from "@/lib/session.server";
@@ -45,6 +48,12 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		betaPlans: BETA_PLANS as readonly string[],
 		subscription: entitled ? subscription : null,
 		currentPlan: current ? { id: current.id, name: current.name } : null,
+		// The Team trial, shown only with no subscription: a subscription
+		// replaces it, and the plan cards below are how a trialist keeps going.
+		trialLastDay:
+			!entitled && isTrialActive(org.trialEndsAt)
+				? trialLastDay(org.trialEndsAt as number)
+				: null,
 		// Only asked when it matters: an Individual subscriber who could move up.
 		switchPath:
 			current?.id === "public"
@@ -315,38 +324,53 @@ export default function Billing({
 					</p>
 				</section>
 			) : (
-				<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-					{d.plans.map((plan) => (
-						<div
-							className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-							key={plan.id}
-						>
-							<h2 className="font-semibold text-neutral-900">{plan.name}</h2>
-							<p className="mt-1 text-2xl font-semibold text-neutral-900">
-								${plan.priceUsdMonthly}
-								<span className="text-sm font-normal text-slate-500">/month</span>
+				<>
+					{d.trialLastDay ? (
+						<section className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6">
+							<h2 className="font-semibold text-neutral-900">
+								Team trial, through {d.trialLastDay}
+							</h2>
+							<p className="mt-2 text-sm text-slate-600">
+								{TRIAL.days} days of Team, with no card: every dashboard tool with no
+								limits, and your API keys at Team's rate. Choose a plan below to keep
+								going. Without one, the account moves to the free plan when the trial
+								ends, and nothing is deleted.
 							</p>
-							<p className="mt-2 text-sm text-slate-600">{plan.summary}</p>
-							<ul className="mt-3 flex-1 list-disc space-y-1 pl-5 text-sm text-slate-600 marker:text-primary">
-								{plan.permits.map((line) => (
-									<li key={line}>{line}</li>
-								))}
-							</ul>
-							<Form className="mt-5" method="post">
-								<input name="intent" type="hidden" value="subscribe" />
-								<input name="plan" type="hidden" value={plan.id} />
-								<button className={button} disabled={isBusy} type="submit">
-									Choose {plan.name}
-								</button>
-							</Form>
-							{d.betaPlans.includes(plan.id) ? (
-								<p className="mt-3 text-xs text-slate-500">
-									Beta tester? Enter your code on the checkout page.
+						</section>
+					) : null}
+					<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+						{d.plans.map((plan) => (
+							<div
+								className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+								key={plan.id}
+							>
+								<h2 className="font-semibold text-neutral-900">{plan.name}</h2>
+								<p className="mt-1 text-2xl font-semibold text-neutral-900">
+									${plan.priceUsdMonthly}
+									<span className="text-sm font-normal text-slate-500">/month</span>
 								</p>
-							) : null}
-						</div>
-					))}
-				</section>
+								<p className="mt-2 text-sm text-slate-600">{plan.summary}</p>
+								<ul className="mt-3 flex-1 list-disc space-y-1 pl-5 text-sm text-slate-600 marker:text-primary">
+									{plan.permits.map((line) => (
+										<li key={line}>{line}</li>
+									))}
+								</ul>
+								<Form className="mt-5" method="post">
+									<input name="intent" type="hidden" value="subscribe" />
+									<input name="plan" type="hidden" value={plan.id} />
+									<button className={button} disabled={isBusy} type="submit">
+										Choose {plan.name}
+									</button>
+								</Form>
+								{d.betaPlans.includes(plan.id) ? (
+									<p className="mt-3 text-xs text-slate-500">
+										Beta tester? Enter your code on the checkout page.
+									</p>
+								) : null}
+							</div>
+						))}
+					</section>
+				</>
 			)}
 
 			<p className="mt-8 text-xs text-slate-500">

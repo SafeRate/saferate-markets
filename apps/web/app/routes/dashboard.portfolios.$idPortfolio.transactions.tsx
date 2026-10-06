@@ -128,7 +128,7 @@ export const action = async ({
 		const problems = await validateNewTrades({ env, existing, incoming });
 		if (problems.length > 0)
 			return { intent, ok: false as const, errors: problems };
-		if (org.tier === "free") {
+		if (org.isLimited) {
 			const problem = await freeValueLimitProblem({
 				env,
 				idOrganization: org.idOrganization,

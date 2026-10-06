@@ -220,3 +220,43 @@ export const FREE_TIER = {
 	maxPortfolios: 2,
 	maxValueUsd: 100_000,
 } as const;
+
+/**
+ * The trial (decided 2026-10-06): every new account gets Team, in full, for 30
+ * days, with no card: sign-in is the only step. Dylan checks in with each
+ * trialist personally, so the length leaves room for two conversations.
+ *
+ * NOT a Stripe trial: that needs a checkout, which is the step this removes.
+ * It is `organizations.trialEndsAt` (migration 0007), set when the
+ * organization is created; accounts that existed on launch day got 30 days
+ * from then. Extending one is an UPDATE of that column, nothing else.
+ *
+ * While it runs, the dashboard has no free-tier limits and the API and MCP
+ * serve the organization's keys at Team's rate. When it ends without a
+ * subscription the account is on the free tier: nothing is deleted, and
+ * anything past the free limits is kept but cannot grow.
+ */
+export const TRIAL = {
+	days: 30,
+	idPlan: "team",
+} as const satisfies { days: number; idPlan: TPlanId };
+
+export const TRIAL_MS = TRIAL.days * 24 * 60 * 60 * 1000;
+
+/** Whether a trial ending at `trialEndsAt` (epoch ms, or null) is running at `now`. */
+export const isTrialActive = (
+	trialEndsAt: number | null | undefined,
+	now: number = Date.now(),
+) => typeof trialEndsAt === "number" && trialEndsAt > now;
+
+/** Whole days left, rounded up, so the last day reads "1 day left". */
+export const trialDaysLeft = (trialEndsAt: number, now: number = Date.now()) =>
+	Math.max(0, Math.ceil((trialEndsAt - now) / (24 * 60 * 60 * 1000)));
+
+/** The trial's last day as people read it, e.g. "November 5" (New York time). */
+export const trialLastDay = (trialEndsAt: number) =>
+	new Date(trialEndsAt).toLocaleDateString("en-US", {
+		month: "long",
+		day: "numeric",
+		timeZone: "America/New_York",
+	});

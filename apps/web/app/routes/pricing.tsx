@@ -1,6 +1,7 @@
 import {
 	CONTACT_ADDRESS,
 	FREE_TIER,
+	TRIAL,
 	PLANS,
 	PRODUCT_NAME,
 } from "@markets/schema";
@@ -33,6 +34,19 @@ export default function Pricing() {
 			<p className="mt-4 max-w-2xl text-lg text-slate-600">
 				Plans differ by who the data is for. Every plan includes the full daily
 				history back to 2008.
+			</p>
+			<p className="mt-4 max-w-2xl rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-slate-700">
+				<span className="font-semibold">
+					Every new account starts with {TRIAL.days} days of Team, free.
+				</span>{" "}
+				Just your email: no payment or credit card. When the trial ends, choose a
+				plan or carry on with Free; nothing you built is deleted.{" "}
+				<a
+					className="font-medium text-primary underline underline-offset-4"
+					href="/sign-in"
+				>
+					Start your trial
+				</a>
 			</p>
 
 			<section className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
