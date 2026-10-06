@@ -6,6 +6,7 @@ import {
 } from "@markets/persistence";
 import {
 	CHECKOUT_PLANS,
+	CONTACT_ADDRESS,
 	checkoutPlanById,
 	ALTERNATE_HOSTS,
 	PRODUCT_NAME,
@@ -19,7 +20,11 @@ import { magicLink } from "better-auth/plugins";
 import Stripe from "stripe";
 import { z } from "zod";
 import { resolveStripeKey } from "@/lib/stripeKey";
-import { magicLinkEmail } from "@/services/authEmail";
+import {
+	magicLinkEmail,
+	shouldNotifySignup,
+	signupNoticeEmail,
+} from "@/services/authEmail";
 import createD1Adapter from "@/services/d1Adapter";
 import {
 	isOrganizationMember,
@@ -153,6 +158,41 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 		user: {
 			// Deleting a user would orphan the organization's keys and usage rows.
 			deleteUser: { enabled: false },
+		},
+		databaseHooks: {
+			user: {
+				create: {
+					// Tell the team when someone outside saferate.com signs up
+					// (production only). Never allowed to fail the sign-up: a send that
+					// fails or is withheld is logged, and the account stands.
+					after: async (user) => {
+						if (!shouldNotifySignup({ email: user.email, environment })) return;
+						try {
+							const provider = resolveEmailProvider({
+								EMAIL: env.EMAIL,
+								MARKETS_ENV: env.MARKETS_ENV,
+								EMAIL_RECIPIENT_ALLOWLIST: env.EMAIL_RECIPIENT_ALLOWLIST,
+							});
+							const notice = signupNoticeEmail({
+								email: user.email,
+								createdAt: user.createdAt ?? new Date(),
+								siteAddress: baseURL,
+							});
+							const result = await provider.send({
+								to: CONTACT_ADDRESS,
+								from: SENDER_ADDRESS,
+								...notice,
+							});
+							if (result.status !== "sent")
+								console.warn(
+									`[auth] sign-up notice for ${user.email} not sent: ${result.status} — ${result.reason}`,
+								);
+						} catch (error) {
+							console.error(`[auth] sign-up notice for ${user.email} failed:`, error);
+						}
+					},
+				},
+			},
 		},
 		plugins: [
 			magicLink({
