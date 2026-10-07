@@ -2,7 +2,11 @@ import { TREASURY_URLS } from "@markets/mcp-tools";
 import { API_SURFACES, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import { TREASURY_COVERAGE_START } from "@saferate/treasury-client/types";
 import { JsonLd } from "@/components/JsonLd";
-import { datasetJsonLd, ORGANIZATION_ID } from "@/lib/jsonLd";
+import {
+	DATA_CATALOG_REF,
+	datasetJsonLd,
+	ORGANIZATION_REF,
+} from "@/lib/jsonLd";
 import type { Route } from "./+types/data";
 
 export const meta: Route.MetaFunction = () => [
@@ -149,11 +153,8 @@ const catalogJsonLd = () => {
 	const web = SITE_HOSTS.production.web;
 	return {
 		"@context": "https://schema.org",
-		"@type": "DataCatalog",
-		"@id": `${web}/data#catalog`,
-		name: "Safe Rate Markets U.S. Treasury data",
-		url: `${web}/data`,
-		publisher: { "@id": ORGANIZATION_ID },
+		...DATA_CATALOG_REF,
+		publisher: ORGANIZATION_REF,
 		dataset: DATASETS.map((d) =>
 			datasetJsonLd({
 				id: `${web}/data#${slugOf(d.title)}`,

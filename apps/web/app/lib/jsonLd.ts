@@ -11,6 +11,12 @@ import { FREE_TIER, PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
  * (address, NMLS, alumni) to saferate.com rather than keeping a second copy
  * that would drift.
  *
+ * EVERY REFERENCE IS A TYPED OBJECT, never a bare `{ "@id": ... }`. Each node
+ * is its own <script> block, and Google does not resolve an @id into another
+ * block: OKLocate's `brand: { "@id": ... }` was reported "Invalid object type"
+ * (2026-10-07). So a reference carries its @id, so the graph still joins, AND
+ * its @type and name, so it stands on its own. A test holds this.
+ *
  * Site-wide nodes are rendered from root's Layout, which always renders: a
  * route's `meta` REPLACES its parent's, so JSON-LD put in root `meta` would
  * appear on no page (saferate.com found exactly that). Page nodes are rendered
@@ -23,7 +29,22 @@ export const ORGANIZATION_ID = "https://saferate.com/#organization";
 const WEBSITE_ID = `${WEB}/#website`;
 const APP_ID = `${WEB}/#application`;
 
-const organizationRef = { "@id": ORGANIZATION_ID };
+/** Safe Rate, as every Markets node refers to it. */
+export const ORGANIZATION_REF = {
+	"@type": "Organization",
+	"@id": ORGANIZATION_ID,
+	name: "Safe Rate",
+	url: "https://saferate.com",
+};
+const organizationRef = ORGANIZATION_REF;
+
+/** The Data page's catalog, as a Dataset on another page refers to it. */
+export const DATA_CATALOG_REF = {
+	"@type": "DataCatalog",
+	"@id": `${WEB}/data#catalog`,
+	name: "Safe Rate Markets U.S. Treasury data",
+	url: `${WEB}/data`,
+};
 
 export const SITE_JSON_LD: Record<string, unknown>[] = [
 	{
@@ -33,6 +54,13 @@ export const SITE_JSON_LD: Record<string, unknown>[] = [
 		name: "Safe Rate",
 		url: "https://saferate.com",
 		email: "team@saferate.com",
+		// saferate.com's own logo node, a raster: Google may decline an SVG.
+		logo: {
+			"@type": "ImageObject",
+			url: "https://saferate.com/images/general/saferate-logo-290x71.png",
+			width: 290,
+			height: 71,
+		},
 	},
 	{
 		"@context": "https://schema.org",
@@ -111,7 +139,7 @@ export const datasetJsonLd = (input: {
 		? { temporalCoverage: `${input.temporalStart}/..` }
 		: {}),
 	spatialCoverage: "United States",
-	includedInDataCatalog: { "@id": `${WEB}/data#catalog` },
+	includedInDataCatalog: DATA_CATALOG_REF,
 	distribution: input.apiPaths.map((path) => ({
 		"@type": "DataDownload",
 		encodingFormat: "application/json",
