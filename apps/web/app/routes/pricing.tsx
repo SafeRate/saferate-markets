@@ -5,6 +5,8 @@ import {
 	PLANS,
 	PRODUCT_NAME,
 } from "@markets/schema";
+import { JsonLd } from "@/components/JsonLd";
+import { PRICING_PRODUCT_JSON_LD } from "@/lib/jsonLd";
 import type { Route } from "./+types/pricing";
 
 export const meta: Route.MetaFunction = () => [
@@ -25,6 +27,7 @@ export const meta: Route.MetaFunction = () => [
 export default function Pricing() {
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
+			<JsonLd data={PRICING_PRODUCT_JSON_LD} />
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				Pricing
 			</p>

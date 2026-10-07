@@ -4,6 +4,7 @@ import {
 	datasetJsonLd,
 	FOUNDER_JSON_LD,
 	ORGANIZATION_REF,
+	PRICING_PRODUCT_JSON_LD,
 	SITE_JSON_LD,
 } from "../app/lib/jsonLd";
 
@@ -36,7 +37,12 @@ const dataset = datasetJsonLd({
 });
 
 test("no node refers to another by a bare @id", () => {
-	for (const node of [...SITE_JSON_LD, ...FOUNDER_JSON_LD, dataset])
+	for (const node of [
+		...SITE_JSON_LD,
+		...FOUNDER_JSON_LD,
+		dataset,
+		PRICING_PRODUCT_JSON_LD,
+	])
 		expect(bareReferences(node)).toEqual([]);
 });
 
@@ -61,4 +67,21 @@ test("every offer has a price; a contact-sales plan publishes none", () => {
 	const offers = app?.offers as { name: string; price?: number }[];
 	expect(offers.every((o) => typeof o.price === "number")).toBe(true);
 	expect(offers.map((o) => o.name)).not.toContain("Enterprise");
+});
+
+test("the Pricing Product qualifies for product snippets: a name, and priced offers", () => {
+	const p = PRICING_PRODUCT_JSON_LD;
+	expect(p["@type"]).toBe("Product");
+	expect(p.name.length).toBeGreaterThan(0);
+	expect(p.brand).toEqual({ "@type": "Brand", name: "Safe Rate" });
+	expect(p.offers.map((o) => [o.name, o.price])).toEqual([
+		["Free", 0],
+		["Individual", 10],
+		["Team", 100],
+	]);
+	expect(
+		p.offers.every((o) => o.availability === "https://schema.org/InStock"),
+	).toBe(true);
+	// Nothing to ship, so nothing claimed about shipping or returns.
+	expect("shippingDetails" in p.offers[0]).toBe(false);
 });

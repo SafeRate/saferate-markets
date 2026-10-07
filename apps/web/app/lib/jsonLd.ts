@@ -1,4 +1,10 @@
-import { FREE_TIER, PLANS, PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
+import {
+	FREE_TIER,
+	PLANS,
+	PRODUCT_NAME,
+	SITE_HOSTS,
+	TRIAL,
+} from "@markets/schema";
 
 /**
  * schema.org JSON-LD for Markets.
@@ -46,6 +52,46 @@ export const DATA_CATALOG_REF = {
 	url: `${WEB}/data`,
 };
 
+/**
+ * What can be bought, one Offer per plan with a price: Free at $0 and each
+ * checkout plan monthly. Enterprise publishes NO Offer: it has no price, and
+ * an Offer without one is invalid ("Either price or priceSpecification should
+ * be specified"), so "contact us" stays in the page copy.
+ */
+const monthly = (price: number) => ({
+	price,
+	priceCurrency: "USD",
+	priceSpecification: {
+		"@type": "UnitPriceSpecification",
+		price,
+		priceCurrency: "USD",
+		unitCode: "MON",
+	},
+	availability: "https://schema.org/InStock",
+	url: `${WEB}/pricing`,
+});
+
+const PLAN_OFFERS = [
+	{
+		"@type": "Offer",
+		name: FREE_TIER.name,
+		description: FREE_TIER.summary,
+		...monthly(0),
+	},
+	...PLANS.flatMap((plan) =>
+		plan.sale.kind === "checkout"
+			? [
+					{
+						"@type": "Offer",
+						name: plan.name,
+						description: plan.summary,
+						...monthly(plan.sale.priceUsdMonthly),
+					},
+				]
+			: [],
+	),
+];
+
 export const SITE_JSON_LD: Record<string, unknown>[] = [
 	{
 		"@context": "https://schema.org",
@@ -82,36 +128,7 @@ export const SITE_JSON_LD: Record<string, unknown>[] = [
 		description:
 			"Portfolio management for U.S. Treasuries: tracking and attribution, cash-flow matching and immunization, stress testing, value at risk, backtesting and trade execution, on every Treasury priced daily since September 2008, with a REST API and an MCP server.",
 		publisher: organizationRef,
-		offers: [
-			{
-				"@type": "Offer",
-				name: FREE_TIER.name,
-				description: FREE_TIER.summary,
-				price: 0,
-				priceCurrency: "USD",
-				url: `${WEB}/pricing`,
-			},
-			...PLANS.flatMap((plan) =>
-				plan.sale.kind === "checkout"
-					? [
-							{
-								"@type": "Offer",
-								name: plan.name,
-								description: plan.summary,
-								price: plan.sale.priceUsdMonthly,
-								priceCurrency: "USD",
-								priceSpecification: {
-									"@type": "UnitPriceSpecification",
-									price: plan.sale.priceUsdMonthly,
-									priceCurrency: "USD",
-									unitCode: "MON",
-								},
-								url: `${WEB}/pricing`,
-							},
-						]
-					: [],
-			),
-		],
+		offers: PLAN_OFFERS,
 	},
 ];
 
@@ -174,3 +191,27 @@ export const FOUNDER_JSON_LD = [
 /** JSON for a <script> body: `<` escaped so no string can close the tag. */
 export const jsonLdScript = (value: unknown) =>
 	JSON.stringify(value).replace(/</g, "\\u003c");
+
+/**
+ * The Pricing page's Product, as oklocate.com/pricing publishes one: it makes
+ * the page eligible for Google's product snippets (the price range under the
+ * result), which take a name and offers. The site-wide node stays
+ * WebApplication, the accurate type for a subscription; this one is on
+ * /pricing only.
+ *
+ * Expect Search Console's MERCHANT LISTINGS report to stay red for it: that
+ * report wants shippingDetails and hasMerchantReturnPolicy, and a subscription
+ * has neither. Do not add them to turn it green (OKLocate, 2026-10-07).
+ */
+export const PRICING_PRODUCT_JSON_LD = {
+	"@context": "https://schema.org",
+	"@type": "Product",
+	"@id": `${WEB}/pricing#product`,
+	name: PRODUCT_NAME,
+	description: `Portfolio management for U.S. Treasuries, with a REST API and an MCP server. Every new account starts with a ${TRIAL.days}-day Team trial, no card required.`,
+	url: `${WEB}/pricing`,
+	image: `${WEB}/og.png`,
+	category: "Fixed income portfolio management software",
+	brand: { "@type": "Brand", name: "Safe Rate" },
+	offers: PLAN_OFFERS,
+};
