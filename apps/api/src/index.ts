@@ -137,7 +137,9 @@ app.get(
 	Scalar({ url: "/openapi.json", pageTitle: `${PRODUCT_NAME} API reference` }),
 );
 
-app.get("/", (c) => c.redirect("/reference", 302));
+// 301: a 302 tells a crawler both URLs are live, and OKLocate's was filed as
+// "Duplicate without user-selected canonical" for it (2026-10-07).
+app.get("/", (c) => c.redirect("/reference", 301));
 
 // JSON to the last byte. A client should never parse an HTML error page.
 app.notFound((c) =>

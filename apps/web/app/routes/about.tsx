@@ -1,6 +1,6 @@
 import { CONTACT_ADDRESS, PRODUCT_NAME } from "@markets/schema";
 import { JsonLd } from "@/components/JsonLd";
-import { FOUNDER_JSON_LD, ORGANIZATION_ID } from "@/lib/jsonLd";
+import { FOUNDER_JSON_LD, ORGANIZATION_REF } from "@/lib/jsonLd";
 import type { Route } from "./+types/about";
 
 export const meta: Route.MetaFunction = () => [
@@ -75,7 +75,7 @@ export default function About() {
 					"@type": "AboutPage",
 					url: "https://saferate.markets/about",
 					name: "About Safe Rate Markets",
-					mainEntity: { "@id": ORGANIZATION_ID },
+					mainEntity: ORGANIZATION_REF,
 				}}
 			/>
 			{FOUNDER_JSON_LD.map((person) => (
