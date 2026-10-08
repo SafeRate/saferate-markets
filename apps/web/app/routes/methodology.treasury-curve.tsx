@@ -244,10 +244,9 @@ export default function TreasuryCurveMethodology() {
 					off-the-run securities.
 				</p>
 				<p>
-					Three methods and three times of day mean the curves differ by a few basis
-					points from day to day, without any of them being wrong. The spread pages
-					show the H.15 constant-maturity spread as a labeled reference line beside
-					this one.
+					Three methods and three times of day mean the curves differ from day to day
+					without any of them being wrong. The spread pages show the H.15
+					constant-maturity spread as a labeled reference line beside this one.
 				</p>
 			</Section>
 
