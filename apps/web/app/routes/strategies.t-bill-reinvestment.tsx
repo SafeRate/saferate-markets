@@ -210,8 +210,10 @@ const TermTabs = ({ bills }: { bills: TBillReinvestment }) => {
 							<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
 								<tr>
 									<th className={th}>Over the next year</th>
-									<th className={`${th} text-right`}>Roll {term.label}</th>
-									<th className={`${th} text-right`}>Lock in 52-week</th>
+									<th className={`${th} text-right`}>
+										Roll {term.label}, APY equivalent
+									</th>
+									<th className={`${th} text-right`}>Lock in 52-week, APY equivalent</th>
 									<th className={`${th} text-right`}>Earns more</th>
 								</tr>
 							</thead>
@@ -260,12 +262,13 @@ const TermTabs = ({ bills }: { bills: TBillReinvestment }) => {
 					Track a bill roll
 				</Link>
 				<p className="mt-3 max-w-3xl text-xs text-slate-500">
-					Return for the year on {money(bills.amount)}, with the interest in
-					brackets, every maturing bill reinvested in full, before taxes. The return
-					is the interest divided by the amount, so it sits slightly above the quoted
-					investment rate, which is stated with semiannual compounding. Treasury bill
-					interest is exempt from state and local income tax. Rates priced in are
-					what today's bill prices imply, not a forecast by Safe Rate.¹
+					APY equivalent: the return for the year on {money(bills.amount)}, with the
+					interest in brackets, every maturing bill reinvested in full, before taxes.
+					It compares directly with the APY a bank quotes on a CD or savings account.
+					It sits slightly above the quoted investment rate, which is stated with
+					semiannual compounding. Treasury bill interest is exempt from state and
+					local income tax. Rates priced in are what today's bill prices imply, not a
+					forecast by Safe Rate.¹
 				</p>
 			</div>
 		</div>
