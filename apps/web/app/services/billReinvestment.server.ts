@@ -75,6 +75,11 @@ const SHIFTS = [
 	{ key: "forwards", label: "Rates move as the market prices them" },
 	{ key: "flat", label: "Rates stay at today's level" },
 	{
+		key: "up50",
+		label: "Rates end up 0.5 points higher than priced",
+		shiftBp: 50,
+	},
+	{
 		key: "down50",
 		label: "Rates end up 0.5 points lower than priced",
 		shiftBp: -50,
@@ -134,6 +139,7 @@ export const loadBillReinvestment = async (env: TEnv, amount: number) => {
 			return {
 				key: s.key,
 				ratePercent: rateFor(growth, horizon),
+				returnPercent: (growth - 1) * 100,
 				income: amount * (growth - 1),
 			};
 		});
@@ -165,6 +171,7 @@ export const loadBillReinvestment = async (env: TEnv, amount: number) => {
 		outcomes: SHIFTS.map((sh) => ({
 			key: sh.key,
 			ratePercent: yearRate,
+			returnPercent: (growthAt(yearRate, horizon) - 1) * 100,
 			income: yearIncome,
 		})),
 	};
@@ -182,6 +189,7 @@ export const loadBillReinvestment = async (env: TEnv, amount: number) => {
 		pricedLater,
 		yearRate,
 		yearIncome,
+		yearReturnPercent: (growthAt(yearRate, horizon) - 1) * 100,
 		terms: [
 			...terms.map((t) => ({ ...t, breakeven: t.breakeven as number | null })),
 			held,

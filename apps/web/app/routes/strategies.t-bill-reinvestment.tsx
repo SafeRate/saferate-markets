@@ -117,6 +117,24 @@ const Answer = ({ bills }: { bills: TBillReinvestment }) => {
 	);
 };
 
+/** A return for the year, with the interest in dollars after it. */
+const ReturnCell = ({
+	income,
+	percent,
+}: {
+	income: number;
+	percent: number;
+}) => (
+	<>
+		{percent.toFixed(2)}%{" "}
+		<span className="text-xs text-slate-500">({money(income)})</span>
+	</>
+);
+
+/** The Builder's bill-roll template, filled in, after sign-in. */
+const trackLink = (amount: number) =>
+	`/sign-in?next=${encodeURIComponent(`/dashboard/builder?mode=strategy&strategy=billRoll&budget=${Math.max(amount, 1000)}`)}`;
+
 const winnerOf = (roll: number, hold: number) =>
 	Math.abs(roll - hold) < 1 ? "Same" : roll > hold ? "Rolling" : "52-week bill";
 
@@ -204,8 +222,15 @@ const TermTabs = ({ bills }: { bills: TBillReinvestment }) => {
 									return (
 										<tr className="border-t border-slate-100" key={s.key}>
 											<td className="px-4 py-2 text-neutral-900">{s.label}</td>
-											<td className={td}>{money(roll.income)}</td>
-											<td className={td}>{money(bills.yearIncome)}</td>
+											<td className={td}>
+												<ReturnCell income={roll.income} percent={roll.returnPercent} />
+											</td>
+											<td className={td}>
+												<ReturnCell
+													income={bills.yearIncome}
+													percent={bills.yearReturnPercent}
+												/>
+											</td>
 											<td className={`${td} font-medium text-neutral-900`}>
 												{winnerOf(roll.income, bills.yearIncome)}
 											</td>
@@ -228,11 +253,19 @@ const TermTabs = ({ bills }: { bills: TBillReinvestment }) => {
 						))}
 					</ul>
 				</details>
+				<Link
+					className="mt-4 inline-block rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+					to={trackLink(bills.amount)}
+				>
+					Track a bill roll
+				</Link>
 				<p className="mt-3 max-w-3xl text-xs text-slate-500">
-					Interest on {money(bills.amount)} over one year with every maturing bill
-					reinvested in full, before taxes. Treasury bill interest is exempt from
-					state and local income tax. Rates priced in are what today's bill prices
-					imply, not a forecast by Safe Rate.¹
+					Return for the year on {money(bills.amount)}, with the interest in
+					brackets, every maturing bill reinvested in full, before taxes. The return
+					is the interest divided by the amount, so it sits slightly above the quoted
+					investment rate, which is stated with semiannual compounding. Treasury bill
+					interest is exempt from state and local income tax. Rates priced in are
+					what today's bill prices imply, not a forecast by Safe Rate.¹
 				</p>
 			</div>
 		</div>
@@ -366,7 +399,7 @@ export default function TBillReinvestmentPage({
 				</p>
 				<Link
 					className="mt-4 inline-block rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-					to={`/sign-in?next=${encodeURIComponent(`/dashboard/builder?mode=strategy&strategy=billRoll&budget=${Math.max(amount, 1000)}`)}`}
+					to={trackLink(amount)}
 				>
 					Track a bill roll
 				</Link>
