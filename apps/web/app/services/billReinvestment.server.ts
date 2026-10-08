@@ -72,20 +72,30 @@ export const TERMS = [
 ] as const;
 
 const SHIFTS = [
-	{ key: "forwards", label: "Rates as the curve prices them" },
-	{ key: "flat", label: "Rates stay where they are today" },
-	{ key: "up50", label: "Rates 50 bp above the curve's pricing", shiftBp: 50 },
+	{ key: "forwards", label: "Rates move as the market prices them" },
+	{ key: "flat", label: "Rates stay at today's level" },
 	{
 		key: "down50",
-		label: "Rates 50 bp below the curve's pricing",
+		label: "Rates end up 0.5 points lower than priced",
 		shiftBp: -50,
 	},
-	{
-		key: "down100",
-		label: "Rates 100 bp below the curve's pricing",
-		shiftBp: -100,
-	},
 ] as const;
+
+/**
+ * How far the priced 3-month rate must move over the year before the page
+ * says it is rising or falling rather than "about the same", in percentage
+ * points. Ten basis points: below that the direction is noise in the fit.
+ */
+const DIRECTION_THRESHOLD = 0.1;
+
+export type TDirection = "rise" | "fall" | "stay about the same";
+
+export const directionOf = (from: number, to: number): TDirection =>
+	to - from > DIRECTION_THRESHOLD
+		? "rise"
+		: from - to > DIRECTION_THRESHOLD
+			? "fall"
+			: "stay about the same";
 
 const addDays = (iso: string, days: number) => {
 	const d = new Date(`${iso}T00:00:00Z`);
@@ -135,18 +145,47 @@ export const loadBillReinvestment = async (env: TEnv, amount: number) => {
 			rolls: atForwards.steps.length,
 			schedule: atForwards.steps.map((s) => ({
 				date: addDays(date, s.startYears * 364),
+				startYears: s.startYears,
+				endYears: s.startYears + term.years,
 				rate: s.pricedRate,
 			})),
 			outcomes,
 		};
 	});
 
+	// The 52-week bill as a fourth "roll" of one step, so every tab on the
+	// page reads the same shape: its rate is fixed, so every case earns the same.
+	const held = {
+		key: "52w",
+		label: "52-week",
+		todayRate: yearRate,
+		breakeven: null,
+		rolls: 1,
+		schedule: [{ date, startYears: 0, endYears: horizon, rate: yearRate }],
+		outcomes: SHIFTS.map((sh) => ({
+			key: sh.key,
+			ratePercent: yearRate,
+			income: yearIncome,
+		})),
+	};
+	const thirteenWeek = terms.find((t) => t.key === "13w");
+	const pricedLater = thirteenWeek?.schedule.at(-1) ?? null;
+	const direction = directionOf(
+		thirteenWeek?.todayRate ?? yearRate,
+		pricedLater?.rate ?? yearRate,
+	);
+
 	return {
 		asOf: date,
 		amount,
+		direction,
+		pricedLater,
 		yearRate,
 		yearIncome,
-		terms,
+		terms: [
+			...terms.map((t) => ({ ...t, breakeven: t.breakeven as number | null })),
+			held,
+		],
 		scenarios: SHIFTS.map((s) => ({ key: s.key, label: s.label })),
 	};
 };

@@ -1,6 +1,8 @@
 import { PRODUCT_NAME, SITE_HOSTS, TRIAL } from "@markets/schema";
+import { useState } from "react";
 import { Form, Link } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
+import { StepChart } from "@/components/StepChart";
 import { breadcrumbJsonLd, ORGANIZATION_REF } from "@/lib/jsonLd";
 import { money, rate } from "@/lib/format";
 import {
@@ -18,7 +20,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: "description",
 		content:
-			"What rolling 4-, 13- or 26-week Treasury bills has to earn to match today's 52-week bill: the breakeven reinvestment rate, the rates the bill curve prices for each reinvestment, and what a roll earns if rates fall or rise. Updated every business day.",
+			"Should you keep rolling short Treasury bills or lock in a 52-week bill? What the bill market is pricing for 3-month rates over the next year, the rate rolling needs to catch up, and who comes out ahead if rates rise, stay flat or fall. Updated every business day.",
 	},
 ];
 
@@ -57,8 +59,6 @@ const longDate = (iso: string) =>
 		year: "numeric",
 		timeZone: "UTC",
 	});
-const signedMoney = (value: number) =>
-	`${value > 0 ? "+" : value < 0 ? "−" : ""}${money(Math.abs(value))}`;
 
 const Section = ({
 	title,
@@ -78,29 +78,172 @@ const Section = ({
 const th = "px-4 py-2 font-semibold";
 const td = "px-4 py-2 text-right tabular-nums";
 
+const monthYear = (iso: string) =>
+	new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+		month: "long",
+		year: "numeric",
+		timeZone: "UTC",
+	});
+
+/**
+ * The page's answer, in the order a reader asks it: which way the market is
+ * pricing rates, what that means for rolling against locking in, and who wins
+ * otherwise. The direction is computed from the day's curve (`directionOf`),
+ * so the sentence stays true when the curve flips.
+ */
 const Answer = ({ bills }: { bills: TBillReinvestment }) => {
 	const thirteen = bills.terms.find((t) => t.key === "13w");
 	const flat = thirteen?.outcomes.find((o) => o.key === "flat");
-	if (!thirteen || !flat) return null;
-	const gap = flat.income - bills.yearIncome;
+	const later = bills.pricedLater;
+	if (!thirteen || !flat || !later) return null;
+	const gap = bills.yearIncome - flat.income;
+	const pricing =
+		bills.direction === "stay about the same"
+			? `The bill market is pricing 3-month rates to stay about where they are, near ${rate(thirteen.todayRate, 2)}, through ${monthYear(later.date)}.`
+			: `The bill market is pricing 3-month rates to ${bills.direction} from ${rate(thirteen.todayRate, 2)} today to about ${rate(later.rate, 2)} by ${monthYear(later.date)}.`;
 	return (
-		<p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-700">
-			On {longDate(bills.asOf)}, the 52-week Treasury bill yields{" "}
-			{rate(bills.yearRate, 2)}. Rolling 13-week bills for a year earns the same
-			only if the next three 13-week bills average {rate(thirteen.breakeven, 2)} or
-			more; today's 13-week bill yields {rate(thirteen.todayRate, 2)}. If bill
-			rates stay where they are, rolling earns {rate(flat.ratePercent, 2)}, which
-			on {money(bills.amount)} is {signedMoney(gap)} against the 52-week bill.
-		</p>
+		<div className="mt-5 max-w-3xl space-y-3 text-lg leading-relaxed text-slate-700">
+			<p>
+				{pricing} If that happens, rolling 13-week bills and locking in today's
+				52-week bill at {rate(bills.yearRate, 2)} earn the same over the year.
+			</p>
+			<p>
+				Locking in earns more if rates come in below that path: if they stay where
+				they are, the 52-week bill earns {money(Math.abs(gap))}{" "}
+				{gap >= 0 ? "more" : "less"} on {money(bills.amount)}. Rolling earns more
+				only if rates climb faster than the market prices.
+			</p>
+		</div>
 	);
 };
 
-export default function TBillReinvestment({
+const winnerOf = (roll: number, hold: number) =>
+	Math.abs(roll - hold) < 1 ? "Same" : roll > hold ? "Rolling" : "52-week bill";
+
+const shortDate = (iso: string) =>
+	new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		timeZone: "UTC",
+	});
+
+/**
+ * One tab per way of holding cash for the year: roll 4-, 13- or 26-week bills,
+ * or hold the 52-week bill. Each shows the bills it buys as steps (the x axis
+ * is the purchase dates), the rate priced in for each, and who comes out
+ * ahead in each case. The 13-week tab is the server-rendered default, so the
+ * page reads completely without script.
+ */
+const TermTabs = ({ bills }: { bills: TBillReinvestment }) => {
+	const [selected, setSelected] = useState("13w");
+	const term = bills.terms.find((t) => t.key === selected) ?? bills.terms[0];
+	const isHeld = term.key === "52w";
+	const first = term.schedule[0];
+	const last = term.schedule.at(-1) ?? first;
+	return (
+		<div className="mt-4">
+			<div
+				aria-label="How the cash is held"
+				className="flex flex-wrap gap-2"
+				role="tablist"
+			>
+				{bills.terms.map((t) => (
+					<button
+						aria-controls="term-panel"
+						aria-selected={t.key === term.key}
+						className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
+							t.key === term.key
+								? "border-primary bg-primary text-primary-foreground"
+								: "border-slate-300 text-slate-700 hover:border-primary/50"
+						}`}
+						key={t.key}
+						onClick={() => setSelected(t.key)}
+						role="tab"
+						type="button"
+					>
+						{t.key === "52w" ? "Hold 52-week" : `Roll ${t.label}`}
+					</button>
+				))}
+			</div>
+			<div className="mt-4" id="term-panel" role="tabpanel">
+				<p className="max-w-3xl text-slate-700">
+					{isHeld
+						? `One bill, bought today at ${rate(term.todayRate, 2)} and held for the year. Nothing is reinvested, so the rate is fixed whatever happens.`
+						: `${term.rolls} bills over the year, each held until it matures and then rolled into the next. The first is bought today at ${rate(first.rate, 2)}; the market prices the last, bought around ${shortDate(last.date)}, at ${rate(last.rate, 2)}.`}
+				</p>
+				<div className="mt-4 max-w-4xl rounded-xl border border-slate-200 bg-white p-4">
+					<StepChart
+						format={(v) => `${v.toFixed(2)}%`}
+						reference={{
+							rate: bills.yearRate,
+							label: `52-week bill locked in today, ${rate(bills.yearRate, 2)}`,
+						}}
+						steps={term.schedule.map((s, i) => ({
+							startYears: s.startYears,
+							endYears: s.endYears,
+							rate: s.rate,
+							label: i === 0 ? "Today" : shortDate(s.date),
+						}))}
+					/>
+				</div>
+				{isHeld ? null : (
+					<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+						<table className="w-full min-w-[36rem] border-collapse text-sm">
+							<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+								<tr>
+									<th className={th}>Over the next year</th>
+									<th className={`${th} text-right`}>Roll {term.label}</th>
+									<th className={`${th} text-right`}>Lock in 52-week</th>
+									<th className={`${th} text-right`}>Earns more</th>
+								</tr>
+							</thead>
+							<tbody>
+								{bills.scenarios.map((s) => {
+									const roll = term.outcomes.find((o) => o.key === s.key);
+									if (!roll) return null;
+									return (
+										<tr className="border-t border-slate-100" key={s.key}>
+											<td className="px-4 py-2 text-neutral-900">{s.label}</td>
+											<td className={td}>{money(roll.income)}</td>
+											<td className={td}>{money(bills.yearIncome)}</td>
+											<td className={`${td} font-medium text-neutral-900`}>
+												{winnerOf(roll.income, bills.yearIncome)}
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				)}
+				<details className="mt-3 max-w-3xl text-sm text-slate-600">
+					<summary className="cursor-pointer font-medium text-slate-700">
+						Each purchase and the rate priced in
+					</summary>
+					<ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+						{term.schedule.map((s, i) => (
+							<li className="tabular-nums" key={s.date}>
+								{i === 0 ? "Today" : shortDate(s.date)}: {rate(s.rate, 2)}
+							</li>
+						))}
+					</ul>
+				</details>
+				<p className="mt-3 max-w-3xl text-xs text-slate-500">
+					Interest on {money(bills.amount)} over one year with every maturing bill
+					reinvested in full, before taxes. Treasury bill interest is exempt from
+					state and local income tax. Rates priced in are what today's bill prices
+					imply, not a forecast by Safe Rate.¹
+				</p>
+			</div>
+		</div>
+	);
+};
+
+export default function TBillReinvestmentPage({
 	loaderData,
 }: Route.ComponentProps) {
 	const { bills, amount } = loaderData;
 	const web = SITE_HOSTS.production.web;
-	const thirteen = bills?.terms.find((t) => t.key === "13w");
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
 			<JsonLd
@@ -142,130 +285,9 @@ export default function TBillReinvestment({
 
 			{bills ? (
 				<>
-					<Section title="What each roll has to beat">
-						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-							<table className="w-full min-w-[36rem] border-collapse text-sm">
-								<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-									<tr>
-										<th className={th}>Roll</th>
-										<th className={`${th} text-right`}>Today's rate</th>
-										<th className={`${th} text-right`}>Bills in a year</th>
-										<th className={`${th} text-right`}>Breakeven reinvestment rate</th>
-									</tr>
-								</thead>
-								<tbody>
-									{bills.terms.map((t) => (
-										<tr className="border-t border-slate-100" key={t.key}>
-											<td className="px-4 py-2 text-neutral-900">{t.label} bills</td>
-											<td className={td}>{rate(t.todayRate, 2)}</td>
-											<td className={td}>{t.rolls}</td>
-											<td className={td}>{rate(t.breakeven, 2)}</td>
-										</tr>
-									))}
-									<tr className="border-t border-slate-100 bg-slate-50/60">
-										<td className="px-4 py-2 font-medium text-neutral-900">
-											52-week bill, held
-										</td>
-										<td className={td}>{rate(bills.yearRate, 2)}</td>
-										<td className={td}>1</td>
-										<td className={td}>None needed</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-						<p className="mt-2 max-w-3xl text-sm text-slate-600">
-							The breakeven is the average rate the bills after the first must earn for
-							the roll to match the 52-week bill over the same year. The first bill is
-							bought today at today's rate.
-						</p>
-					</Section>
-
-					{thirteen ? (
-						<Section title="The rate the curve prices for each 13-week reinvestment">
-							<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-								<table className="w-full min-w-[24rem] border-collapse text-sm">
-									<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-										<tr>
-											<th className={th}>Bill bought around</th>
-											<th className={`${th} text-right`}>Rate</th>
-										</tr>
-									</thead>
-									<tbody>
-										{thirteen.schedule.map((s, i) => (
-											<tr className="border-t border-slate-100" key={s.date}>
-												<td className="px-4 py-2 text-neutral-900">
-													{longDate(s.date)}
-													{i === 0 ? " (today)" : ""}
-												</td>
-												<td className={td}>{rate(s.rate, 2)}</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-							<p className="mt-2 max-w-3xl text-sm text-slate-600">
-								These are implied forward rates: what today's bill prices already imply
-								for each future 13-week bill. They are the market's pricing, read off
-								Safe Rate's fitted bill curve, not a forecast by Safe Rate.
-							</p>
-						</Section>
-					) : null}
-
-					<Section title={`One year on ${money(bills.amount)}`}>
-						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-							<table className="w-full min-w-[44rem] border-collapse text-sm">
-								<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-									<tr>
-										<th className={th}>If reinvestment rates are</th>
-										{bills.terms.map((t) => (
-											<th className={`${th} text-right`} key={t.key}>
-												Roll {t.label}
-											</th>
-										))}
-										<th className={`${th} text-right`}>Hold 52-week</th>
-									</tr>
-								</thead>
-								<tbody>
-									{bills.scenarios.map((s) => (
-										<tr className="border-t border-slate-100" key={s.key}>
-											<td className="px-4 py-2 text-neutral-900">{s.label}</td>
-											{bills.terms.map((t) => {
-												const o = t.outcomes.find((x) => x.key === s.key);
-												return (
-													<td className={td} key={t.key}>
-														{o ? (
-															<>
-																{money(o.income)}{" "}
-																<span className="text-xs text-slate-500">
-																	{rate(o.ratePercent, 2)}
-																</span>
-															</>
-														) : (
-															"—"
-														)}
-													</td>
-												);
-											})}
-											<td className={td}>
-												{money(bills.yearIncome)}{" "}
-												<span className="text-xs text-slate-500">
-													{rate(bills.yearRate, 2)}
-												</span>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-						<p className="mt-2 max-w-3xl text-xs text-slate-500">
-							Interest earned over one year, with each maturing bill reinvested in
-							full. The 52-week bill's income is fixed when it is bought; a roll's
-							depends on the rates at each reinvestment. "Stay where they are" holds
-							each roll at today's rate for its term. Rates are bond-equivalent yields,
-							the basis TreasuryDirect calls the investment rate. Before taxes;
-							Treasury bill interest is exempt from state and local income tax.
-						</p>
-						<Form className="mt-4 flex flex-wrap items-end gap-3" method="get">
+					<Section title="Roll or lock in, one bill at a time">
+						<TermTabs bills={bills} />
+						<Form className="mt-6 flex flex-wrap items-end gap-3" method="get">
 							<label className="text-sm text-slate-700" htmlFor="amount">
 								Amount
 								<input
@@ -286,6 +308,36 @@ export default function TBillReinvestment({
 							<span className="text-xs text-slate-500">$100 to $10,000,000.</span>
 						</Form>
 					</Section>
+
+					<Section title="The rate rolling needs to catch up">
+						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+							<table className="w-full min-w-[36rem] border-collapse text-sm">
+								<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+									<tr>
+										<th className={th}>Keep rolling</th>
+										<th className={`${th} text-right`}>Rate today</th>
+										<th className={`${th} text-right`}>Later bills need to average</th>
+									</tr>
+								</thead>
+								<tbody>
+									{bills.terms
+										.filter((t) => t.breakeven !== null)
+										.map((t) => (
+											<tr className="border-t border-slate-100" key={t.key}>
+												<td className="px-4 py-2 text-neutral-900">{t.label} bills</td>
+												<td className={td}>{rate(t.todayRate, 2)}</td>
+												<td className={td}>{rate(t.breakeven, 2)}</td>
+											</tr>
+										))}
+								</tbody>
+							</table>
+						</div>
+						<p className="mt-2 max-w-3xl text-sm text-slate-600">
+							To match locking in the 52-week bill at {rate(bills.yearRate, 2)}, the
+							bills bought after today's must average at least this much over the rest
+							of the year.
+						</p>
+					</Section>
 				</>
 			) : null}
 
@@ -298,16 +350,10 @@ export default function TBillReinvestment({
 						maturing bill into the same term.
 					</p>
 					<p>
-						Rolling short bills keeps money available and follows rates as they move,
-						up or down. Holding a 52-week bill fixes the rate for the year. Which
-						earns more depends only on where bill rates go, and the breakeven above is
-						the line between the two.
-					</p>
-					<p>
-						When the bill curve slopes up, as it does today, the 52-week bill pays
-						more than a short bill, and the curve prices later short bills higher too.
-						Rolling comes out ahead only if those later bills beat what the curve
-						prices.
+						Rolling short bills keeps money available sooner and follows rates as they
+						move, up or down. Holding a 52-week bill fixes the rate for the year.
+						Which earns more depends only on where bill rates go, and the catch-up
+						rate above is the line between the two.
 					</p>
 				</div>
 			</Section>
@@ -336,8 +382,13 @@ export default function TBillReinvestment({
 						government publication.
 					</li>
 					<li>
-						Implied forwards are calculated from that curve's discount factors on a
-						bond-equivalent basis. How the coupon curve is fitted:{" "}
+						¹ The rates priced in are implied forward rates, calculated from the bill
+						curve's discount factors on a bond-equivalent basis, the basis
+						TreasuryDirect calls the investment rate. Bill prices also reflect how
+						many bills Treasury is selling and what investors pay for shorter
+						maturities, so they are the market's price for later rates rather than a
+						pure prediction. Futures on SOFR and fed funds price the same question
+						more directly. How the coupon curve is fitted:{" "}
 						<Link
 							className="text-primary underline underline-offset-4"
 							to="/methodology/treasury-curve"
