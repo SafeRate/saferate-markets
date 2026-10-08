@@ -19,6 +19,7 @@ export default [
 	route("privacy", "./routes/privacy.tsx"),
 	route("privacy-choices", "./routes/privacy-choices.tsx"),
 	route("terms", "./routes/terms.tsx"),
+	route("strategies", "./routes/strategies.tsx"),
 	route("strategies/ladder-5y", "./routes/strategies.ladder-5y.tsx"),
 	route(
 		"strategies/t-bill-reinvestment",
@@ -48,6 +49,9 @@ export default [
 	}),
 	route("terms.txt", "./routes/page-twin.ts", { id: "twin:terms.txt" }),
 	route("privacy.txt", "./routes/page-twin.ts", { id: "twin:privacy.txt" }),
+	route("strategies.txt", "./routes/page-twin.ts", {
+		id: "twin:strategies.txt",
+	}),
 	route("strategies/ladder-5y.txt", "./routes/page-twin.ts", {
 		id: "twin:strategies/ladder-5y.txt",
 	}),
