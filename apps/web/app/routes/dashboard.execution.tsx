@@ -6,7 +6,7 @@ import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.execution";
 
 export const meta: Route.MetaFunction = () => [
-	{ title: `Trade Execution | ${PRODUCT_NAME}` },
+	{ title: `Order Sheets | ${PRODUCT_NAME}` },
 ];
 
 const METHOD_LABEL: Record<string, string> = {
@@ -41,7 +41,7 @@ export default function Execution({ loaderData }: Route.ComponentProps) {
 	return (
 		<main className="max-w-5xl">
 			<h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-				Trade Execution
+				Order Sheets
 			</h1>
 			<p className="mt-2 text-sm text-slate-600">
 				Order sheets from saved Builder plans, split between the secondary market

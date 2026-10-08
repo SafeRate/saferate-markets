@@ -6,7 +6,7 @@ export const meta: Route.MetaFunction = () => [
 	{
 		name: "description",
 		content:
-			"What Safe Rate Markets does and how: portfolio construction (cash-flow matching, immunization, horizon matching, index tracking), stress testing by full repricing, value at risk from filtered historical simulation, backtesting, return attribution and trade execution for U.S. Treasury portfolios.",
+			"What Safe Rate Markets does and how: portfolio construction (cash-flow matching, immunization, horizon matching, index tracking), stress testing by full repricing, value at risk from filtered historical simulation, backtesting, return attribution and order sheets for U.S. Treasury portfolios.",
 	},
 ];
 
@@ -134,15 +134,15 @@ const CAPABILITIES: TCapability[] = [
 	},
 	{
 		id: "execution",
-		kicker: "Trading",
+		kicker: "Orders",
 		title: "From plan to order sheet",
 		what:
 			"Turn a plan into orders with limit prices, split between what TreasuryDirect can fill at auction and what goes to the secondary market, ready for any broker or custodian.",
 		how: [
 			"One BUY per position, limited at the plan's clean price, in the lot rules you chose, with the TreasuryDirect alternative alongside: the same term at its next auction, flagged where it would exceed TreasuryDirect's $10 million limit.",
-			"Downloads as a CSV in common blotter columns, so it opens in a spreadsheet or maps onto a broker's basket upload; or track the plan as a portfolio. Sending orders to a broker directly is planned, not built.",
+			"Downloads as a CSV in common blotter columns, so it opens in a spreadsheet or maps onto a broker's basket upload; or track the plan as a portfolio. Safe Rate does not place or route orders: you submit them yourself, to your broker or TreasuryDirect.",
 		],
-		page: { label: "Trade Execution", to: "/dashboard/execution" },
+		page: { label: "Order Sheets", to: "/dashboard/execution" },
 	},
 	{
 		id: "analytics",

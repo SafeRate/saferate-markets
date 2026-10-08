@@ -40,9 +40,7 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 	},
 	{
 		title: "Trading",
-		items: [
-			{ kind: "link", label: "Trade Execution", to: "/dashboard/execution" },
-		],
+		items: [{ kind: "link", label: "Order Sheets", to: "/dashboard/execution" }],
 	},
 	{
 		title: "Account",
