@@ -1,5 +1,6 @@
 import { PRODUCT_NAME, TRIAL } from "@markets/schema";
-import { Form, useNavigation } from "react-router";
+import { Form, useNavigation, useSearchParams } from "react-router";
+import { safeNext } from "@/lib/signInNext";
 import { getAuth } from "@/services/auth.server";
 import type { Route } from "./+types/sign-in";
 
@@ -27,10 +28,11 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 	}
 
 	const env = context.cloudflare.env;
+	const next = safeNext(formData.get("next"));
 	try {
 		const auth = getAuth({ env, request });
 		await auth.api.signInMagicLink({
-			body: { email, callbackURL: "/dashboard" },
+			body: { email, callbackURL: next },
 			headers: request.headers,
 		});
 	} catch (error) {
@@ -44,6 +46,7 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 
 const SignIn = ({ actionData }: Route.ComponentProps) => {
 	const navigation = useNavigation();
+	const [searchParams] = useSearchParams();
 	const isSubmitting = navigation.state === "submitting";
 
 	if (actionData?.status === "sent") {
@@ -86,6 +89,7 @@ const SignIn = ({ actionData }: Route.ComponentProps) => {
 			</p>
 
 			<Form className="mt-8 flex flex-col gap-3" method="post">
+				<input name="next" type="hidden" value={searchParams.get("next") ?? ""} />
 				<label className="text-sm font-medium" htmlFor="email">
 					Work email
 				</label>

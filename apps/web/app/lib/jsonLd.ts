@@ -188,6 +188,18 @@ export const FOUNDER_JSON_LD = [
 	},
 ];
 
+/** A BreadcrumbList for a page, from the site root down to the page itself. */
+export const breadcrumbJsonLd = (items: { name: string; path: string }[]) => ({
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: items.map((item, i) => ({
+		"@type": "ListItem",
+		position: i + 1,
+		name: item.name,
+		item: `${WEB}${item.path === "/" ? "" : item.path}`,
+	})),
+});
+
 /** JSON for a <script> body: `<` escaped so no string can close the tag. */
 export const jsonLdScript = (value: unknown) =>
 	JSON.stringify(value).replace(/</g, "\\u003c");

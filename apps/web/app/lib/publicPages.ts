@@ -23,6 +23,8 @@ export const PUBLIC_TWIN_PATHS = [
 	"/docs/indices",
 	"/terms",
 	"/privacy",
+	"/strategies/ladder-5y",
+	"/methodology/treasury-curve",
 ] as const;
 
 export type TPublicTwinPath = (typeof PUBLIC_TWIN_PATHS)[number];
