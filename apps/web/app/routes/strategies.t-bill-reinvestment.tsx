@@ -299,6 +299,7 @@ export default function TBillReinvestmentPage({
 			<JsonLd
 				data={breadcrumbJsonLd([
 					{ name: PRODUCT_NAME, path: "/" },
+					{ name: "Strategies", path: "/strategies" },
 					{ name: "T-Bill Reinvestment", path: PATH },
 				])}
 			/>

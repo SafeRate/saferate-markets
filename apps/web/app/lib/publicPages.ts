@@ -23,6 +23,7 @@ export const PUBLIC_TWIN_PATHS = [
 	"/docs/indices",
 	"/terms",
 	"/privacy",
+	"/strategies",
 	"/strategies/ladder-5y",
 	"/strategies/t-bill-reinvestment",
 	"/methodology/treasury-curve",

@@ -140,6 +140,7 @@ export default function LadderFiveYear({ loaderData }: Route.ComponentProps) {
 			<JsonLd
 				data={breadcrumbJsonLd([
 					{ name: PRODUCT_NAME, path: "/" },
+					{ name: "Strategies", path: "/strategies" },
 					{ name: TITLE, path: PATH },
 				])}
 			/>

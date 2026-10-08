@@ -28,6 +28,12 @@ export const SiteHeader = () => (
 					Data
 				</a>
 				<a
+					className="hidden transition-colors hover:text-slate-900 md:inline"
+					href="/strategies"
+				>
+					Strategies
+				</a>
+				<a
 					className="hidden transition-colors hover:text-slate-900 lg:inline"
 					href="/indices"
 				>
@@ -78,6 +84,9 @@ export const SiteFooter = () => (
 			<span className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-slate-400">
 				<a className="hover:text-slate-900" href="/data">
 					Data
+				</a>
+				<a className="hover:text-slate-900" href="/strategies">
+					Strategies
 				</a>
 				<a className="hover:text-slate-900" href="/indices">
 					Indices

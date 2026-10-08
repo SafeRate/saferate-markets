@@ -664,7 +664,7 @@ so its "latest" curve is stale; switch it too if that starts to mislead.
 - **Every public page has a `.txt` twin**: lib/publicPages.ts `PUBLIC_TWIN_PATHS`
   is the one list (/, /data, /indices, /capabilities, /about, /pricing, /docs,
   /docs/indices, /terms, /privacy, and from 2026-10-08 the pilot pages
-  /strategies/ladder-5y, /strategies/t-bill-reinvestment,
+  /strategies (the hub), /strategies/ladder-5y, /strategies/t-bill-reinvestment,
   /methodology/treasury-curve). The dashboard has none: it is behind
   sign-in.
 - **The twin is the page**: routes/page-twin.ts runs the page's own loader,
