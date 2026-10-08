@@ -9,6 +9,8 @@ import * as home from "@/routes/_index";
 import * as indices from "@/routes/indices";
 import * as pricing from "@/routes/pricing";
 import * as privacy from "@/routes/privacy";
+import * as spread2s10s from "@/routes/curve.2s10s";
+import * as spread5s30s from "@/routes/curve.5s30s";
 import * as strategies from "@/routes/strategies";
 import * as ladderFiveYear from "@/routes/strategies.ladder-5y";
 import * as tBillReinvestment from "@/routes/strategies.t-bill-reinvestment";
@@ -38,6 +40,8 @@ export const PUBLIC_PAGE_MODULES: Record<TPublicTwinPath, TPageModule> = {
 	"/terms": terms as unknown as TPageModule,
 	"/privacy": privacy as unknown as TPageModule,
 	"/strategies": strategies as unknown as TPageModule,
+	"/curve/2s10s": spread2s10s as unknown as TPageModule,
+	"/curve/5s30s": spread5s30s as unknown as TPageModule,
 	"/strategies/ladder-5y": ladderFiveYear as unknown as TPageModule,
 	"/strategies/t-bill-reinvestment": tBillReinvestment as unknown as TPageModule,
 	"/methodology/treasury-curve":
