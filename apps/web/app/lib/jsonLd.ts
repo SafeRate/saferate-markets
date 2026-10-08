@@ -126,7 +126,7 @@ export const SITE_JSON_LD: Record<string, unknown>[] = [
 		applicationCategory: "FinanceApplication",
 		operatingSystem: "Web",
 		description:
-			"Portfolio management for U.S. Treasuries: tracking and attribution, cash-flow matching and immunization, stress testing, value at risk, backtesting and trade execution, on every Treasury priced daily since September 2008, with a REST API and an MCP server.",
+			"Portfolio management for U.S. Treasuries: tracking and attribution, cash-flow matching and immunization, stress testing, value at risk, backtesting and order sheets, on every Treasury priced daily since September 2008, with a REST API and an MCP server.",
 		publisher: organizationRef,
 		offers: PLAN_OFFERS,
 	},

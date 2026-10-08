@@ -16,7 +16,7 @@ import type { Route } from "./+types/_index";
 
 const TITLE = `Portfolio management for U.S. Treasuries | ${PRODUCT_NAME}`;
 const DESCRIPTION =
-	"Institutional-grade tools to track, build, stress-test, backtest and trade U.S. Treasury portfolios, on every Treasury priced daily since September 2008, from primary sources with no data license to pay for. With a REST API and an MCP server.";
+	"Institutional-grade tools to track, build, stress-test and backtest U.S. Treasury portfolios, and turn a plan into an order sheet, on every Treasury priced daily since September 2008, from primary sources with no data license to pay for. With a REST API and an MCP server.";
 
 export const meta: Route.MetaFunction = () => [
 	{ title: TITLE },
@@ -285,9 +285,9 @@ const SUITE = [
 	},
 	{
 		icon: "trade",
-		title: "Trade execution",
+		title: "Order sheets",
 		body:
-			"Turn a plan into an order sheet with limit prices, split between what TreasuryDirect can fill at auction and what goes to the secondary market, ready for your broker.",
+			"Turn a plan into an order sheet with limit prices, split between what TreasuryDirect can fill at auction and what goes to the secondary market. You place the orders yourself, with your broker or TreasuryDirect.",
 	},
 	{
 		icon: "market",
@@ -324,10 +324,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 						</h1>
 						<p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
 							Institutional-grade tools for the world's largest government bond market:
-							track, build, stress-test, backtest and trade, on every Treasury priced
-							daily since {coverage}. Built on free primary sources, so there are no
-							data licenses to pay for, at a fraction of what terminals and data feeds
-							cost.
+							track, build, stress-test and backtest, and turn a plan into an order
+							sheet, on every Treasury priced daily since {coverage}. Built on free
+							primary sources, so there are no data licenses to pay for, at a fraction
+							of what terminals and data feeds cost.
 						</p>
 						<div className="mt-8 flex flex-wrap items-center gap-3">
 							<a
