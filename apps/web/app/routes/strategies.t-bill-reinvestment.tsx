@@ -2,6 +2,7 @@ import { PRODUCT_NAME, SITE_HOSTS, TRIAL } from "@markets/schema";
 import { useState } from "react";
 import { Form, Link } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
+import { StrategyDisclaimer } from "@/components/StrategyDisclaimer";
 import { StepChart } from "@/components/StepChart";
 import { breadcrumbJsonLd, ORGANIZATION_REF } from "@/lib/jsonLd";
 import { money, rate } from "@/lib/format";
@@ -315,6 +316,10 @@ export default function TBillReinvestmentPage({
 					Today's bill curve could not be read just now. Try again shortly.
 				</p>
 			)}
+			<StrategyDisclaimer
+				trackLabel="Track a bill roll"
+				trackTo={trackLink(amount)}
+			/>
 
 			{bills ? (
 				<>
@@ -389,20 +394,6 @@ export default function TBillReinvestmentPage({
 						rate above is the line between the two.
 					</p>
 				</div>
-			</Section>
-
-			<Section title="Hold bills in a portfolio">
-				<p className="mt-3 max-w-3xl text-slate-700">
-					Track a bill roll in Safe Rate Markets, valued every day on the same
-					end-of-day prices. New accounts start with a free {TRIAL.days}-day trial,
-					no card required.
-				</p>
-				<Link
-					className="mt-4 inline-block rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-					to={trackLink(amount)}
-				>
-					Track a bill roll
-				</Link>
 			</Section>
 
 			<Section title="Sources">

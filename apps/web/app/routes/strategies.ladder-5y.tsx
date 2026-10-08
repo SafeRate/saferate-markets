@@ -1,6 +1,7 @@
 import { PRODUCT_NAME, SITE_HOSTS, TRIAL } from "@markets/schema";
 import { Form, Link } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
+import { StrategyDisclaimer } from "@/components/StrategyDisclaimer";
 import { breadcrumbJsonLd, ORGANIZATION_REF } from "@/lib/jsonLd";
 import { describeSecurity, money, number, price, rate } from "@/lib/format";
 import { NY_FED_NOTICE } from "@/lib/sourceNotices";
@@ -157,6 +158,10 @@ export default function LadderFiveYear({ loaderData }: Route.ComponentProps) {
 					try again shortly.
 				</p>
 			)}
+			<StrategyDisclaimer
+				trackLabel="Track this ladder"
+				trackTo={`/sign-in?next=${encodeURIComponent(`/dashboard/builder?mode=strategy&strategy=ladder&horizon=${YEARS}&budget=${amount}`)}`}
+			/>
 
 			<Section title="The rule">
 				<ol className="mt-4 max-w-3xl list-decimal space-y-2 pl-5 text-slate-700 marker:text-primary">
@@ -165,9 +170,7 @@ export default function LadderFiveYear({ loaderData }: Route.ComponentProps) {
 					))}
 				</ol>
 				<p className="mt-3 max-w-3xl text-sm text-slate-500">
-					A published rule applied to public prices. It is the same for every reader,
-					and it describes how a ladder is built; it is not a recommendation to buy
-					any security.
+					A published rule applied to public prices, the same for every reader.
 				</p>
 			</Section>
 
@@ -346,20 +349,6 @@ export default function LadderFiveYear({ loaderData }: Route.ComponentProps) {
 					</Section>
 				</>
 			) : null}
-
-			<Section title="Track this ladder">
-				<p className="mt-3 max-w-3xl text-slate-700">
-					Track it as a portfolio in Safe Rate Markets: values, income and maturities
-					every day, on the same end-of-day prices. New accounts start with a free{" "}
-					{TRIAL.days}-day trial, no card required.
-				</p>
-				<Link
-					className="mt-4 inline-block rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
-					to={`/sign-in?next=${encodeURIComponent(`/dashboard/builder?mode=strategy&strategy=ladder&horizon=${YEARS}&budget=${amount}`)}`}
-				>
-					Track this trade
-				</Link>
-			</Section>
 
 			<Section title="Sources">
 				<ul className="mt-3 max-w-3xl list-disc space-y-1 pl-5 text-sm text-slate-600">
