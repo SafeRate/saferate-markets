@@ -162,9 +162,22 @@ export default function TreasuryCurveMethodology() {
 				<p>
 					<strong className="text-neutral-900">Par or zero?</strong> A par yield is
 					the coupon that prices a new bond at 100, and it is what the market quotes.
-					Spreads such as 2s10s and 5s30s are differences in par yields, so the 2s10s{" "}
-					and 5s30s pages use par. Zero rates are the discount rates themselves, for
-					pricing cashflows and building forwards.
+					Spreads such as 2s10s and 5s30s are differences in par yields, so the{" "}
+					<Link
+						className="text-primary underline underline-offset-4"
+						to="/curve/2s10s"
+					>
+						2s10s
+					</Link>{" "}
+					and{" "}
+					<Link
+						className="text-primary underline underline-offset-4"
+						to="/curve/5s30s"
+					>
+						5s30s
+					</Link>{" "}
+					pages use par. Zero rates are the discount rates themselves, for pricing
+					cashflows and building forwards.
 				</p>
 			</Section>
 
