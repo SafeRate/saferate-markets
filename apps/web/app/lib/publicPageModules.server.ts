@@ -9,6 +9,9 @@ import * as home from "@/routes/_index";
 import * as indices from "@/routes/indices";
 import * as pricing from "@/routes/pricing";
 import * as privacy from "@/routes/privacy";
+import * as ladderFiveYear from "@/routes/strategies.ladder-5y";
+import * as tBillReinvestment from "@/routes/strategies.t-bill-reinvestment";
+import * as treasuryCurveMethodology from "@/routes/methodology.treasury-curve";
 import * as terms from "@/routes/terms";
 
 /**
@@ -33,6 +36,10 @@ export const PUBLIC_PAGE_MODULES: Record<TPublicTwinPath, TPageModule> = {
 	"/docs/indices": docsIndices as unknown as TPageModule,
 	"/terms": terms as unknown as TPageModule,
 	"/privacy": privacy as unknown as TPageModule,
+	"/strategies/ladder-5y": ladderFiveYear as unknown as TPageModule,
+	"/strategies/t-bill-reinvestment": tBillReinvestment as unknown as TPageModule,
+	"/methodology/treasury-curve":
+		treasuryCurveMethodology as unknown as TPageModule,
 };
 
 /** A page's title and description, from its own meta. */
