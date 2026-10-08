@@ -15,3 +15,4 @@ export * from "./builder";
 export * from "./risk/tsay";
 export * from "./backtest";
 export * from "./indexReturns";
+export * from "./billCurve";

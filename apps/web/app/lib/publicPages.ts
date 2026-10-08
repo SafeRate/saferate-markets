@@ -24,6 +24,7 @@ export const PUBLIC_TWIN_PATHS = [
 	"/terms",
 	"/privacy",
 	"/strategies/ladder-5y",
+	"/strategies/t-bill-reinvestment",
 	"/methodology/treasury-curve",
 ] as const;
 
