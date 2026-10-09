@@ -28,9 +28,9 @@ export const meta: Route.MetaFunction = () => [
  * (selectSecuritiesForFitting) in saferate-treasury. When the gate is re-run,
  * update MEASURED_ON and the table together.
  *
- * The H.15 comparison is described, not quantified: the gap between this curve
- * and Treasury's constant-maturity yields is being measured and is not stated
- * until it is.
+ * The H.15 table is treasury_exploration's scoring of 2026-10-09: ours minus
+ * H.15 constant maturity over the 274 days both cover (2025-09-04 to
+ * 2026-10-07). It says nothing about earlier years until DGS is backfilled.
  */
 const MEASURED_ON = "October 8, 2026";
 
@@ -62,6 +62,15 @@ const ACCURACY = [
 		rmse: "2.81",
 		gate: "12",
 	},
+];
+
+const H15 = [
+	{ what: "2s10s spread", mean: "+1.31", meanAbs: "1.96", rmse: "2.36" },
+	{ what: "5s30s spread", mean: "+0.42", meanAbs: "2.54", rmse: "2.82" },
+	{ what: "2-year par yield", mean: "+2.26", meanAbs: "2.34", rmse: "2.84" },
+	{ what: "5-year par yield", mean: "+1.28", meanAbs: "1.32", rmse: "1.54" },
+	{ what: "10-year par yield", mean: "+3.58", meanAbs: "3.58", rmse: "3.93" },
+	{ what: "30-year par yield", mean: "+1.70", meanAbs: "2.20", rmse: "2.95" },
 ];
 
 const Section = ({
@@ -244,11 +253,43 @@ export default function TreasuryCurveMethodology() {
 					off-the-run securities.
 				</p>
 				<p>
-					Three methods and three times of day mean the curves differ from day to day
-					without any of them being wrong. The spread pages show the H.15
-					constant-maturity spread as a labeled reference line beside this one.
+					Measured over the 274 business days both cover, September 4, 2025 to
+					October 7, 2026, in basis points, Safe Rate minus H.15:
 				</p>
 			</Section>
+			<div className="mt-4 max-w-3xl overflow-x-auto rounded-xl border border-slate-200">
+				<table className="w-full min-w-[30rem] border-collapse text-sm">
+					<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+						<tr>
+							<th className="px-4 py-2 font-semibold">Series</th>
+							<th className="px-4 py-2 text-right font-semibold">Mean</th>
+							<th className="px-4 py-2 text-right font-semibold">Mean abs</th>
+							<th className="px-4 py-2 text-right font-semibold">RMSE</th>
+						</tr>
+					</thead>
+					<tbody>
+						{H15.map((row) => (
+							<tr className="border-t border-slate-100" key={row.what}>
+								<td className="px-4 py-2 text-neutral-900">{row.what}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.mean}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.meanAbs}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.rmse}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+			<div className="max-w-3xl space-y-3 leading-relaxed text-slate-700">
+				<p className="mt-3">
+					The fitted curve sits slightly above the constant-maturity curve at every
+					tenor, by 1.3 to 3.6 basis points on average, most at ten years. Because
+					that offset is similar at each end, it largely cancels in a spread: the
+					2s10s and 5s30s spreads agree to within about 2 to 3 basis points root mean
+					square. The spread pages draw the H.15 spread as a labeled reference line
+					beside this one wherever the Federal Reserve series are available. The
+					comparison covers the past year only.
+				</p>
+			</div>
 
 			<Section title="Sources">
 				<ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">

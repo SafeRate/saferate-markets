@@ -43,6 +43,16 @@ export const bp = (value: number | null) =>
 		? "—"
 		: `${value > 0.5 ? "+" : value < -0.5 ? "−" : ""}${Math.abs(Math.round(value))} bp`;
 
+/**
+ * How closely the fitted spread tracks Treasury's H.15 constant-maturity
+ * spread, measured by treasury_exploration on 2026-10-09 over 274 days
+ * (2025-09-04 to 2026-10-07). Update with the methodology page's table.
+ */
+const H15_AGREEMENT: Record<string, { rmse: number; mean: number }> = {
+	"2s10s": { rmse: 2.36, mean: 1.31 },
+	"5s30s": { rmse: 2.82, mean: 0.42 },
+};
+
 const RELATED: { path: string; label: string; key?: string }[] = [
 	{ path: "/curve/2s10s", label: "2s10s Treasury spread", key: "2s10s" },
 	{ path: "/curve/5s30s", label: "5s30s Treasury spread", key: "5s30s" },
@@ -169,10 +179,22 @@ export const SpreadPage = ({
 								format={(v) => `${Math.round(v)} bp`}
 								series={[
 									{
-										label: `${spread.name}, fitted par curve`,
+										label: `${spread.name}, Safe Rate fitted par curve`,
 										className: "stroke-primary",
 										points: drawn.map((p) => ({ date: p.date, value: p.bp })),
 									},
+									...(drawn.some((p) => p.h15 !== null)
+										? [
+												{
+													label: "H.15 constant maturity (Federal Reserve)",
+													className: "stroke-slate-400",
+													points: drawn.map((p) => ({
+														date: p.date,
+														value: p.h15,
+													})),
+												},
+											]
+										: []),
 								]}
 							/>
 						</div>
@@ -206,6 +228,15 @@ export const SpreadPage = ({
 											`${Math.round(spread.percentile)}%`,
 											`of ${spread.days.toLocaleString("en-US")}`,
 										],
+										...(spread.h15
+											? [
+													[
+														"H.15 constant-maturity spread",
+														bp(spread.h15.bp),
+														longDate(spread.h15.date),
+													],
+												]
+											: []),
 										[`${spread.longYears}-year par yield`, rate(spread.longYield, 3), ""],
 										[
 											`${spread.shortYears}-year par yield`,
@@ -268,9 +299,13 @@ export const SpreadPage = ({
 						.
 					</li>
 					<li>
-						This spread uses Safe Rate's fitted curve. Treasury's official
-						constant-maturity yields (H.15) use a different method and time of day, so
-						the two spreads differ from day to day.
+						This spread uses Safe Rate's fitted curve.
+						{spread?.h15
+							? " The grey line is Treasury's constant-maturity spread from the Federal Reserve's H.15 release (FRED series DGS2, DGS5, DGS10 and DGS30), which uses a different method and time of day."
+							: " Treasury's constant-maturity yields from the Federal Reserve's H.15 release use a different method and time of day."}
+						{spread && H15_AGREEMENT[spread.key]
+							? ` Over the past year the two ${spread.name} spreads differed by ${H15_AGREEMENT[spread.key].rmse} basis points root mean square.`
+							: ""}
 					</li>
 				</ul>
 			</section>
