@@ -4,7 +4,7 @@ import {
 	createAlertSignup,
 	deleteAlertSignup,
 } from "@markets/persistence";
-import { SENDER_ADDRESS } from "@markets/schema";
+import { resolveMarketsEnv, SENDER_ADDRESS } from "@markets/schema";
 import { z } from "zod";
 import { confirmSignupEmail } from "@/lib/alertEmails";
 import { siteFor } from "./alerts.server";
@@ -135,6 +135,18 @@ export const handleAlertSignup = async (
 
 	if (!env.TURNSTILE_SECRET_KEY) {
 		console.error("[alerts] TURNSTILE_SECRET_KEY is not set; refusing sign-ups");
+		return out(503, "unavailable");
+	}
+	// Cloudflare's always-pass test secrets verify any token, made-up ones
+	// included, and nothing would look wrong. Staging uses one on purpose;
+	// production must refuse to run on one rather than run unprotected.
+	if (
+		resolveMarketsEnv(env.MARKETS_ENV) === "production" &&
+		/^[0-9]x0+AA$/.test(env.TURNSTILE_SECRET_KEY)
+	) {
+		console.error(
+			"[alerts] a Turnstile TEST secret is set in production; refusing sign-ups",
+		);
 		return out(503, "unavailable");
 	}
 	if (!body.turnstile) return out(400, "invalid_turnstile");

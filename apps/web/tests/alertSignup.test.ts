@@ -130,6 +130,16 @@ describe("the sign-up endpoint", () => {
 		expect(sent).toEqual([]);
 	});
 
+	test("production refuses Turnstile's always-pass test secret", async () => {
+		const testKey = {
+			TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+		};
+		expect((await post(valid, {}, testKey)).status).toBe(503);
+		expect(
+			(await post(valid, {}, { ...testKey, MARKETS_ENV: "staging" })).status,
+		).toBe(202);
+	});
+
 	test("a repeat for the same address within a day is 202 and sends nothing", async () => {
 		await post(valid);
 		const again = await post(valid, { "X-Subscriber-IP": "198.51.100.1" });
