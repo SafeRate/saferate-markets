@@ -149,6 +149,13 @@ export const bidderShares = (auction: TAuction) => {
 const mean = (xs: number[]) =>
 	xs.length === 0 ? null : xs.reduce((s, x) => s + x, 0) / xs.length;
 
+/**
+ * A cash management bill: its term is in days ("Bill 27-Day"), where the
+ * regular calendar's are in weeks. Treasury's history since 2008 has no term
+ * that is neither (treasury_exploration, 2026-10-09).
+ */
+export const isCashManagement = (key: string) => /-Day$/.test(key);
+
 /** How many prior auctions a change averages, at most. */
 export const AUCTION_PRIORS = 6;
 
@@ -179,13 +186,18 @@ export const analyseAuctions = (auctions: TAuction[], on: string) => {
 					(b.kind === null ? 99 : KIND_ORDER.indexOf(b.kind)) ||
 				yearsOf(a.term) - yearsOf(b.term),
 		);
+	const bill = (key: string) => ({
+		kind: "Bill" as TSecurityKind | null,
+		term: key.slice("Bill ".length),
+		key,
+	});
+	// Cash management bills (day-denominated, off the weekly calendar) go last,
+	// after the coupons: shown, since their results are real, but below the
+	// scheduled terms people come for (Dylan, 2026-10-09).
 	const terms = [
-		...billKeys.map((key) => ({
-			kind: "Bill" as TSecurityKind | null,
-			term: key.slice("Bill ".length),
-			key,
-		})),
+		...billKeys.filter((key) => !isCashManagement(key)).map(bill),
 		...couponTerms,
+		...billKeys.filter(isCashManagement).map(bill),
 	];
 	const held = (a: TAuction) => a.auctionDate <= on;
 	const ofTerm = (key: string) =>

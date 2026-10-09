@@ -74,6 +74,26 @@ describe("the analysis", () => {
 		expect(kinds.indexOf("Note")).toBeLessThan(kinds.indexOf("FRN"));
 	});
 
+	test("puts cash management bills last, below the coupons", async () => {
+		const cmb = auctionRow({
+			cusip: "912797ZZ1",
+			auction_date: "2026-09-29",
+			original_security_term: "27-Day",
+			security_term: "27-Day",
+			reopening: 0,
+		});
+		const rows = await readAuctionsBetween(
+			env(fakeAuctionTreasury([cmb, ...ALL_ROWS])),
+			{ from: "2026-01-01", to: "2026-12-31" },
+		);
+		const { terms, latestByTerm } = analyseAuctions(rows, ON);
+		const keys = terms.map((t) => t.key);
+		expect(keys.at(-1)).toBe("Bill 27-Day");
+		expect(keys[0]).toBe("Bill 4-Week");
+		// Still shown: its result is real.
+		expect(latestByTerm.at(-1)?.auction.cusip).toBe("912797ZZ1");
+	});
+
 	test("matches saferate.com for 912797VP9: six priors, +0.00 cover, -0.8863 pt dealers", async () => {
 		const { latestByTerm } = analyseAuctions(await read(), ON);
 		const fourWeek = latestByTerm.find((r) => r.key === "Bill 4-Week");
