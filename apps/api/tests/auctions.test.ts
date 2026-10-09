@@ -112,6 +112,75 @@ describe("GET /v1/auctions/latest", () => {
 		expect(fourWeek.primary_dealer_compared_with).toBe(6);
 	});
 
+	test("carries treasury's demand ranking on the auction it describes, as published", async () => {
+		const demandRow = {
+			auction: { cusip: "912797VP9", auctionDate: "2026-10-01" },
+			measures: [
+				{
+					key: "bidToCover",
+					label: "Bid to cover",
+					percentile: 0,
+					sampleSize: 104,
+					value: 2.83,
+				},
+				{
+					key: "indirect",
+					label: "Indirect share",
+					percentile: 13,
+					sampleSize: 104,
+					value: 0.57,
+				},
+				{
+					key: "dealer",
+					label: "Dealer takedown",
+					percentile: 14,
+					sampleSize: 104,
+					value: 0.36,
+				},
+				{
+					key: "spread",
+					label: "High less median",
+					percentile: 13,
+					sampleSize: 104,
+					value: 7,
+				},
+			],
+			sampleSize: 104,
+			term: "Bill|4-Week",
+			termLabel: "Bill 4-Week",
+			verdict: "weak",
+			windowMonths: 24,
+		};
+		let asked: unknown = null;
+		const treasury = {
+			...fakeAuctionTreasury(),
+			auctionDemand: async (input: unknown) => {
+				asked = input;
+				return [demandRow];
+			},
+		};
+		const { status, body } = await get("/v1/auctions/latest", treasury);
+		expect(status).toBe(200);
+		expect(asked).toEqual({ on: ON });
+		const [fourWeek, ...rest] = body.terms;
+		expect(fourWeek.demand.verdict).toBe("weak");
+		expect(fourWeek.demand.sample_size).toBe(104);
+		expect(fourWeek.demand.window_months).toBe(24);
+		// Published as treasury ranked it: never re-inverted on this side.
+		expect(
+			fourWeek.demand.measures.find((m: { key: string }) => m.key === "dealer")
+				.percentile,
+		).toBe(14);
+		// A term treasury did not rank has no demand, rather than a guessed one.
+		for (const term of rest) expect(term.demand).toBeNull();
+	});
+
+	test("a treasury-api without auctionDemand still serves results, with demand null", async () => {
+		const { status, body } = await get("/v1/auctions/latest");
+		expect(status).toBe(200);
+		for (const term of body.terms) expect(term.demand).toBeNull();
+	});
+
 	test("never lists an announced auction as a term's result", async () => {
 		const { body } = await get("/v1/auctions/latest");
 		expect(body.terms.map((t: { group: string }) => t.group)).not.toContain(

@@ -23,7 +23,8 @@ import {
  *
  * Two views. `schedule` (default): auctions in a window, by default the last
  * two weeks and everything announced. `latest_by_term`: each term's most
- * recent result with its changes against up to six previous auctions.
+ * recent result with its changes against up to six previous auctions, and
+ * treasury's demand ranking (strong, average or weak) where the term has one.
  */
 
 const KINDS = ["Bill", "Note", "Bond", "TIPS", "FRN"] as const;
@@ -50,7 +51,7 @@ export const ZInputGetTreasuryAuctions = z.object({
 });
 
 const HOW_TO_READ =
-	"status is against as_of (the newest priced day): announced = not yet held, auctioned = held but not yet issued, settled. A NEW security not yet issued has maturity_date and coupon_percent null; that is expected, not missing data. clearing_rate.measure says what high_percent is: a bill's DISCOUNT rate (with investment_rate_percent, the coupon-equivalent figure comparable with a note's yield), a note's or bond's yield, a TIPS's real yield, or an FRN's discount margin. high_less_median_basis_points is the stop less the median, not the tail. bidders are shares of the competitive award, leaving out the Fed's SOMA rollover. In latest_by_term, each change is against the mean of the number of previous auctions stated beside it (up to six), not always six.";
+	"status is against as_of (the newest priced day): announced = not yet held, auctioned = held but not yet issued, settled. A NEW security not yet issued has maturity_date and coupon_percent null; that is expected, not missing data. clearing_rate.measure says what high_percent is: a bill's DISCOUNT rate (with investment_rate_percent, the coupon-equivalent figure comparable with a note's yield), a note's or bond's yield, a TIPS's real yield, or an FRN's discount margin. high_less_median_basis_points is the stop less the median, not the tail. bidders are shares of the competitive award, leaving out the Fed's SOMA rollover. In latest_by_term, each change is against the mean of the number of previous auctions stated beside it (up to six), not always six. demand ranks bid-to-cover, indirect share, dealer takedown and high-less-median against the same term's last 24 months (window_months), this auction excluded: every percentile reads 100 = strong demand (the dealer and spread measures are already flipped, do not invert them), and verdict counts measures in the top or bottom third. Quote sample_size with any verdict; demand is null for terms with fewer than eight prior auctions. It is not a tail: that needs the when-issued yield, which is not held.";
 
 export async function getTreasuryAuctions(
 	_input: z.input<typeof ZInputGetTreasuryAuctions>,
