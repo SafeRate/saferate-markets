@@ -28,9 +28,14 @@ export const meta: Route.MetaFunction = () => [
  * (selectSecuritiesForFitting) in saferate-treasury. When the gate is re-run,
  * update MEASURED_ON and the table together.
  *
- * The H.15 table is treasury_exploration's scoring of 2026-10-09: ours minus
- * H.15 constant maturity over the 274 days both cover (2025-09-04 to
- * 2026-10-07). It says nothing about earlier years until DGS is backfilled.
+ * THREE CURVES, ONE WINDOW. The par-yield table is treasury_exploration's
+ * scoring of 2026-10-09 on every date all three curves have: 2025-09-04 to
+ * 2026-09-04, n=252. GSW comes from a reference file last refreshed
+ * 2026-09-04, which is why the window ends there. The spread rows are a
+ * different window (274 days to 2026-10-07, against H.15 only) and are labelled
+ * as such. Dylan's correction, the same day: the 10-year gap to H.15 is not our
+ * bias; H.15 sits about 5 bp below GSW there and this curve lies between them.
+ * The on-the-run explanation is stated as a likely reason, not a verified one.
  */
 const MEASURED_ON = "October 8, 2026";
 
@@ -64,13 +69,42 @@ const ACCURACY = [
 	},
 ];
 
-const H15 = [
-	{ what: "2s10s spread", mean: "+1.31", meanAbs: "1.96", rmse: "2.36" },
-	{ what: "5s30s spread", mean: "+0.42", meanAbs: "2.54", rmse: "2.82" },
-	{ what: "2-year par yield", mean: "+2.26", meanAbs: "2.34", rmse: "2.84" },
-	{ what: "5-year par yield", mean: "+1.28", meanAbs: "1.32", rmse: "1.54" },
-	{ what: "10-year par yield", mean: "+3.58", meanAbs: "3.58", rmse: "3.93" },
-	{ what: "30-year par yield", mean: "+1.70", meanAbs: "2.20", rmse: "2.95" },
+/** Safe Rate minus each Fed curve, par yields, basis points, n=252. */
+const THREE_CURVES = [
+	{
+		tenor: "2-year",
+		h15Mean: "+2.30",
+		h15Rmse: "2.88",
+		gswMean: "+2.13",
+		gswRmse: "3.07",
+	},
+	{
+		tenor: "5-year",
+		h15Mean: "+1.25",
+		h15Rmse: "1.52",
+		gswMean: "−0.63",
+		gswRmse: "1.18",
+	},
+	{
+		tenor: "10-year",
+		h15Mean: "+3.82",
+		h15Rmse: "4.09",
+		gswMean: "−1.54",
+		gswRmse: "3.11",
+	},
+	{
+		tenor: "30-year",
+		h15Mean: "+1.87",
+		h15Rmse: "3.07",
+		gswMean: "−3.00",
+		gswRmse: "4.51",
+	},
+];
+
+/** Safe Rate minus H.15, spreads, basis points, n=274 to 2026-10-07. */
+const H15_SPREADS = [
+	{ what: "2s10s", mean: "+1.31", rmse: "2.36" },
+	{ what: "5s30s", mean: "+0.42", rmse: "2.82" },
 ];
 
 const Section = ({
@@ -242,38 +276,40 @@ export default function TreasuryCurveMethodology() {
 				</p>
 			</div>
 
-			<Section title="How it differs from Treasury's constant-maturity yields">
+			<Section title="Three curves, measured against each other">
 				<p>
-					Treasury's official constant-maturity yields, republished by the Federal
-					Reserve in its H.15 release and on FRED (for example DGS2 and DGS10), are a
-					third curve with its own method: a par curve built from bid-side quotes for
-					the most recently auctioned securities, taken in the afternoon rather than
-					at the end of the day. This curve is fitted to end-of-day prices for all
-					eligible notes and bonds, and the Federal Reserve's research curve to
-					off-the-run securities.
+					The Federal Reserve publishes two Treasury curves, and they are built
+					differently. Treasury's constant-maturity yields, republished in the H.15
+					release and on FRED (for example DGS2 and DGS10), are a par curve built
+					from quotes for the most recently auctioned securities, taken in the
+					afternoon. The Gürkaynak, Sack and Wright curve is fitted to off-the-run
+					securities. Safe Rate's curve is fitted to end-of-day prices for all
+					eligible notes and bonds.
 				</p>
 				<p>
-					Measured over the 274 business days both cover, September 4, 2025 to
-					October 7, 2026, in basis points, Safe Rate minus H.15:
+					On the 252 business days all three cover, September 4, 2025 to September 4,
+					2026, Safe Rate minus each, par yields in basis points:
 				</p>
 			</Section>
 			<div className="mt-4 max-w-3xl overflow-x-auto rounded-xl border border-slate-200">
 				<table className="w-full min-w-[30rem] border-collapse text-sm">
 					<thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
 						<tr>
-							<th className="px-4 py-2 font-semibold">Series</th>
-							<th className="px-4 py-2 text-right font-semibold">Mean</th>
-							<th className="px-4 py-2 text-right font-semibold">Mean abs</th>
-							<th className="px-4 py-2 text-right font-semibold">RMSE</th>
+							<th className="px-4 py-2 font-semibold">Par yield</th>
+							<th className="px-4 py-2 text-right font-semibold">vs H.15 mean</th>
+							<th className="px-4 py-2 text-right font-semibold">vs H.15 RMSE</th>
+							<th className="px-4 py-2 text-right font-semibold">vs GSW mean</th>
+							<th className="px-4 py-2 text-right font-semibold">vs GSW RMSE</th>
 						</tr>
 					</thead>
 					<tbody>
-						{H15.map((row) => (
-							<tr className="border-t border-slate-100" key={row.what}>
-								<td className="px-4 py-2 text-neutral-900">{row.what}</td>
-								<td className="px-4 py-2 text-right tabular-nums">{row.mean}</td>
-								<td className="px-4 py-2 text-right tabular-nums">{row.meanAbs}</td>
-								<td className="px-4 py-2 text-right tabular-nums">{row.rmse}</td>
+						{THREE_CURVES.map((row) => (
+							<tr className="border-t border-slate-100" key={row.tenor}>
+								<td className="px-4 py-2 text-neutral-900">{row.tenor}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.h15Mean}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.h15Rmse}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.gswMean}</td>
+								<td className="px-4 py-2 text-right tabular-nums">{row.gswRmse}</td>
 							</tr>
 						))}
 					</tbody>
@@ -281,13 +317,27 @@ export default function TreasuryCurveMethodology() {
 			</div>
 			<div className="max-w-3xl space-y-3 leading-relaxed text-slate-700">
 				<p className="mt-3">
-					The fitted curve sits slightly above the constant-maturity curve at every
-					tenor, by 1.3 to 3.6 basis points on average, most at ten years. Because
-					that offset is similar at each end, it largely cancels in a spread: the
-					2s10s and 5s30s spreads agree to within about 2 to 3 basis points root mean
-					square. The spread pages draw the H.15 spread as a labeled reference line
-					beside this one wherever the Federal Reserve series are available. The
-					comparison covers the past year only.
+					At ten years Safe Rate's curve is 3.8 basis points above H.15 and 1.5 below
+					GSW: the two Federal Reserve curves sit about 5 basis points apart there,
+					and this curve lies between them. A likely reason is that recently
+					auctioned securities usually trade at slightly lower yields; H.15 is built
+					from them, GSW leaves them out, and this curve includes them with
+					everything else.
+				</p>
+				<p>
+					Spreads move less than levels, because much of each curve's offset is
+					shared across maturities. Against H.15, over the 274 business days to
+					October 7, 2026:{" "}
+					{H15_SPREADS.map((row, i) => (
+						<span key={row.what}>
+							{i > 0 ? "; " : ""}
+							{row.what} differs by {row.mean} bp on average and {row.rmse} bp root
+							mean square
+						</span>
+					))}
+					. The spread pages draw the H.15 spread as a labeled reference line beside
+					this one wherever the Federal Reserve series are available. These
+					comparisons cover the past year only.
 				</p>
 			</div>
 
