@@ -72,7 +72,23 @@ app.use("*", async (c, next) => {
 	c.header("X-Robots-Tag", "noindex, nofollow, noarchive");
 });
 
-app.get("/robots.txt", (c) => c.text("User-agent: *\nDisallow: /\n"));
+/**
+ * Closed to crawlers, with one door on production: the OpenAPI spec, which
+ * llms.txt points AI agents at (Dylan, 2026-10-09). Without it, every crawler
+ * that obeys robots.txt skipped the one file it had been sent to. The spec is
+ * public already; this only stops forbidding polite crawlers from reading it.
+ * It stays out of search: the noindex header above covers it like everything
+ * else. /reference stays closed, since it would duplicate /docs on the site.
+ * Staging and development allow nothing.
+ */
+export const robotsFor = (environment: string) =>
+	environment === "production"
+		? "User-agent: *\nAllow: /openapi.json\nDisallow: /\n"
+		: "User-agent: *\nDisallow: /\n";
+
+app.get("/robots.txt", (c) =>
+	c.text(robotsFor(resolveMarketsEnv(c.env.MARKETS_ENV))),
+);
 
 // The site's icon, not a second copy of it. Every browser tab on /reference
 // asked for this and got a JSON 404 (seen in the production tail, 2026-09-28).
