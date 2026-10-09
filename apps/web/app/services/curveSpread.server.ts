@@ -14,14 +14,16 @@ type TEnv = Env;
  * date per tenor, which refuses a tenor it does not store rather than
  * returning a quiet gap.
  *
- * Treasury's H.15 constant-maturity spread is NOT drawn here yet: the gap
- * between the two curves is being measured, and a second line goes on the
- * chart only once that number exists.
+ * Treasury's H.15 constant-maturity spread is drawn beside it as a labelled
+ * reference (DGS10 minus DGS2, DGS30 minus DGS5, public domain, via the FRED
+ * catalogue), now that the gap is measured: 2.36 and 2.82 bp RMSE over
+ * 2025-09-04 to 2026-10-07 (treasury_exploration, 2026-10-09). A failed read
+ * of the reference drops the line, never the page.
  */
 
 export const SPREADS = {
-	"2s10s": { short: 2, long: 10, name: "2s10s" },
-	"5s30s": { short: 5, long: 30, name: "5s30s" },
+	"2s10s": { short: 2, long: 10, name: "2s10s", h15: ["DGS2", "DGS10"] },
+	"5s30s": { short: 5, long: 30, name: "5s30s", h15: ["DGS5", "DGS30"] },
 } as const;
 export type TSpreadKey = keyof typeof SPREADS;
 
@@ -34,6 +36,39 @@ const ZRow = z
 		par_yield: z.number(),
 	})
 	.passthrough();
+
+const ZSeriesRow = z
+	.object({ series_id: z.string(), date: z.string(), value: z.number() })
+	.passthrough();
+
+/** The H.15 constant-maturity spread by date, in bp; empty if unreadable. */
+const readH15 = async (
+	env: TEnv,
+	[shortId, longId]: readonly [string, string],
+): Promise<Map<string, number>> => {
+	try {
+		const reply = (await call(
+			env,
+			"series",
+		)({ ids: [shortId, longId], from: HISTORY_START, to: iso(new Date()) })) as {
+			rows?: unknown[];
+		} | null;
+		const byDate = new Map<string, { short?: number; long?: number }>();
+		for (const r of z.array(ZSeriesRow).parse(reply?.rows ?? [])) {
+			const day = byDate.get(r.date) ?? {};
+			if (r.series_id === shortId) day.short = r.value;
+			if (r.series_id === longId) day.long = r.value;
+			byDate.set(r.date, day);
+		}
+		const spread = new Map<string, number>();
+		for (const [date, d] of byDate)
+			if (d.short !== undefined && d.long !== undefined)
+				spread.set(date, (d.long - d.short) * 100);
+		return spread;
+	} catch {
+		return new Map();
+	}
+};
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const daysBefore = (date: string, days: number) => {
@@ -79,6 +114,7 @@ const thin = (points: { date: string; bp: number }[]) => {
 
 export const loadSpread = async (env: TEnv, key: TSpreadKey) => {
 	const spread = SPREADS[key];
+	const h15Pending = readH15(env, spread.h15);
 	const rows = z.array(ZRow).parse(
 		await call(
 			env,
@@ -116,6 +152,11 @@ export const loadSpread = async (env: TEnv, key: TSpreadKey) => {
 	const min = points.reduce((m, p) => (p.bp < m.bp ? p : m), last);
 	const max = points.reduce((m, p) => (p.bp > m.bp ? p : m), last);
 	const atOrBelow = points.filter((p) => p.bp <= last.bp).length;
+	const h15 = await h15Pending;
+	const h15Today = [...h15]
+		.filter(([d]) => d <= last.date)
+		.sort(([a], [b]) => a.localeCompare(b))
+		.at(-1);
 
 	return {
 		key,
@@ -137,7 +178,12 @@ export const loadSpread = async (env: TEnv, key: TSpreadKey) => {
 		percentile: (atOrBelow / points.length) * 100,
 		days: points.length,
 		since: points[0].date,
-		history: thin(points).map((p) => ({ date: p.date, bp: p.bp })),
+		history: thin(points).map((p) => ({
+			date: p.date,
+			bp: p.bp,
+			h15: h15.get(p.date) ?? null,
+		})),
+		h15: h15Today ? { date: h15Today[0], bp: h15Today[1] } : null,
 	};
 };
 

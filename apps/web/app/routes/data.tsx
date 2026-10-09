@@ -53,6 +53,28 @@ type TDataset = {
 	interactive: { label: string; href: string }[];
 };
 
+/** The public Treasury curve pages, listed under "Treasury curve". */
+const CURVE_PAGES = [
+	{
+		title: "2s10s Treasury spread",
+		to: "/curve/2s10s",
+		what:
+			"The 10-year minus the 2-year par yield: today's level, how it moved, and where it sits since 2008.",
+	},
+	{
+		title: "5s30s Treasury spread",
+		to: "/curve/5s30s",
+		what:
+			"The 30-year minus the 5-year par yield: today's level, how it moved, and where it sits since 2008.",
+	},
+	{
+		title: "Treasury curve methodology",
+		to: "/methodology/treasury-curve",
+		what:
+			"How the curve is fitted to Treasury's end-of-day prices, and how closely it tracks the Federal Reserve's.",
+	},
+];
+
 const DATASETS: TDataset[] = [
 	{
 		title: "Prices and securities",
@@ -83,6 +105,7 @@ const DATASETS: TDataset[] = [
 			{ label: "Curves", to: "/dashboard/curves" },
 		],
 		surfaces: ["Curves"],
+		more: { label: "Curve methodology", to: "/methodology/treasury-curve" },
 		interactive: [
 			{ label: "Treasury rates today", href: TREASURY_URLS.rates },
 			{ label: "Yield curves", href: TREASURY_URLS.curves },
@@ -306,6 +329,31 @@ export default function Data() {
 					);
 				})}
 			</div>
+
+			<section className="mt-12" id="treasury-curve">
+				<h2 className="text-2xl font-semibold tracking-tight text-neutral-900">
+					Treasury curve
+				</h2>
+				<p className="mt-2 max-w-3xl text-slate-600">
+					Public pages on Safe Rate's fitted curve, updated every business day:
+					today's figure first, then its history since September 2008.
+				</p>
+				<ul className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+					{CURVE_PAGES.map((page) => (
+						<li key={page.to}>
+							<a
+								className="block h-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-primary/50"
+								href={page.to}
+							>
+								<h3 className="font-semibold text-neutral-900">{page.title}</h3>
+								<p className="mt-2 text-sm leading-relaxed text-slate-600">
+									{page.what}
+								</p>
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
 
 			<section className="mt-12 rounded-xl border border-slate-200 bg-slate-50 p-6">
 				<h2 className="font-semibold text-neutral-900">From primary sources</h2>
