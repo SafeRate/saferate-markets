@@ -9,6 +9,7 @@ import {
 	loadAuctions,
 	type TAuction,
 } from "@/services/auctions.server";
+import { rankedAgainst, unrankedCaption } from "@/lib/demandCaption";
 import type { Route } from "./+types/dashboard.auctions";
 
 export const meta: Route.MetaFunction = () => [
@@ -79,20 +80,8 @@ const Rank = ({ demand, measure }: { demand: TDemand; measure: string }) => {
  * here, so they stay right if its thresholds move.
  */
 const Reading = ({ demand }: { demand: TDemand }) => {
-	if (demand?.unranked === "sample" && demand.minSample !== null)
-		return (
-			<div className="text-xs text-slate-500">
-				Not ranked: {demand.sampleSize} prior{" "}
-				{demand.sampleSize === 1 ? "auction" : "auctions"} in {demand.windowMonths}{" "}
-				mo, needs {demand.minSample}
-			</div>
-		);
-	if (demand?.unranked === "stale" && demand.daysSinceLast !== null)
-		return (
-			<div className="text-xs text-slate-500">
-				Not ranked: no auction in {demand.daysSinceLast} days
-			</div>
-		);
+	const caption = demand ? unrankedCaption(demand) : null;
+	if (caption) return <div className="text-xs text-slate-500">{caption}</div>;
 	if (!demand || demand.verdict === null)
 		return <span className="text-xs text-slate-400">—</span>;
 	const tone =
@@ -106,9 +95,7 @@ const Reading = ({ demand }: { demand: TDemand }) => {
 			<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tone}`}>
 				{demand.verdict}
 			</span>
-			<div className="mt-1 text-xs text-slate-500">
-				vs {demand.sampleSize} over {demand.windowMonths} mo
-			</div>
+			<div className="mt-1 text-xs text-slate-500">{rankedAgainst(demand)}</div>
 		</>
 	);
 };

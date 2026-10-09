@@ -45,6 +45,7 @@ const SECTIONS: { title: string | null; items: TItem[] }[] = [
 	{
 		title: "Account",
 		items: [
+			{ kind: "link", label: "Email Alerts", to: "/dashboard/alerts" },
 			{ kind: "link", label: "API & MCP", to: "/dashboard/keys" },
 			{ kind: "link", label: "Documentation", to: "/docs" },
 			{ kind: "link", label: "Billing", to: "/dashboard/billing" },

@@ -60,6 +60,9 @@
 	"env": {
 		"staging": {
 			"name": "saferate-markets-web-staging",
+			// The email alerts sweep (workers/app.ts scheduled). Staging sends only
+			// to EMAIL_RECIPIENT_ALLOWLIST; everyone else is recorded as withheld.
+			"triggers": { "crons": ["*/5 * * * *"] },
 			"routes": [{ "pattern": "staging.saferate.markets", "custom_domain": true }],
 			"d1_databases": [
 				{
@@ -86,6 +89,8 @@
 		},
 		"production": {
 			"name": "saferate-markets-web-production",
+			// The email alerts sweep (workers/app.ts scheduled).
+			"triggers": { "crons": ["*/5 * * * *"] },
 			// The apex plus every name that only redirects to it (REDIRECT_HOSTS in
 			// @markets/schema). Claimed by this Worker rather than left parked, so
 			// none can be taken over; app/lib/canonicalHost.ts does the redirect.

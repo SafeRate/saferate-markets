@@ -2,6 +2,7 @@ import { createRequestHandler } from "react-router";
 import { resolveMarketsEnv } from "@markets/schema";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
+import { sweepAlerts } from "@/services/alerts.server";
 import { getAuth } from "@/services/auth.server";
 
 declare module "react-router" {
@@ -89,5 +90,20 @@ export default {
 			console.error("[worker] unhandled", url.pathname, error);
 			return new Response("Internal Server Error", { status: 500 });
 		}
+	},
+
+	/**
+	 * The email alerts sweep (services/alerts.server.ts), every five minutes.
+	 * Each tick decides from the data what is new; the cron carries no
+	 * schedule of its own beyond "often", so a late result or a late curve is
+	 * mailed on the tick after it lands. Logged every time, sending or not, so
+	 * a sweep that stopped can be told from one with nothing to do.
+	 */
+	async scheduled(_controller, env, ctx) {
+		ctx.waitUntil(
+			sweepAlerts(env)
+				.then((line) => console.info(`[alerts] ${line}`))
+				.catch((error) => console.error("[alerts] sweep failed:", error)),
+		);
 	},
 } satisfies ExportedHandler<Env>;

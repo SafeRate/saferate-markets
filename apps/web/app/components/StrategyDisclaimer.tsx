@@ -10,9 +10,12 @@ import { Link } from "react-router";
 export const StrategyDisclaimer = ({
 	trackLabel,
 	trackTo,
+	note = `Free ${TRIAL.days}-day trial, no card`,
 }: {
 	trackLabel: string;
 	trackTo: string;
+	/** The line under the button; the trial unless the action is free anyway. */
+	note?: string;
 }) => (
 	<div className="mt-6 flex max-w-3xl flex-col gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
 		<p className="text-sm text-slate-600">
@@ -27,9 +30,7 @@ export const StrategyDisclaimer = ({
 			>
 				{trackLabel}
 			</Link>
-			<p className="mt-1 text-xs text-slate-500">
-				Free {TRIAL.days}-day trial, no card
-			</p>
+			<p className="mt-1 text-xs text-slate-500">{note}</p>
 		</div>
 	</div>
 );
