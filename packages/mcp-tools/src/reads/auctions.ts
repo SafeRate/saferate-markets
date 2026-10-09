@@ -149,6 +149,13 @@ export const bidderShares = (auction: TAuction) => {
 const mean = (xs: number[]) =>
 	xs.length === 0 ? null : xs.reduce((s, x) => s + x, 0) / xs.length;
 
+/**
+ * A cash management bill: its term is in days ("Bill 27-Day"), where the
+ * regular calendar's are in weeks. Treasury's history since 2008 has no term
+ * that is neither (treasury_exploration, 2026-10-09).
+ */
+export const isCashManagement = (key: string) => /-Day$/.test(key);
+
 /** How many prior auctions a change averages, at most. */
 export const AUCTION_PRIORS = 6;
 
@@ -179,13 +186,18 @@ export const analyseAuctions = (auctions: TAuction[], on: string) => {
 					(b.kind === null ? 99 : KIND_ORDER.indexOf(b.kind)) ||
 				yearsOf(a.term) - yearsOf(b.term),
 		);
+	const bill = (key: string) => ({
+		kind: "Bill" as TSecurityKind | null,
+		term: key.slice("Bill ".length),
+		key,
+	});
+	// Cash management bills (day-denominated, off the weekly calendar) go last,
+	// after the coupons: shown, since their results are real, but below the
+	// scheduled terms people come for (Dylan, 2026-10-09).
 	const terms = [
-		...billKeys.map((key) => ({
-			kind: "Bill" as TSecurityKind | null,
-			term: key.slice("Bill ".length),
-			key,
-		})),
+		...billKeys.filter((key) => !isCashManagement(key)).map(bill),
 		...couponTerms,
+		...billKeys.filter(isCashManagement).map(bill),
 	];
 	const held = (a: TAuction) => a.auctionDate <= on;
 	const ofTerm = (key: string) =>
@@ -272,7 +284,10 @@ let windowCache: { on: string; rows: TAuction[] } | null = null;
  * share, dealer takedown and high-less-median. Treasury flips the last two
  * before publishing, so 100 is strong demand on every row; do not re-invert.
  * The verdict counts measures in the top and bottom thirds, it does not
- * average. A term with fewer than eight priors has no row. Not a "tail":
+ * average. Every term treasury considered has a row; an unranked one says
+ * why in `unranked`, "sample" (fewer than `minSample` priors) or "stale" (no
+ * auction in more than `maxStaleDays`), with an empty `measures` and a null
+ * verdict. Captions quote those numbers from the row. Not a "tail":
  * that needs when-issued yields, which no one here holds.
  *
  * Optional: a treasury deployment without the method, or a failed read,
@@ -295,6 +310,11 @@ const ZDemandRow = z.object({
 	termLabel: z.string(),
 	verdict: z.enum(["strong", "average", "weak"]).nullable(),
 	windowMonths: z.number(),
+	// Optional until every treasury deployment publishes reason codes (#44).
+	unranked: z.enum(["sample", "stale"]).nullable().default(null),
+	daysSinceLast: z.number().nullable().default(null),
+	maxStaleDays: z.number().nullable().default(null),
+	minSample: z.number().nullable().default(null),
 });
 export type TAuctionDemand = Omit<z.infer<typeof ZDemandRow>, "auction">;
 
@@ -453,7 +473,11 @@ export const publishLatestByTerm = (
 			? null
 			: {
 					verdict: row.demand.verdict,
+					unranked: row.demand.unranked,
 					sample_size: row.demand.sampleSize,
+					min_sample: row.demand.minSample,
+					days_since_last: row.demand.daysSinceLast,
+					max_stale_days: row.demand.maxStaleDays,
 					window_months: row.demand.windowMonths,
 					measures: row.demand.measures.map((m) => ({
 						key: m.key,
