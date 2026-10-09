@@ -75,6 +75,8 @@ const fakeDb = (
 };
 
 type TSetup = {
+	/** MARKETS_ENV for the app. Default "development". */
+	environment?: string;
 	treasury?: unknown;
 	/** Default: always allows, and records which key it was asked about. */
 	limiter?: { limit: (o: { key: string }) => Promise<{ success: boolean }> };
@@ -99,7 +101,7 @@ export const setup = async (overrides: TSetup = {}) => {
 	const pending: Promise<unknown>[] = [];
 	const env = {
 		DB: d1.db,
-		MARKETS_ENV: "development",
+		MARKETS_ENV: overrides.environment ?? "development",
 		TREASURY: "treasury" in overrides ? overrides.treasury : TREASURY,
 		...(overrides.omitLimiter
 			? {}
