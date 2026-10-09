@@ -139,6 +139,41 @@ export const ZAuctionsOut = z
 	.strict()
 	.openapi("Auctions");
 
+const ZDemandOut = z
+	.object({
+		verdict: z.enum(["strong", "average", "weak"]).nullable().openapi({
+			description:
+				"How many of the four measures sit in the top third (strong) or bottom third (weak) of this term's recent auctions. It counts measures rather than averaging them, so mixed demand reads as average. Null when fewer than two measures could be ranked.",
+		}),
+		sample_size: z.number().int().openapi({
+			description:
+				"Prior auctions of the same term in the window, this one excluded. A verdict over a few auctions is a weaker claim than one over many.",
+		}),
+		window_months: z.number().int().openapi({
+			description: "How far back the comparison reaches, in months.",
+			example: 24,
+		}),
+		measures: z.array(
+			z.object({
+				key: z.string().openapi({ example: "bidToCover" }),
+				label: z.string(),
+				percentile: z.number().nullable().openapi({
+					description:
+						"0 to 100, and 100 is strong demand on every measure: dealer takedown and high-less-median are stronger when lower and are flipped before publication.",
+				}),
+				value: z.number().nullable().openapi({
+					description:
+						"The measure itself: the bid-to-cover ratio, a share as a fraction, or high-less-median in basis points.",
+				}),
+				sample_size: z.number().int(),
+			}),
+		),
+	})
+	.openapi("AuctionDemand", {
+		description:
+			"Auction strength, from Safe Rate's treasury service (the same figures saferate.com shows). Not a tail: that is measured against the when-issued yield, which Safe Rate does not hold.",
+	});
+
 const ZLatestTermOut = z
 	.object({
 		group: z.string().openapi({ example: "Bill 4-Week" }),
@@ -162,6 +197,10 @@ const ZLatestTermOut = z
 				description: `The primary-dealer share less its mean over up to ${AUCTION_PRIORS} previous auctions, percentage points. Dealers take what others do not, so a rise is weaker demand at the price.`,
 			}),
 		primary_dealer_compared_with: z.number().int(),
+		demand: ZDemandOut.nullable().openapi({
+			description:
+				"This auction's demand ranked against the same term's recent history. Null when the term has fewer than eight prior auctions in the window, or the ranking is unavailable.",
+		}),
 	})
 	.strict()
 	.openapi("AuctionTermLatest");
@@ -217,7 +256,7 @@ const latestRoute = createRoute({
 	method: "get",
 	path: "/v1/auctions/latest",
 	summary: "The latest auction result of every term",
-	description: `For each term auctioned in the last 400 days, its most recent held auction, with the change in bid-to-cover and in the primary-dealer share against the mean of up to ${AUCTION_PRIORS} previous auctions of that term. Each change says how many it averaged.`,
+	description: `For each term auctioned in the last 400 days, its most recent held auction, with \`demand\`: bid-to-cover, indirect share, dealer takedown and high-less-median ranked against that term's last 24 months, and a strong, average or weak verdict. Also the change in bid-to-cover and in the primary-dealer share against the mean of up to ${AUCTION_PRIORS} previous auctions of that term, each saying how many it averaged.`,
 	tags: ["Auctions"],
 	request: {
 		query: z.object({ kind: z.enum(KINDS).optional() }),

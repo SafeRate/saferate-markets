@@ -262,6 +262,71 @@ export const shiftDays = (iso: string, days: number) =>
 let windowCache: { on: string; rows: TAuction[] } | null = null;
 
 /**
+ * DEMAND: how strong each term's latest auction was, from treasury's
+ * `auctionDemand` (2026-10-09), the ONE producer of it. saferate.com's
+ * /treasury/auctions computes the same thing and is to read it too; this
+ * module never recomputes it, so the two sites cannot disagree on a rank.
+ *
+ * Four measures ranked as percentiles against the same term's trailing
+ * `windowMonths` (24), the auction itself excluded: bid-to-cover, indirect
+ * share, dealer takedown and high-less-median. Treasury flips the last two
+ * before publishing, so 100 is strong demand on every row; do not re-invert.
+ * The verdict counts measures in the top and bottom thirds, it does not
+ * average. A term with fewer than eight priors has no row. Not a "tail":
+ * that needs when-issued yields, which no one here holds.
+ *
+ * Optional: a treasury deployment without the method, or a failed read,
+ * leaves every row's `demand` null and the pages say nothing about strength.
+ */
+const ZDemandRow = z.object({
+	auction: z
+		.object({ cusip: z.string(), auctionDate: z.string() })
+		.passthrough(),
+	measures: z.array(
+		z.object({
+			key: z.string(),
+			label: z.string(),
+			percentile: z.number().nullable(),
+			sampleSize: z.number(),
+			value: z.number().nullable(),
+		}),
+	),
+	sampleSize: z.number(),
+	termLabel: z.string(),
+	verdict: z.enum(["strong", "average", "weak"]).nullable(),
+	windowMonths: z.number(),
+});
+export type TAuctionDemand = Omit<z.infer<typeof ZDemandRow>, "auction">;
+
+const demandKey = (cusip: string, auctionDate: string) =>
+	`${cusip}|${auctionDate.slice(0, 10)}`;
+
+/** Demand by `cusip|auctionDate`, or an empty map when it cannot be read. */
+export const readAuctionDemand = async (
+	env: TEnv,
+	on: string,
+): Promise<Map<string, TAuctionDemand>> => {
+	try {
+		const rows = z
+			.array(ZDemandRow)
+			.parse(await call(env, "auctionDemand")({ on }));
+		return new Map(
+			rows.map(({ auction, ...demand }) => [
+				demandKey(auction.cusip, auction.auctionDate),
+				demand,
+			]),
+		);
+	} catch (error) {
+		if (!(error instanceof TreasuryAbsent))
+			console.error("[auctions] demand unavailable:", error);
+		return new Map();
+	}
+};
+
+let demandCache: { on: string; byAuction: Map<string, TAuctionDemand> } | null =
+	null;
+
+/**
  * The full window around the newest price day, analysed: what the Auctions page
  * and /v1/auctions/latest serve. Null when treasury-api lacks auctionsBetween,
  * which the caller must say rather than show an empty schedule.
@@ -282,15 +347,26 @@ export const loadAuctionWindow = async (env: TEnv) => {
 			throw error;
 		}
 	}
+	if (demandCache === null || demandCache.on !== on)
+		demandCache = { on, byAuction: await readAuctionDemand(env, on) };
+	const analysed = analyseAuctions(windowCache.rows, on);
+	const byAuction = demandCache.byAuction;
 	return {
 		auctions: windowCache.rows,
-		...analyseAuctions(windowCache.rows, on),
+		...analysed,
+		latestByTerm: analysed.latestByTerm.map((row) => ({
+			...row,
+			demand:
+				byAuction.get(demandKey(row.auction.cusip, row.auction.auctionDate)) ??
+				null,
+		})),
 	};
 };
 
 /** Forget the cached window: for tests, which swap the fake service per case. */
 export const resetAuctionWindowCache = () => {
 	windowCache = null;
+	demandCache = null;
 };
 
 // ── The published shape (REST and MCP) ─────────────────────────────────────────
@@ -358,7 +434,9 @@ export type TPublishedAuction = ReturnType<typeof publishAuction>;
 
 /** One term's latest held auction with its changes, as REST and MCP publish it. */
 export const publishLatestByTerm = (
-	row: ReturnType<typeof analyseAuctions>["latestByTerm"][number],
+	row: ReturnType<typeof analyseAuctions>["latestByTerm"][number] & {
+		demand?: TAuctionDemand | null;
+	},
 	on: string,
 ) => ({
 	group: row.key,
@@ -370,4 +448,19 @@ export const publishLatestByTerm = (
 	primary_dealer_change_points:
 		row.dealersVsPrior === null ? null : round(row.dealersVsPrior * 100, 4),
 	primary_dealer_compared_with: row.dealersComparedWith,
+	demand:
+		row.demand === undefined || row.demand === null
+			? null
+			: {
+					verdict: row.demand.verdict,
+					sample_size: row.demand.sampleSize,
+					window_months: row.demand.windowMonths,
+					measures: row.demand.measures.map((m) => ({
+						key: m.key,
+						label: m.label,
+						percentile: m.percentile,
+						value: m.value,
+						sample_size: m.sampleSize,
+					})),
+				},
 });

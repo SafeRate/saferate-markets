@@ -58,6 +58,42 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 };
 
 type TLoader = Route.ComponentProps["loaderData"];
+type TDemand = TLoader["latestByTerm"][number]["demand"];
+
+/** A measure's percentile from treasury's demand ranking, as published. */
+const Rank = ({ demand, measure }: { demand: TDemand; measure: string }) => {
+	const p = demand?.measures.find((m) => m.key === measure)?.percentile;
+	if (p === null || p === undefined) return null;
+	return (
+		<div
+			className={`text-xs ${p >= 67 ? "text-emerald-700" : p <= 33 ? "text-rose-700" : "text-slate-500"}`}
+		>
+			{Math.round(p)} pct
+		</div>
+	);
+};
+
+/** The demand verdict and what it was ranked against. */
+const Reading = ({ demand }: { demand: TDemand }) => {
+	if (!demand || demand.verdict === null)
+		return <span className="text-xs text-slate-400">—</span>;
+	const tone =
+		demand.verdict === "strong"
+			? "bg-emerald-50 text-emerald-700"
+			: demand.verdict === "weak"
+				? "bg-rose-50 text-rose-700"
+				: "bg-slate-100 text-slate-600";
+	return (
+		<>
+			<span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tone}`}>
+				{demand.verdict}
+			</span>
+			<div className="mt-1 text-xs text-slate-500">
+				vs {demand.sampleSize} over {demand.windowMonths} mo
+			</div>
+		</>
+	);
+};
 type TShown = TLoader["history"][number];
 
 const th = "px-3 py-2 font-semibold";
@@ -206,14 +242,18 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 					<>
 						Bidder shares are of the competitive award: dealers, direct and indirect
 						bidders, leaving out the Fed's SOMA rollover and non-competitive bids,
-						which do not bid on price. Changes are against the average of up to six of
-						that term's previous auctions; the number averaged is shown beside each,
-						and is fewer where Safe Rate holds less of that term's history. Dealers
-						take what others do not, so a higher dealer share is weaker demand at the
-						price; indirect bidders are the usual proxy for foreign and real-money
-						buyers. High less median is how far the stop sat above the middle of the
-						accepted bids; it is not the tail, which is measured against the
-						when-issued yield Safe Rate does not hold.
+						which do not bid on price. Under each measure is its percentile against
+						the same term's auctions over the last 24 months, this one excluded, and
+						100 is strong demand on every measure (a low dealer share and a small
+						high-less-median rank high). The demand reading counts how many measures
+						sit in the top or bottom third rather than averaging them, and says how
+						many auctions it was ranked against; terms with fewer than eight have
+						none. The same figures as saferate.com. Dealers take what others do not,
+						so a higher dealer share is weaker demand at the price; indirect bidders
+						are the usual proxy for foreign and real-money buyers. High less median is
+						how far the stop sat above the middle of the accepted bids; it is not the
+						tail, which is measured against the when-issued yield Safe Rate does not
+						hold.
 					</>
 				}
 				title="Latest result, by term"
@@ -230,6 +270,7 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 							<th className={`${th} text-right`}>Dealers</th>
 							<th className={`${th} text-right`}>Indirect</th>
 							<th className={`${th} text-right`}>Direct</th>
+							<th className={th}>Demand</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -260,36 +301,25 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 										{row.highLessMedianBp === null
 											? "—"
 											: `${row.highLessMedianBp.toFixed(1)} bp`}
+										<Rank demand={row.demand} measure="spread" />
 									</td>
 									<td className={`${td} text-right`}>
 										{number(a.bidToCoverRatio)}
-										<div className={`text-xs ${signClass(row.coverVsPrior)}`}>
-											{signed(row.coverVsPrior, (v) => v.toFixed(2))}
-											{row.coverVsPrior === null ? null : (
-												<span className="text-slate-400">
-													{" "}
-													· {row.coverComparedWith} prior
-												</span>
-											)}
-										</div>
+										<Rank demand={row.demand} measure="bidToCover" />
 									</td>
 									<td className={`${td} text-right`}>
 										{percent(a.shares?.dealers ?? null, 1)}
-										<div className={`text-xs ${signClass(-(row.dealersVsPrior ?? 0))}`}>
-											{signed(row.dealersVsPrior, (v) => `${(v * 100).toFixed(1)} pt`)}
-											{row.dealersVsPrior === null ? null : (
-												<span className="text-slate-400">
-													{" "}
-													· {row.dealersComparedWith} prior
-												</span>
-											)}
-										</div>
+										<Rank demand={row.demand} measure="dealer" />
 									</td>
 									<td className={`${td} text-right`}>
 										{percent(a.shares?.indirect ?? null, 1)}
+										<Rank demand={row.demand} measure="indirect" />
 									</td>
 									<td className={`${td} text-right`}>
 										{percent(a.shares?.direct ?? null, 1)}
+									</td>
+									<td className="px-3 py-2">
+										<Reading demand={row.demand} />
 									</td>
 								</tr>
 							);
