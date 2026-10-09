@@ -73,8 +73,26 @@ const Rank = ({ demand, measure }: { demand: TDemand; measure: string }) => {
 	);
 };
 
-/** The demand verdict and what it was ranked against. */
+/**
+ * The demand verdict and what it was ranked against, or why there is none.
+ * The numbers in an unranked caption come from treasury's row, never from
+ * here, so they stay right if its thresholds move.
+ */
 const Reading = ({ demand }: { demand: TDemand }) => {
+	if (demand?.unranked === "sample" && demand.minSample !== null)
+		return (
+			<div className="text-xs text-slate-500">
+				Not ranked: {demand.sampleSize} prior{" "}
+				{demand.sampleSize === 1 ? "auction" : "auctions"} in {demand.windowMonths}{" "}
+				mo, needs {demand.minSample}
+			</div>
+		);
+	if (demand?.unranked === "stale" && demand.daysSinceLast !== null)
+		return (
+			<div className="text-xs text-slate-500">
+				Not ranked: no auction in {demand.daysSinceLast} days
+			</div>
+		);
 	if (!demand || demand.verdict === null)
 		return <span className="text-xs text-slate-400">—</span>;
 	const tone =
@@ -247,13 +265,13 @@ export default function Auctions({ loaderData }: Route.ComponentProps) {
 						100 is strong demand on every measure (a low dealer share and a small
 						high-less-median rank high). The demand reading counts how many measures
 						sit in the top or bottom third rather than averaging them, and says how
-						many auctions it was ranked against; terms with fewer than eight have
-						none. The same figures as saferate.com. Dealers take what others do not,
-						so a higher dealer share is weaker demand at the price; indirect bidders
-						are the usual proxy for foreign and real-money buyers. High less median is
-						how far the stop sat above the middle of the accepted bids; it is not the
-						tail, which is measured against the when-issued yield Safe Rate does not
-						hold.
+						many auctions it was ranked against; a term too new or too dormant to rank
+						says so. The same figures as saferate.com. Dealers take what others do
+						not, so a higher dealer share is weaker demand at the price; indirect
+						bidders are the usual proxy for foreign and real-money buyers. High less
+						median is how far the stop sat above the middle of the accepted bids; it
+						is not the tail, which is measured against the when-issued yield Safe Rate
+						does not hold.
 					</>
 				}
 				title="Latest result, by term"

@@ -272,7 +272,10 @@ let windowCache: { on: string; rows: TAuction[] } | null = null;
  * share, dealer takedown and high-less-median. Treasury flips the last two
  * before publishing, so 100 is strong demand on every row; do not re-invert.
  * The verdict counts measures in the top and bottom thirds, it does not
- * average. A term with fewer than eight priors has no row. Not a "tail":
+ * average. Every term treasury considered has a row; an unranked one says
+ * why in `unranked`, "sample" (fewer than `minSample` priors) or "stale" (no
+ * auction in more than `maxStaleDays`), with an empty `measures` and a null
+ * verdict. Captions quote those numbers from the row. Not a "tail":
  * that needs when-issued yields, which no one here holds.
  *
  * Optional: a treasury deployment without the method, or a failed read,
@@ -295,6 +298,11 @@ const ZDemandRow = z.object({
 	termLabel: z.string(),
 	verdict: z.enum(["strong", "average", "weak"]).nullable(),
 	windowMonths: z.number(),
+	// Optional until every treasury deployment publishes reason codes (#44).
+	unranked: z.enum(["sample", "stale"]).nullable().default(null),
+	daysSinceLast: z.number().nullable().default(null),
+	maxStaleDays: z.number().nullable().default(null),
+	minSample: z.number().nullable().default(null),
 });
 export type TAuctionDemand = Omit<z.infer<typeof ZDemandRow>, "auction">;
 
@@ -453,7 +461,11 @@ export const publishLatestByTerm = (
 			? null
 			: {
 					verdict: row.demand.verdict,
+					unranked: row.demand.unranked,
 					sample_size: row.demand.sampleSize,
+					min_sample: row.demand.minSample,
+					days_since_last: row.demand.daysSinceLast,
+					max_stale_days: row.demand.maxStaleDays,
 					window_months: row.demand.windowMonths,
 					measures: row.demand.measures.map((m) => ({
 						key: m.key,

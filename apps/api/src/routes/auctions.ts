@@ -143,11 +143,27 @@ const ZDemandOut = z
 	.object({
 		verdict: z.enum(["strong", "average", "weak"]).nullable().openapi({
 			description:
-				"How many of the four measures sit in the top third (strong) or bottom third (weak) of this term's recent auctions. It counts measures rather than averaging them, so mixed demand reads as average. Null when fewer than two measures could be ranked.",
+				"How many of the four measures sit in the top third (strong) or bottom third (weak) of this term's recent auctions. It counts measures rather than averaging them, so mixed demand reads as average. Null when the term is unranked or fewer than two measures could be ranked.",
+		}),
+		unranked: z.enum(["sample", "stale"]).nullable().openapi({
+			description:
+				"Why the term has no ranking, or null when it has one. sample: fewer than min_sample prior auctions in the window. stale: no auction in more than max_stale_days. An unranked term has a null verdict and no measures.",
 		}),
 		sample_size: z.number().int().openapi({
 			description:
 				"Prior auctions of the same term in the window, this one excluded. A verdict over a few auctions is a weaker claim than one over many.",
+		}),
+		min_sample: z.number().int().nullable().openapi({
+			description: "Prior auctions a term needs before it is ranked.",
+			example: 8,
+		}),
+		days_since_last: z.number().int().nullable().openapi({
+			description: "Days from the term's latest auction to the as-of date.",
+		}),
+		max_stale_days: z.number().int().nullable().openapi({
+			description:
+				"A term with no auction for longer than this is unranked as stale.",
+			example: 180,
 		}),
 		window_months: z.number().int().openapi({
 			description: "How far back the comparison reaches, in months.",
@@ -199,7 +215,7 @@ const ZLatestTermOut = z
 		primary_dealer_compared_with: z.number().int(),
 		demand: ZDemandOut.nullable().openapi({
 			description:
-				"This auction's demand ranked against the same term's recent history. Null when the term has fewer than eight prior auctions in the window, or the ranking is unavailable.",
+				"This auction's demand ranked against the same term's recent history. A term too new or too dormant to rank says why in unranked. Null when the ranking is unavailable.",
 		}),
 	})
 	.strict()

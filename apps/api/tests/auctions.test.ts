@@ -166,6 +166,8 @@ describe("GET /v1/auctions/latest", () => {
 		expect(fourWeek.demand.verdict).toBe("weak");
 		expect(fourWeek.demand.sample_size).toBe(104);
 		expect(fourWeek.demand.window_months).toBe(24);
+		// A treasury that predates reason codes reads as ranked, not as unknown.
+		expect(fourWeek.demand.unranked).toBeNull();
 		// Published as treasury ranked it: never re-inverted on this side.
 		expect(
 			fourWeek.demand.measures.find((m: { key: string }) => m.key === "dealer")
@@ -173,6 +175,42 @@ describe("GET /v1/auctions/latest", () => {
 		).toBe(14);
 		// A term treasury did not rank has no demand, rather than a guessed one.
 		for (const term of rest) expect(term.demand).toBeNull();
+	});
+
+	test("publishes why a term is unranked, with the numbers a caption quotes", async () => {
+		const treasury = {
+			...fakeAuctionTreasury(),
+			auctionDemand: async () => [
+				{
+					auction: { cusip: "91282CRF0", auctionDate: "2026-09-09" },
+					measures: [],
+					sampleSize: 3,
+					term: "Note|10-Year",
+					termLabel: "Note 10-Year",
+					verdict: null,
+					windowMonths: 24,
+					unranked: "sample",
+					daysSinceLast: 30,
+					maxStaleDays: 180,
+					minSample: 8,
+				},
+			],
+		};
+		const { status, body } = await get("/v1/auctions/latest", treasury);
+		expect(status).toBe(200);
+		const tenYear = body.terms.find(
+			(t: { auction: { cusip: string } }) => t.auction.cusip === "91282CRF0",
+		);
+		expect(tenYear.demand).toEqual({
+			verdict: null,
+			unranked: "sample",
+			sample_size: 3,
+			min_sample: 8,
+			days_since_last: 30,
+			max_stale_days: 180,
+			window_months: 24,
+			measures: [],
+		});
 	});
 
 	test("a treasury-api without auctionDemand still serves results, with demand null", async () => {
