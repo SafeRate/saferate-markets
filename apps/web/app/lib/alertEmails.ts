@@ -296,7 +296,7 @@ export const confirmSignupEmail = (input: {
 	]
 		.filter(Boolean)
 		.join(" and ");
-	const lead = `Confirm your email to receive ${what || "Treasury alerts"} from Safe Rate Markets. Nothing is sent until you do.`;
+	const lead = `Confirm your email to receive ${what || "Treasury alerts"} from Safe Rate Markets.`;
 	return {
 		subject: "Confirm your Treasury email alerts",
 		text: [
@@ -306,7 +306,7 @@ export const confirmSignupEmail = (input: {
 			"",
 			input.confirmUrl,
 			"",
-			"The link works for 48 hours. If you did not ask for this, ignore this email and nothing will be sent.",
+			"The link works for 48 hours. If you did not ask for this, you can ignore this email.",
 		].join("\n"),
 		html: `<!doctype html>
 <html lang="en">
@@ -317,7 +317,7 @@ export const confirmSignupEmail = (input: {
 <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#475569">${esc(lead)}</p>
 ${button(input.confirmUrl, "Confirm")}
 <p style="margin:28px 0 0;font-size:13px;line-height:1.6;color:#64748b;word-break:break-all">Or paste this into your browser:<br>${esc(input.confirmUrl)}</p>
-<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#94a3b8">The link works for 48 hours. If you did not ask for this, ignore this email and nothing will be sent.</p>
+<p style="margin:24px 0 0;font-size:12px;line-height:1.5;color:#94a3b8">The link works for 48 hours. If you did not ask for this, you can ignore this email.</p>
 </div>
 </body>
 </html>`,
