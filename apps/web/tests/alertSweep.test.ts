@@ -225,7 +225,12 @@ describe("the alert sweep", () => {
 			"all@example.com",
 			"everyone@example.com",
 		]);
-		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-02");
+		// Friday's close is Monday morning's rundown: dated, and linked, by the
+		// morning it goes out, with its sections naming the close.
+		expect(rundowns[0].subject).toMatch(/^Treasury rundown, Mon, Oct 5:/);
+		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-05");
+		expect(rundowns[0].text).toContain("THE CURVE AT THE CLOSE, FRI, OCT 2");
+		expect(rundowns[0].text).toContain("closed Friday at 5.20%");
 		// Zero and real beside par at 10 years, and the money market with its
 		// change against the previous fitted day.
 		// Par; its change on the day, week (09-25, 5.10%) and month (09-02,

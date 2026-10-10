@@ -8,7 +8,8 @@ import type { TRundown } from "@/services/dailyRundown.server";
  */
 
 export const RUNDOWN_PATH = "/daily-rundown/treasury";
-export const rundownPath = (date: string) => `${RUNDOWN_PATH}/${date}`;
+/** The page for an edition, dated by the morning it goes out. */
+export const rundownPath = (edition: string) => `${RUNDOWN_PATH}/${edition}`;
 
 export const longDate = (iso: string) =>
 	new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", {
@@ -16,6 +17,13 @@ export const longDate = (iso: string) =>
 		month: "long",
 		day: "numeric",
 		year: "numeric",
+		timeZone: "UTC",
+	});
+
+/** "Thursday". */
+export const weekday = (iso: string) =>
+	new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", {
+		weekday: "long",
 		timeZone: "UTC",
 	});
 
@@ -70,7 +78,7 @@ export const rundownSummary = (r: TRundown) => {
 	const parts: string[] = [];
 	if (ten)
 		parts.push(
-			`The 10-year Treasury par yield closed at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}`,
+			`The 10-year Treasury par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}`,
 		);
 	if (twos)
 		parts.push(

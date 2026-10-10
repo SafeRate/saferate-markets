@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
 import { rundownPath } from "@/lib/rundownText";
-import { latestRundownDate } from "@/services/dailyRundown.server";
+import { editionOf, latestRundownDate } from "@/services/dailyRundown.server";
 import type { Route } from "./+types/daily-rundown.treasury";
 
 /**
@@ -12,7 +12,7 @@ export const loader = async ({ context }: Route.LoaderArgs) => {
 	const latest = await latestRundownDate(context.cloudflare.env);
 	if (latest === null)
 		throw new Response("No rundown is published yet.", { status: 503 });
-	return redirect(rundownPath(latest), {
+	return redirect(rundownPath(editionOf(latest)), {
 		status: 302,
 		headers: { "Cache-Control": "no-store" },
 	});

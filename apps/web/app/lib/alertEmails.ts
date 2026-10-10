@@ -120,7 +120,7 @@ export const rundownEmail = (
 	r: TRundown,
 	links: TEmailLinks,
 ): TRenderedEmail => {
-	const url = `${links.site}${rundownPath(r.date)}`;
+	const url = `${links.site}${rundownPath(r.edition)}`;
 	const summary = rundownSummary(r);
 	const why =
 		"You're receiving the Treasury daily rundown because you have a Safe Rate Markets account or subscribed to it.";
@@ -156,17 +156,17 @@ export const rundownEmail = (
 	const h2 = (t: string) =>
 		`<h2 style="margin:24px 0 4px;font-size:16px">${esc(t)}</h2>`;
 	const body = `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155">${esc(summary)}</p>
-${h2("The curve at the close")}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
-${h2("Money market")}${moneyMarket}
-${h2("Auction results")}${results}
+${h2(`The curve at the close, ${shortDate(r.date)}`)}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
+${h2(`Money market at the close, ${shortDate(r.date)}`)}${moneyMarket}
+${h2(`Auction results, ${shortDate(r.date)}`)}${results}
 ${h2(`Announced for the next ${r.aheadDays} days`)}${ahead}
 ${button(url, "View on the web")}`;
 	const text = [
-		`Treasury daily rundown: ${longDate(r.date)}`,
+		`Treasury daily rundown: ${longDate(r.edition)}`,
 		"",
 		summary,
 		"",
-		"THE CURVE AT THE CLOSE (par yield; change on the day, week, month; zero; real)",
+		`THE CURVE AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (par yield; change on the day, week, month; zero; real)`,
 		...r.tenors.map(
 			(t) =>
 				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${signedBp(t.weekBp).padEnd(7)} ${signedBp(t.monthBp).padEnd(7)}  ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
@@ -178,7 +178,7 @@ ${button(url, "View on the web")}`;
 				`  ${s.name} ${signedBp(s.bp).replace(/^\+/, "")} (${signedBp(s.changeBp)})`,
 		),
 		"",
-		"MONEY MARKET (yield; change on the day, week, month)",
+		`MONEY MARKET AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (yield; change on the day, week, month)`,
 		...(r.moneyMarket
 			? r.moneyMarket.rates.map(
 					(m) =>
@@ -186,7 +186,7 @@ ${button(url, "View on the web")}`;
 				)
 			: ["  Not available for this date."]),
 		"",
-		"AUCTION RESULTS",
+		`AUCTION RESULTS, ${shortDate(r.date).toUpperCase()}`,
 		...(r.results.length === 0
 			? ["  None."]
 			: r.results.map(
@@ -206,11 +206,11 @@ ${button(url, "View on the web")}`;
 		footerText(why, links),
 	].join("\n");
 	return {
-		subject: `Treasury rundown, ${shortDate(r.date)}: ${summary.split(";")[0]}`,
+		subject: `Treasury rundown, ${shortDate(r.edition)}: ${summary.split(";")[0]}`,
 		text,
 		html: layout({
 			eyebrow: "Treasury daily rundown",
-			title: longDate(r.date),
+			title: longDate(r.edition),
 			preheader: summary,
 			body,
 			why,
