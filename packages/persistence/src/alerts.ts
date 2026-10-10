@@ -290,7 +290,11 @@ export async function createAlertSignup(input: {
 		.run();
 }
 
-/** Mark a sign-up confirmed and return it; null if unknown, expired or used. */
+/**
+ * Mark a sign-up confirmed and return it; null if unknown or expired. A link
+ * followed again before it expires returns the sign-up again, keeping the
+ * first confirmedAt: people click twice, and mail scanners click first.
+ */
 export async function confirmAlertSignup(input: {
 	db: D1Database;
 	idAlertSignup: string;
@@ -298,8 +302,8 @@ export async function confirmAlertSignup(input: {
 	const now = Date.now();
 	const row = await input.db
 		.prepare(
-			`update alertSignups set confirmedAt = ?
-			  where idAlertSignup = ? and confirmedAt is null and expiresAt > ?
+			`update alertSignups set confirmedAt = coalesce(confirmedAt, ?)
+			  where idAlertSignup = ? and expiresAt > ?
 			  returning email, rundown, auctions, source`,
 		)
 		.bind(now, input.idAlertSignup, now)

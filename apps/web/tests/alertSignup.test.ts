@@ -86,11 +86,17 @@ describe("the sign-up endpoint", () => {
 			auctions: true,
 			source: "saferate.com/treasury/auctions",
 		});
-		// The link works once.
+		// A second click works the same; an unknown link does not.
 		expect(
 			await confirmAlertSignup({
 				db: world.db,
 				idAlertSignup: await hashToken(token),
+			}),
+		).toEqual(signup);
+		expect(
+			await confirmAlertSignup({
+				db: world.db,
+				idAlertSignup: await hashToken("not-a-token"),
 			}),
 		).toBeNull();
 	});
