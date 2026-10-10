@@ -15,6 +15,7 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	sinceText,
 } from "@/lib/rundownText";
 import { latestRundownDate, loadRundown } from "@/services/dailyRundown.server";
 import type { Route } from "./+types/daily-rundown.treasury.$date";
@@ -64,6 +65,18 @@ export const meta: Route.MetaFunction = ({ data: loaded, params }) => {
 };
 
 const th = "px-3 py-2 text-left font-semibold";
+
+type TPast = {
+	changeBp: number | null;
+	weekAgo: number | null;
+	monthAgo: number | null;
+};
+/** The day's change, then where the same term stood a week and a month ago. */
+const pastRows: [string, (c: TPast) => string][] = [
+	["Change", (c) => signedBp(c.changeBp)],
+	["1 week ago", (c) => pct(c.weekAgo)],
+	["1 month ago", (c) => pct(c.monthAgo)],
+];
 const td = "px-3 py-2 tabular-nums";
 
 const Verdict = ({
@@ -155,9 +168,8 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					The curve at the close
 				</h2>
 				<p className="mt-1 text-sm text-slate-500">
-					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent, with
-					changes{r.previousDate ? ` since ${shortDate(r.previousDate)}` : ""}; zero
-					and real (TIPS) rates are continuously compounded.
+					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent;{" "}
+					{sinceText(r)}. Zero and real (TIPS) rates are continuously compounded.
 				</p>
 				<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
 					<table className="w-full min-w-[32rem] text-sm">
@@ -180,14 +192,16 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 									</td>
 								))}
 							</tr>
-							<tr className="border-t border-slate-100">
-								<td className={td}>Change</td>
-								{r.tenors.map((t) => (
-									<td className={`${td} text-right text-slate-600`} key={t.years}>
-										{signedBp(t.changeBp)}
-									</td>
-								))}
-							</tr>
+							{pastRows.map(([label, pick]) => (
+								<tr className="border-t border-slate-100" key={label}>
+									<td className={`${td} text-slate-600`}>{label}</td>
+									{r.tenors.map((t) => (
+										<td className={`${td} text-right text-slate-600`} key={t.years}>
+											{pick(t)}
+										</td>
+									))}
+								</tr>
+							))}
 							<tr className="border-t border-slate-100">
 								<td className={td}>Zero</td>
 								{r.tenors.map((t) => (
@@ -237,8 +251,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					<>
 						<p className="mt-1 text-sm text-slate-500">
 							Under a year, fitted to {r.moneyMarket.billCount} bills,{" "}
-							{r.moneyMarket.convention}
-							{r.previousDate ? `, changes since ${shortDate(r.previousDate)}` : ""}.
+							{r.moneyMarket.convention}.
 						</p>
 						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
 							<table className="w-full min-w-[32rem] text-sm">
@@ -261,14 +274,16 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 											</td>
 										))}
 									</tr>
-									<tr className="border-t border-slate-100">
-										<td className={td}>Change</td>
-										{r.moneyMarket.rates.map((m) => (
-											<td className={`${td} text-right text-slate-600`} key={m.label}>
-												{signedBp(m.changeBp)}
-											</td>
-										))}
-									</tr>
+									{pastRows.map(([label, pick]) => (
+										<tr className="border-t border-slate-100" key={label}>
+											<td className={`${td} text-slate-600`}>{label}</td>
+											{r.moneyMarket?.rates.map((m) => (
+												<td className={`${td} text-right text-slate-600`} key={m.label}>
+													{pick(m)}
+												</td>
+											))}
+										</tr>
+									))}
 								</tbody>
 							</table>
 						</div>

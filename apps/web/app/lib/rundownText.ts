@@ -84,3 +84,13 @@ export const rundownSummary = (r: TRundown) => {
 					.join(", ")}`;
 	return `${parts.join(", ")}; ${auctions}. ${r.ahead.length} ${r.ahead.length === 1 ? "auction" : "auctions"} announced for the next ${r.aheadDays} days.`;
 };
+
+/** "change since Oct 7; a week ago is Oct 1, a month ago Sep 8". */
+export const sinceText = (r: TRundown) =>
+	[
+		r.previousDate ? `change since ${shortDate(r.previousDate)}` : null,
+		r.weekDate ? `a week ago is the close of ${shortDate(r.weekDate)}` : null,
+		r.monthDate ? `a month ago ${shortDate(r.monthDate)}` : null,
+	]
+		.filter((x): x is string => x !== null)
+		.join("; ");
