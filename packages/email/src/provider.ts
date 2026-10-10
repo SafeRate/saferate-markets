@@ -32,6 +32,8 @@ export interface EmailMessage {
 	subject: string;
 	html: string;
 	text: string;
+	/** Extra headers, e.g. List-Unsubscribe on alert mail. */
+	headers?: Record<string, string>;
 }
 
 export type EmailSendResult =
@@ -52,6 +54,7 @@ export interface CloudflareEmailBinding {
 		subject: string;
 		html?: string;
 		text?: string;
+		headers?: Record<string, string>;
 	}): Promise<unknown>;
 }
 

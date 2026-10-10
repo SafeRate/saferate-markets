@@ -318,7 +318,7 @@ const ZDemandRow = z.object({
 });
 export type TAuctionDemand = Omit<z.infer<typeof ZDemandRow>, "auction">;
 
-const demandKey = (cusip: string, auctionDate: string) =>
+export const demandKey = (cusip: string, auctionDate: string) =>
 	`${cusip}|${auctionDate.slice(0, 10)}`;
 
 /** Demand by `cusip|auctionDate`, or an empty map when it cannot be read. */
