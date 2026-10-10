@@ -49,14 +49,18 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 	const { idUser } = await requireOrganization(request, env);
 	const form = await request.formData();
 	const on = (name: string) => form.get(name) === "on";
-	const everyTerm = form.get("termScope") !== "some";
+	// Every term starts ticked. Leaving all of them ticked saves "every term"
+	// (null), which also covers terms that first appear later, such as a new
+	// cash management bill; unticking any saves the ticked list.
 	const picked = form.getAll("terms").map(String).filter(Boolean);
+	const shown = form.getAll("shown").map(String).filter(Boolean);
+	const everyTerm = shown.every((t) => picked.includes(t));
 	const preferences: TAlertPreferences = {
 		rundown: on("rundown"),
 		auctionResults: on("auctionResults"),
 		auctionAnnouncements: on("auctionAnnouncements"),
-		// Choosing "only these" with none ticked would silently mean nothing;
-		// treat it as every term and say so.
+		// None ticked would silently mean no auction alerts at all; treat it as
+		// every term and say so.
 		terms: everyTerm || picked.length === 0 ? null : picked,
 		paused: on("paused"),
 	};
@@ -183,32 +187,17 @@ export default function Alerts({
 					<legend className="px-1 text-sm font-medium text-neutral-900">
 						Terms for auction alerts
 					</legend>
-					<label className="flex items-center gap-2 py-1 text-sm">
-						<input
-							className="accent-primary"
-							defaultChecked={p.terms === null}
-							name="termScope"
-							type="radio"
-							value="all"
-						/>
-						Every term
-					</label>
-					<label className="flex items-center gap-2 py-1 text-sm">
-						<input
-							className="accent-primary"
-							defaultChecked={p.terms !== null}
-							name="termScope"
-							type="radio"
-							value="some"
-						/>
-						Only these:
-					</label>
-					<div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 pl-6 sm:grid-cols-3">
+					<p className="py-1 text-sm text-slate-600">
+						Untick the terms you don't want. With every term ticked, terms that first
+						appear later are included too.
+					</p>
+					<div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
 						{[...scheduled, ...cmb].map((t) => (
 							<label className="flex items-center gap-2 text-sm" key={t}>
+								<input name="shown" type="hidden" value={t} />
 								<input
 									className="accent-primary"
-									defaultChecked={p.terms?.includes(t) ?? false}
+									defaultChecked={p.terms === null || p.terms.includes(t)}
 									name="terms"
 									type="checkbox"
 									value={t}

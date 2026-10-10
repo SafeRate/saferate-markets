@@ -1,3 +1,4 @@
+import { getAlertPreferences } from "@markets/persistence";
 import { PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import { data, Link } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
@@ -17,6 +18,7 @@ import {
 	signedBp,
 	sinceText,
 } from "@/lib/rundownText";
+import { getServerSession } from "@/services/auth.server";
 import { latestRundownDate, loadRundown } from "@/services/dailyRundown.server";
 import type { Route } from "./+types/daily-rundown.treasury.$date";
 
@@ -28,13 +30,36 @@ import type { Route } from "./+types/daily-rundown.treasury.$date";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-export const loader = async ({ params, context }: Route.LoaderArgs) => {
+/**
+ * Whether the visitor already gets the rundown: a signed-in account with it
+ * on and not paused. Anonymous, or any failure, is "not signed in"; this only
+ * changes the button, so it must never cost the page.
+ */
+const readerOf = async (request: Request, env: Env) => {
+	try {
+		const session = await getServerSession({ env, request });
+		if (!session?.user?.id) return "anonymous" as const;
+		const p = await getAlertPreferences({ db: env.DB, idUser: session.user.id });
+		return p.rundown && !p.paused
+			? ("subscribed" as const)
+			: ("signedIn" as const);
+	} catch {
+		return "anonymous" as const;
+	}
+};
+
+export const loader = async ({
+	params,
+	context,
+	request,
+}: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
 	const date = params.date;
 	if (!ISO.test(date)) throw data("Not a date", { status: 404 });
-	const [rundown, latest] = await Promise.all([
+	const [rundown, latest, reader] = await Promise.all([
 		loadRundown(env, date),
 		latestRundownDate(env),
+		readerOf(request, env),
 	]);
 	if (rundown === null)
 		throw data(
@@ -45,7 +70,7 @@ export const loader = async ({ params, context }: Route.LoaderArgs) => {
 				headers: { "Cache-Control": "no-store" },
 			},
 		);
-	return { rundown, latest };
+	return { rundown, latest, reader };
 };
 
 export const meta: Route.MetaFunction = ({ data: loaded, params }) => {
@@ -105,7 +130,7 @@ const Verdict = ({
 };
 
 export default function DailyRundown({ loaderData }: Route.ComponentProps) {
-	const { rundown: r, latest } = loaderData;
+	const { rundown: r, latest, reader } = loaderData;
 	const web = SITE_HOSTS.production.web;
 	const path = rundownPath(r.date);
 	return (
@@ -158,9 +183,19 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 			</nav>
 
 			<StrategyDisclaimer
-				note="Free, every business day"
-				trackLabel="Get it by email"
-				trackTo={`/sign-in?next=${encodeURIComponent("/dashboard/alerts")}`}
+				note={
+					reader === "subscribed"
+						? "You get this by email"
+						: "Free, every business day"
+				}
+				trackLabel={
+					reader === "subscribed" ? "Manage email alerts" : "Get it by email"
+				}
+				trackTo={
+					reader === "anonymous"
+						? `/sign-in?next=${encodeURIComponent("/dashboard/alerts")}`
+						: "/dashboard/alerts"
+				}
 			/>
 
 			<section className="mt-12">
