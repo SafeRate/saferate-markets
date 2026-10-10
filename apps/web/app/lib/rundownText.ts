@@ -42,6 +42,17 @@ export const signedBp = (value: number | null) => {
 	return `${r > 0 ? "+" : r < 0 ? "−" : ""}${Math.abs(r)} bp`;
 };
 
+/** "+0.12%", "−0.05%", "0.00%"; "—" when unknown. Inputs in percent. */
+export const signedPct = (value: number | null, digits = 2) => {
+	if (value === null) return "—";
+	const r = Number(value.toFixed(digits));
+	return `${r > 0 ? "+" : r < 0 ? "−" : ""}${Math.abs(r).toFixed(digits)}%`;
+};
+
+/** An index's page on saferate.com. */
+export const indexUrl = (slug: string) =>
+	`https://saferate.com/treasury/indices/${slug}`;
+
 /** "4.123%", or "—". Inputs are already in percent. */
 export const pct = (value: number | null, digits = 3) =>
 	value === null ? "—" : `${value.toFixed(digits)}%`;

@@ -9,12 +9,14 @@ import {
 	auctionName,
 	billions,
 	clearingText,
+	indexUrl,
 	longDate,
 	pct,
 	rundownPath,
 	rundownSummary,
 	shortDate,
 	signedBp,
+	signedPct,
 	sinceText,
 } from "./rundownText";
 
@@ -153,11 +155,23 @@ export const rundownEmail = (
 							`<tr><td style="${cell}">${esc(shortDate(a.auction_date))}</td><td style="${cell}">${esc(auctionName(a))}</td><td style="${cell};text-align:right">${esc(billions(a.offering_amount))}</td></tr>`,
 					)
 					.join("")}</table>`;
+	const ix = r.indices;
+	const indices = ix
+		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Index</th><th style="${head};text-align:right">Level</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr>${ix
+				.map(
+					(i) =>
+						`<tr><td style="${cell}"><a href="${indexUrl(i.slug)}" style="color:#0f172a">${esc(i.name)}</a><br><span style="font-family:monospace;font-size:11px;color:#64748b">${esc(i.ticker)}</span></td><td style="${cell};text-align:right;font-weight:600">${i.level.toFixed(2)}</td><td style="${cell};text-align:right">${signedPct(i.changePct)}</td><td style="${cell};text-align:right">${signedPct(i.weekPct)}</td><td style="${cell};text-align:right">${signedPct(i.monthPct)}</td></tr>`,
+				)
+				.join(
+					"",
+				)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Total return over the same closes as the curve.${ix.some((i) => i.isProvisional) ? " This month's levels are provisional until it closes." : ""} <a href="${links.site}/indices" style="color:#94a3b8">About the indices</a>.</p>`
+		: `<p style="margin:8px 0 0;font-size:13px;color:#64748b">Index levels for this close are not published yet. <a href="${links.site}/indices">See the indices</a>.</p>`;
 	const h2 = (t: string) =>
 		`<h2 style="margin:24px 0 4px;font-size:16px">${esc(t)}</h2>`;
 	const body = `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155">${esc(summary)}</p>
 ${h2(`The curve at the close, ${shortDate(r.date)}`)}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
 ${h2(`Money market at the close, ${shortDate(r.date)}`)}${moneyMarket}
+${h2(`Safe Rate Treasury indices at the close, ${shortDate(r.date)}`)}${indices}
 ${h2(`Auction results, ${shortDate(r.date)}`)}${results}
 ${h2(`Announced for the next ${r.aheadDays} days`)}${ahead}
 ${button(url, "View on the web")}`;
@@ -185,6 +199,17 @@ ${button(url, "View on the web")}`;
 						`  ${m.label.padEnd(4)} ${pct(m.rate)}  ${signedBp(m.changeBp).padEnd(7)} ${signedBp(m.weekBp).padEnd(7)} ${signedBp(m.monthBp)}`,
 				)
 			: ["  Not available for this date."]),
+		"",
+		`SAFE RATE TREASURY INDICES AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (level; total return on the day, week, month)`,
+		...(ix
+			? [
+					...ix.map(
+						(i) =>
+							`  ${i.name.padEnd(22)} ${i.level.toFixed(2).padStart(8)}  ${signedPct(i.changePct).padEnd(7)} ${signedPct(i.weekPct).padEnd(7)} ${signedPct(i.monthPct)}`,
+					),
+					`  About the indices: ${links.site}/indices`,
+				]
+			: ["  Not published yet for this close."]),
 		"",
 		`AUCTION RESULTS, ${shortDate(r.date).toUpperCase()}`,
 		...(r.results.length === 0
