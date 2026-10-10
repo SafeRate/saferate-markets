@@ -155,8 +155,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					The curve at the close
 				</h2>
 				<p className="mt-1 text-sm text-slate-500">
-					Par yields from Safe Rate's fitted Treasury curve
-					{r.previousDate ? `, changes since ${shortDate(r.previousDate)}` : ""}.
+					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent, with
+					changes{r.previousDate ? ` since ${shortDate(r.previousDate)}` : ""}; zero
+					and real (TIPS) rates are continuously compounded.
 				</p>
 				<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
 					<table className="w-full min-w-[32rem] text-sm">
@@ -187,9 +188,31 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 									</td>
 								))}
 							</tr>
+							<tr className="border-t border-slate-100">
+								<td className={td}>Zero</td>
+								{r.tenors.map((t) => (
+									<td className={`${td} text-right`} key={t.years}>
+										{t.zeroRate === null ? "—" : pct(t.zeroRate)}
+									</td>
+								))}
+							</tr>
+							<tr className="border-t border-slate-100">
+								<td className={td}>Real (TIPS)</td>
+								{r.tenors.map((t) => (
+									<td className={`${td} text-right`} key={t.years}>
+										{t.realRate === null ? "—" : pct(t.realRate)}
+									</td>
+								))}
+							</tr>
 						</tbody>
 					</table>
 				</div>
+				<p className="mt-2 text-xs text-slate-500">
+					{r.real
+						? `Real rates fitted to ${r.real.tipsCount} TIPS; the TIPS curve starts at 2 years.`
+						: "The real (TIPS) curve is not available for this date."}
+					{r.hasZero ? "" : " The zero curve is not available for this date."}
+				</p>
 				<ul className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
 					{r.spreads.map((s) => (
 						<li key={s.name}>
@@ -204,6 +227,57 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 						</li>
 					))}
 				</ul>
+			</section>
+
+			<section className="mt-12">
+				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
+					Money market
+				</h2>
+				{r.moneyMarket ? (
+					<>
+						<p className="mt-1 text-sm text-slate-500">
+							Under a year, fitted to {r.moneyMarket.billCount} bills,{" "}
+							{r.moneyMarket.convention}
+							{r.previousDate ? `, changes since ${shortDate(r.previousDate)}` : ""}.
+						</p>
+						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+							<table className="w-full min-w-[32rem] text-sm">
+								<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+									<tr>
+										<th className={th}>Tenor</th>
+										{r.moneyMarket.rates.map((m) => (
+											<th className={`${th} text-right`} key={m.label}>
+												{m.label}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody>
+									<tr className="border-t border-slate-100">
+										<td className={td}>Yield</td>
+										{r.moneyMarket.rates.map((m) => (
+											<td className={`${td} text-right font-medium`} key={m.label}>
+												{pct(m.rate)}
+											</td>
+										))}
+									</tr>
+									<tr className="border-t border-slate-100">
+										<td className={td}>Change</td>
+										{r.moneyMarket.rates.map((m) => (
+											<td className={`${td} text-right text-slate-600`} key={m.label}>
+												{signedBp(m.changeBp)}
+											</td>
+										))}
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</>
+				) : (
+					<p className="mt-3 text-slate-600">
+						The money market curve is not available for this date.
+					</p>
+				)}
 			</section>
 
 			<section className="mt-12">
