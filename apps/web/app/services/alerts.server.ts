@@ -47,6 +47,13 @@ import { latestRundownDate, loadRundown } from "./dailyRundown.server";
  */
 
 const FRESH_MS = 6 * 60 * 60 * 1000;
+/**
+ * How long a rundown waits for its close's index levels. They come from
+ * treasury's verify run, about 15 minutes after the curve on a good day and
+ * hours later when a run fails (2026-10-07), so the email waits a while and
+ * then goes without them rather than not at all. Inside FRESH_MS.
+ */
+const INDEX_WAIT_MS = 2 * 60 * 60 * 1000;
 /** Emails per tick: inside a Worker's subrequest limit, and the daily quota. */
 const BUDGET = 80;
 
@@ -286,7 +293,8 @@ export const sweepAlerts = async (env: TSweepEnv, now = new Date()) => {
 		}
 	}
 
-	// The rundown: once a close's curve is in, for the day it was fitted on.
+	// The rundown: once a close's curve is in, for the day it was fitted on,
+	// and its index levels too, or INDEX_WAIT_MS after the curve.
 	const latest = await latestRundownDate(env, now);
 	if (latest !== null) {
 		const seen = await observeAlertEvents({
@@ -295,10 +303,16 @@ export const sweepAlerts = async (env: TSweepEnv, now = new Date()) => {
 			eventKeys: [latest],
 			now: now.getTime(),
 		});
-		if (fresh(seen.get(latest))) {
+		const firstSeen = seen.get(latest);
+		if (fresh(firstSeen)) {
 			const rundown = await loadRundown(env, latest);
 			if (rundown === null)
 				lines.push(`rundown ${latest}: no curve after all; not sent`);
+			else if (
+				rundown.indices === null &&
+				now.getTime() - (firstSeen ?? 0) < INDEX_WAIT_MS
+			)
+				lines.push(`rundown ${latest}: waiting for the index levels`);
 			else
 				await deliver({
 					kind: "rundown",

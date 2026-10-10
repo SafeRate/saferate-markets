@@ -9,6 +9,7 @@ import {
 	auctionName,
 	billions,
 	clearingText,
+	indexUrl,
 	longDate,
 	pct,
 	RUNDOWN_PATH,
@@ -16,6 +17,7 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	signedPct,
 	sinceText,
 } from "@/lib/rundownText";
 import { getServerSession } from "@/services/auth.server";
@@ -340,6 +342,81 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 
 			<section className="mt-12">
 				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
+					Safe Rate Treasury indices at the close, {shortDate(r.date)}
+				</h2>
+				{r.indices ? (
+					<>
+						<p className="mt-1 text-sm text-slate-500">
+							Total return over the same closes as the curve.
+							{r.indices.some((i) => i.isProvisional)
+								? " This month's levels are provisional until it closes."
+								: ""}{" "}
+							<Link
+								className="text-primary underline underline-offset-4"
+								to="/indices"
+							>
+								About the indices
+							</Link>
+							.
+						</p>
+						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+							<table className="w-full min-w-[32rem] text-sm">
+								<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+									<tr>
+										<th className={th}>Index</th>
+										<th className={`${th} text-right`}>Level</th>
+										<th className={`${th} text-right`}>1 day</th>
+										<th className={`${th} text-right`}>1 week</th>
+										<th className={`${th} text-right`}>1 month</th>
+									</tr>
+								</thead>
+								<tbody>
+									{r.indices.map((i) => (
+										<tr className="border-t border-slate-100" key={i.code}>
+											<td className="px-3 py-2">
+												<a
+													className="font-medium text-primary underline-offset-4 hover:underline"
+													href={indexUrl(i.slug)}
+													rel="noopener"
+													target="_blank"
+												>
+													{i.name}
+												</a>
+												<div className="font-mono text-[11px] text-slate-500">
+													{i.ticker}
+												</div>
+											</td>
+											<td className={`${td} text-right font-medium`}>
+												{i.level.toFixed(2)}
+											</td>
+											<td className={`${td} text-right text-slate-600`}>
+												{signedPct(i.changePct)}
+											</td>
+											<td className={`${td} text-right text-slate-600`}>
+												{signedPct(i.weekPct)}
+											</td>
+											<td className={`${td} text-right text-slate-600`}>
+												{signedPct(i.monthPct)}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</>
+				) : (
+					<p className="mt-3 text-slate-600">
+						Index levels for this close are not published yet.{" "}
+						<Link className="text-primary underline underline-offset-4" to="/indices">
+							See the indices
+						</Link>
+						.
+					</p>
+				)}
+			</section>
+
+			<section className="mt-12">
+				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
 					Auction results, {shortDate(r.date)}
 				</h2>
 				{r.results.length === 0 ? (
@@ -441,8 +518,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					>
 						methodology
 					</Link>
-					). Auction results and schedules from the U.S. Treasury. A day's rundown is
-					published the next business morning, once its close is in.
+					). Index levels from the Safe Rate Treasury indices, valued from Treasury's
+					end-of-day prices. Auction results and schedules from the U.S. Treasury. A
+					day's rundown is published the next business morning, once its close is in.
 				</p>
 			</section>
 		</main>

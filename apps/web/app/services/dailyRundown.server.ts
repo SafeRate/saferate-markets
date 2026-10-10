@@ -5,10 +5,16 @@ import {
 	publishAuction,
 	readAuctionDemand,
 	readAuctionsBetween,
+	readDailyLevelsOn,
 	shiftDays,
 	type TAuctionDemand,
 } from "@markets/mcp-tools";
 import { getCurvesOn, getRealCurveOn } from "@saferate/treasury-client/client";
+import {
+	INDEX_META,
+	INDEX_SLUG,
+	type TIndexCode,
+} from "@saferate/treasury-client/types";
 import { z } from "zod";
 
 type TEnv = Env;
@@ -36,7 +42,8 @@ type TEnv = Env;
  * `parYieldSeries` (the curve and 2s10s/5s30s pages), auctions from
  * `auctionsBetween` published by `publishAuction` (the auctions page, REST
  * and MCP), demand from treasury's `auctionDemand` on the same date, and the
- * zero, real and money market curves from the readers the Rates page uses.
+ * zero, real and money market curves from the readers the Rates page uses,
+ * and the Safe Rate index levels from the reader /indices uses.
  */
 
 export const RUNDOWN_TENORS = [1, 2, 3, 5, 7, 10, 20, 30] as const;
@@ -260,6 +267,66 @@ const readMoneyMarket = async (
 	};
 };
 
+export type TRundownIndex = {
+	code: string;
+	name: string;
+	ticker: string;
+	/** Its page on saferate.com, /treasury/indices/<slug>. */
+	slug: string;
+	/** Total-return level. */
+	level: number;
+	/** True while the month is open and its prices can still be restated. */
+	isProvisional: boolean;
+	/** Total return in percent, from the level at each comparison close. */
+	changePct: number | null;
+	weekPct: number | null;
+	monthPct: number | null;
+};
+
+/** Percent from `then` to `now`, from total-return levels. */
+const returnPct = (now: number, then: number | undefined) =>
+	then === undefined ? null : (now / then - 1) * 100;
+
+/**
+ * Every index's level at the close and its total return since the same
+ * comparison closes as the curve. Levels, not the since-rebalance return:
+ * a week can straddle a rebalance, and differencing levels is right across
+ * one. Null when the close has no levels yet: they are published by
+ * treasury's verify run, about a quarter of an hour after the curve.
+ */
+const readIndices = async (
+	env: TEnv,
+	date: string,
+	compare: (string | null)[],
+): Promise<TRundownIndex[] | null> => {
+	const levelsOn = (on: string | null) =>
+		on === null
+			? Promise.resolve(null)
+			: optional(`index levels ${on}`, () => readDailyLevelsOn(env, on));
+	const [today, ...priors] = await Promise.all([
+		levelsOn(date),
+		...compare.map(levelsOn),
+	]);
+	if (!today || today.length === 0) return null;
+	const [day, week, month] = priors.map((p) =>
+		p ? new Map(p.map((row) => [row.code, row.level])) : null,
+	);
+	return today.map((row) => {
+		const code = row.code as TIndexCode;
+		return {
+			code,
+			name: INDEX_META[code].name,
+			ticker: INDEX_META[code].ticker,
+			slug: INDEX_SLUG[code],
+			level: row.level,
+			isProvisional: row.isProvisional,
+			changePct: returnPct(row.level, day?.get(code)),
+			weekPct: returnPct(row.level, week?.get(code)),
+			monthPct: returnPct(row.level, month?.get(code)),
+		};
+	});
+};
+
 /**
  * The morning a close's rundown goes out: the next weekday. Not the next
  * business day: treasury fetches a close the next morning whether or not it
@@ -316,10 +383,10 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		...t,
 		realRate: realBy.get(t.years) ?? null,
 	}));
-	const moneyMarket = await readMoneyMarket(env, date, [
-		curve.previousDate,
-		curve.weekDate,
-		curve.monthDate,
+	const compare = [curve.previousDate, curve.weekDate, curve.monthDate];
+	const [moneyMarket, indices] = await Promise.all([
+		readMoneyMarket(env, date, compare),
+		readIndices(env, date, compare),
 	]);
 	const analysed = analyseAuctions(auctions, date);
 	const results = analysed.latestByTerm
@@ -351,6 +418,7 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		real: realCurve ? { tipsCount: realCurve.tipsCount } : null,
 		spreads: curve.spreads,
 		moneyMarket,
+		indices,
 		results,
 		ahead,
 		aheadDays: AHEAD_DAYS,

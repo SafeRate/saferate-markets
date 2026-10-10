@@ -70,13 +70,42 @@ const moneyMarketRow = (date: string) => ({
 	rmse_basis_points: 1,
 });
 
+/**
+ * indexLevelsDailyOn's rows, as treasury sends them: the broad index at 202
+ * on 10-02, against 200 the day before, 201 a week before (09-25) and 198 a
+ * month before (09-02).
+ */
+const BROAD: Record<string, number> = {
+	"2026-09-02": 198,
+	"2026-09-25": 201,
+	"2026-09-30": 199,
+	"2026-10-01": 200,
+	"2026-10-02": 202,
+};
+const indexRows = (date: string) =>
+	indexDates.includes(date) && BROAD[date] !== undefined
+		? [
+				{
+					code: "broad",
+					date,
+					level: BROAD[date],
+					provisional: 1,
+					rebalance_date: "2026-09-30",
+					return_since_rebalance: 0.01,
+				},
+			]
+		: [];
+
 let world: ReturnType<typeof sqliteD1>;
 let rows: Record<string, unknown>[];
 let curveDates: string[];
+/** The closes whose index levels are published. */
+let indexDates: string[];
 let sent: {
 	to: string;
 	subject: string;
 	text: string;
+	html: string;
 	headers?: Record<string, string>;
 }[];
 
@@ -113,6 +142,7 @@ const env = () =>
 				},
 			],
 			realCurve: async ({ date }: { date: string }) => realRow(date),
+			indexLevelsDailyOn: async ({ date }: { date: string }) => indexRows(date),
 			curvesOn: async (date: string) => ({
 				zero: [],
 				moneyMarket: moneyMarketRow(date),
@@ -149,6 +179,8 @@ beforeEach(async () => {
 	rows = [...ALL_ROWS];
 	// A month ago (09-02) and a week ago (09-25) are fitted closes too.
 	curveDates = ["2026-09-02", "2026-09-25", "2026-09-30", "2026-10-01"];
+	// Levels for every close, 10-02's included, unless a test says otherwise.
+	indexDates = [...curveDates, "2026-10-02"];
 	sent = [];
 	everyone = world.addUser("everyone@example.com");
 	tenYearFan = world.addUser("ten@example.com");
@@ -239,6 +271,44 @@ describe("the alert sweep", () => {
 			/10y\s+5\.200%\s+−5 bp\s+\+10 bp\s+\+30 bp\s+5\.111%\s+2\.345%/,
 		);
 		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp\s+−5 bp\s+−5 bp/);
+		// The broad index: level, then total return on the day (200), week
+		// (201) and month (198).
+		expect(rundowns[0].text).toContain(
+			"SAFE RATE TREASURY INDICES AT THE CLOSE, FRI, OCT 2",
+		);
+		expect(rundowns[0].text).toMatch(
+			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%/,
+		);
+		expect(rundowns[0].html).toContain(
+			"https://saferate.com/treasury/indices/nominal",
+		);
+	});
+
+	test("the rundown waits for its close's index levels", async () => {
+		indexDates = indexDates.filter((d) => d !== "2026-10-02");
+		await tick(T0);
+		curveDates.push("2026-10-02");
+		expect(await tick(T0 + 5 * MIN)).toContain("waiting for the index levels");
+		await tick(T0 + 60 * MIN);
+		expect(sent).toEqual([]);
+		indexDates.push("2026-10-02");
+		await tick(T0 + 65 * MIN);
+		const rundowns = sent.filter((m) => m.subject.startsWith("Treasury rundown"));
+		expect(rundowns).toHaveLength(2);
+		expect(rundowns[0].text).toMatch(/US Treasury\s+202\.00/);
+	});
+
+	test("and goes without them after two hours", async () => {
+		indexDates = indexDates.filter((d) => d !== "2026-10-02");
+		await tick(T0);
+		curveDates.push("2026-10-02");
+		await tick(T0 + 5 * MIN);
+		await tick(T0 + 120 * MIN);
+		expect(sent).toEqual([]);
+		await tick(T0 + 125 * MIN);
+		const rundowns = sent.filter((m) => m.subject.startsWith("Treasury rundown"));
+		expect(rundowns).toHaveLength(2);
+		expect(rundowns[0].text).toContain("Not published yet for this close.");
 	});
 
 	test("every alert carries a one-click unsubscribe that verifies", async () => {
