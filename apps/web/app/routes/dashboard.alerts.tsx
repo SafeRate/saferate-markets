@@ -95,6 +95,25 @@ const Toggle = ({
 	</label>
 );
 
+const SaveButton = ({
+	className = "",
+	form,
+	saving,
+}: {
+	className?: string;
+	form?: string;
+	saving: boolean;
+}) => (
+	<button
+		className={`rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60 ${className}`}
+		disabled={saving}
+		form={form}
+		type="submit"
+	>
+		{saving ? "Saving…" : "Save"}
+	</button>
+);
+
 export default function Alerts({
 	loaderData,
 	actionData,
@@ -105,9 +124,13 @@ export default function Alerts({
 	const cmb = terms.filter(isCashManagement);
 	return (
 		<div className="max-w-3xl">
-			<h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-				Email alerts
-			</h1>
+			<div className="flex items-center justify-between gap-4">
+				<h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+					Email alerts
+				</h1>
+				{/* Also at the top: the form is longer than a screen. */}
+				<SaveButton form="alerts" saving={saving} />
+			</div>
 			<p className="mt-2 text-sm text-slate-600">
 				Sent to {email}. Free, and every email has a one-click unsubscribe.
 			</p>
@@ -122,7 +145,7 @@ export default function Alerts({
 					Saved.{actionData.note ? ` ${actionData.note}` : ""}
 				</p>
 			) : null}
-			<Form className="mt-6" method="post">
+			<Form className="mt-6" id="alerts" method="post">
 				<div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-5">
 					<Toggle
 						defaultChecked={p.rundown}
@@ -205,13 +228,7 @@ export default function Alerts({
 					/>
 				</div>
 
-				<button
-					className="mt-6 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60"
-					disabled={saving}
-					type="submit"
-				>
-					{saving ? "Saving…" : "Save"}
-				</button>
+				<SaveButton className="mt-6" saving={saving} />
 			</Form>
 		</div>
 	);
