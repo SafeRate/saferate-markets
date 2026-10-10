@@ -66,16 +66,16 @@ export const meta: Route.MetaFunction = ({ data: loaded, params }) => {
 
 const th = "px-3 py-2 text-left font-semibold";
 
-type TPast = {
+type TChanges = {
 	changeBp: number | null;
-	weekAgo: number | null;
-	monthAgo: number | null;
+	weekBp: number | null;
+	monthBp: number | null;
 };
-/** The day's change, then where the same term stood a week and a month ago. */
-const pastRows: [string, (c: TPast) => string][] = [
-	["Change", (c) => signedBp(c.changeBp)],
-	["1 week ago", (c) => pct(c.weekAgo)],
-	["1 month ago", (c) => pct(c.monthAgo)],
+/** Changes on the day, the week and the month, in both tables. */
+const pastRows: [string, (c: TChanges) => string][] = [
+	["1 day", (c) => signedBp(c.changeBp)],
+	["1 week", (c) => signedBp(c.weekBp)],
+	["1 month", (c) => signedBp(c.monthBp)],
 ];
 const td = "px-3 py-2 tabular-nums";
 

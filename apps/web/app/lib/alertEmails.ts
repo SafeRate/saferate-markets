@@ -95,19 +95,19 @@ const button = (href: string, label: string) =>
 
 // ── The daily rundown ─────────────────────────────────────────────────────────
 
-/** The day's change, then the same term a week and a month ago. */
+/** Changes on the day, the week and the month. */
 const pastRowsHtml = (
 	cols: {
 		changeBp: number | null;
-		weekAgo: number | null;
-		monthAgo: number | null;
+		weekBp: number | null;
+		monthBp: number | null;
 	}[],
 ) =>
 	(
 		[
-			["Change", (c) => signedBp(c.changeBp)],
-			["1 week ago", (c) => pct(c.weekAgo)],
-			["1 month ago", (c) => pct(c.monthAgo)],
+			["1 day", (c) => signedBp(c.changeBp)],
+			["1 week", (c) => signedBp(c.weekBp)],
+			["1 month", (c) => signedBp(c.monthBp)],
 		] as [string, (c: (typeof cols)[number]) => string][]
 	)
 		.map(
@@ -166,10 +166,10 @@ ${button(url, "View on the web")}`;
 		"",
 		summary,
 		"",
-		"THE CURVE AT THE CLOSE (par yield, change, 1 week ago, 1 month ago, zero, real)",
+		"THE CURVE AT THE CLOSE (par yield; change on the day, week, month; zero; real)",
 		...r.tenors.map(
 			(t) =>
-				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${pct(t.weekAgo)}  ${pct(t.monthAgo)}   ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
+				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${signedBp(t.weekBp).padEnd(7)} ${signedBp(t.monthBp).padEnd(7)}  ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
 		),
 		`  ${sinceText(r)}.`,
 		"  Zero and real rates are continuously compounded.",
@@ -178,11 +178,11 @@ ${button(url, "View on the web")}`;
 				`  ${s.name} ${signedBp(s.bp).replace(/^\+/, "")} (${signedBp(s.changeBp)})`,
 		),
 		"",
-		"MONEY MARKET (yield, change, 1 week ago, 1 month ago)",
+		"MONEY MARKET (yield; change on the day, week, month)",
 		...(r.moneyMarket
 			? r.moneyMarket.rates.map(
 					(m) =>
-						`  ${m.label.padEnd(4)} ${pct(m.rate)}  ${signedBp(m.changeBp).padEnd(7)} ${pct(m.weekAgo)}  ${pct(m.monthAgo)}`,
+						`  ${m.label.padEnd(4)} ${pct(m.rate)}  ${signedBp(m.changeBp).padEnd(7)} ${signedBp(m.weekBp).padEnd(7)} ${signedBp(m.monthBp)}`,
 				)
 			: ["  Not available for this date."]),
 		"",

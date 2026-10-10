@@ -85,12 +85,17 @@ export const rundownSummary = (r: TRundown) => {
 	return `${parts.join(", ")}; ${auctions}. ${r.ahead.length} ${r.ahead.length === 1 ? "auction" : "auctions"} announced for the next ${r.aheadDays} days.`;
 };
 
-/** "change since Oct 7; a week ago is Oct 1, a month ago Sep 8". */
-export const sinceText = (r: TRundown) =>
-	[
-		r.previousDate ? `change since ${shortDate(r.previousDate)}` : null,
-		r.weekDate ? `a week ago is the close of ${shortDate(r.weekDate)}` : null,
-		r.monthDate ? `a month ago ${shortDate(r.monthDate)}` : null,
-	]
-		.filter((x): x is string => x !== null)
-		.join("; ");
+/** "changes since Oct 7 (day), Oct 1 (week) and Sep 8 (month)". */
+export const sinceText = (r: TRundown) => {
+	const parts = [
+		r.previousDate ? `${shortDate(r.previousDate)} (day)` : null,
+		r.weekDate ? `${shortDate(r.weekDate)} (week)` : null,
+		r.monthDate ? `${shortDate(r.monthDate)} (month)` : null,
+	].filter((x): x is string => x !== null);
+	if (parts.length === 0) return "no earlier close to compare";
+	const list =
+		parts.length === 1
+			? parts[0]
+			: `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+	return `changes since the closes of ${list}`;
+};

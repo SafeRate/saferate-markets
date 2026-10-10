@@ -54,6 +54,10 @@ const monthBefore = (date: string) => {
 	return d.toISOString().slice(0, 10);
 };
 
+/** Basis points from `then` to `now`; null without a comparison close. */
+const bp = (now: number, then: number | undefined) =>
+	then === undefined ? null : (now - then) * 100;
+
 /** The newest fitted date on or before `limit`, the comparison close. */
 const closeOnOrBefore = (dates: string[], limit: string) =>
 	dates.filter((d) => d <= limit).at(-1) ?? null;
@@ -73,10 +77,10 @@ export type TRundownTenor = {
 	parYield: number;
 	/** Basis points against the previous fitted day; null without one. */
 	changeBp: number | null;
-	/** The par yield at the close a week earlier (on or before date − 7 days). */
-	weekAgo: number | null;
-	/** The par yield at the close a calendar month earlier (on or before). */
-	monthAgo: number | null;
+	/** Basis points against the close a week earlier (on or before date − 7 days). */
+	weekBp: number | null;
+	/** Basis points against the close a calendar month earlier (on or before). */
+	monthBp: number | null;
 	/** Percent, continuously compounded. */
 	zeroRate: number | null;
 	/** Percent, continuously compounded; null where the TIPS curve has no tenor (1y). */
@@ -88,8 +92,8 @@ export type TRundownMoneyMarket = {
 		label: string;
 		rate: number;
 		changeBp: number | null;
-		weekAgo: number | null;
-		monthAgo: number | null;
+		weekBp: number | null;
+		monthBp: number | null;
 	}[];
 	billCount: number;
 	convention: string;
@@ -163,8 +167,8 @@ const readCurve = async (env: TEnv, date: string) => {
 				years,
 				parYield: y,
 				changeBp: p === undefined ? null : (y - p) * 100,
-				weekAgo: week?.get(years) ?? null,
-				monthAgo: month?.get(years) ?? null,
+				weekBp: bp(y, week?.get(years)),
+				monthBp: bp(y, month?.get(years)),
 				zeroRate: zeros.get(years) ?? null,
 				realRate: null as number | null,
 			},
@@ -238,15 +242,13 @@ const readMoneyMarket = async (
 	const [day, week, month] = priors.map((p) =>
 		p ? new Map(p.rates.map((r) => [r.label, r.rate])) : null,
 	);
-	const bp = (now: number, then: number | undefined) =>
-		then === undefined ? null : (now - then) * 100;
 	return {
 		rates: mm.rates.map((r) => ({
 			label: r.label,
 			rate: r.rate,
 			changeBp: bp(r.rate, day?.get(r.label)),
-			weekAgo: week?.get(r.label) ?? null,
-			monthAgo: month?.get(r.label) ?? null,
+			weekBp: bp(r.rate, week?.get(r.label)),
+			monthBp: bp(r.rate, month?.get(r.label)),
 		})),
 		billCount: mm.billCount,
 		convention: mm.convention,

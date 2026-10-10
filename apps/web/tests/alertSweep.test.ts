@@ -228,12 +228,12 @@ describe("the alert sweep", () => {
 		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-02");
 		// Zero and real beside par at 10 years, and the money market with its
 		// change against the previous fitted day.
-		// Par, the day's change, the same term a week and a month ago, then
-		// zero and real.
+		// Par; its change on the day, week (09-25, 5.10%) and month (09-02,
+		// 4.90%); then zero and real.
 		expect(rundowns[0].text).toMatch(
-			/10y\s+5\.200%\s+−5 bp\s+5\.100%\s+4\.900%\s+5\.111%\s+2\.345%/,
+			/10y\s+5\.200%\s+−5 bp\s+\+10 bp\s+\+30 bp\s+5\.111%\s+2\.345%/,
 		);
-		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp\s+4\.250%/);
+		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp\s+−5 bp\s+−5 bp/);
 	});
 
 	test("every alert carries a one-click unsubscribe that verifies", async () => {
