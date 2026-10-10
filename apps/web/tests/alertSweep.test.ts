@@ -32,8 +32,43 @@ const parRows = (date: string, ten: number) =>
 		date,
 		tenor_years,
 		par_yield: tenor_years === 10 ? ten : 4 + tenor_years / 100,
-		zero_rate: 4,
+		zero_rate: tenor_years === 10 ? 5.111 : 4,
 	}));
+
+/** realCurve's row, as treasury sends it: a 10-year real yield of 2.345%. */
+const realRow = (date: string) => ({
+	converged: 1,
+	date,
+	max_price_error_cents: 1,
+	rate_02y: 1.9,
+	rate_03y: 2,
+	rate_05y: 2.1,
+	rate_07y: 2.2,
+	rate_10y: 2.345,
+	rate_20y: 2.5,
+	rate_30y: 2.6,
+	rmse_basis_points: 2,
+	tips_count: 46,
+});
+
+/** curvesOn's money market row: 3-month 4.20% today, 4.25% the day before. */
+const moneyMarketRow = (date: string) => ({
+	bill_count: 31,
+	converged: 1,
+	convention: "bond equivalent",
+	date,
+	implied_overnight: 4.3,
+	max_residual_basis_points: 1,
+	rate_01m: 4.3,
+	rate_01w: 4.31,
+	rate_02m: 4.28,
+	rate_03m: date === "2026-10-02" ? 4.2 : 4.25,
+	rate_04m: 4.18,
+	rate_06m: 4.1,
+	rate_09m: 4.0,
+	rate_12m: 3.9,
+	rmse_basis_points: 1,
+});
 
 let world: ReturnType<typeof sqliteD1>;
 let rows: Record<string, unknown>[];
@@ -77,6 +112,13 @@ const env = () =>
 					minSample: 8,
 				},
 			],
+			realCurve: async ({ date }: { date: string }) => realRow(date),
+			curvesOn: async (date: string) => ({
+				zero: [],
+				moneyMarket: moneyMarketRow(date),
+				nss: null,
+				dieboldLi: null,
+			}),
 			parYieldSeries: async ({ from, to }: { from: string; to: string }) =>
 				curveDates
 					.filter((d) => d >= from && d <= to)
@@ -172,6 +214,10 @@ describe("the alert sweep", () => {
 			"everyone@example.com",
 		]);
 		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-02");
+		// Zero and real beside par at 10 years, and the money market with its
+		// change against the previous fitted day.
+		expect(rundowns[0].text).toMatch(/10y\s+5\.200%.*5\.111%\s+2\.345%/);
+		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp/);
 	});
 
 	test("every alert carries a one-click unsubscribe that verifies", async () => {

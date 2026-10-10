@@ -8,6 +8,7 @@ import {
 	shiftDays,
 	type TAuctionDemand,
 } from "@markets/mcp-tools";
+import { getCurvesOn, getRealCurveOn } from "@saferate/treasury-client/client";
 import { z } from "zod";
 
 type TEnv = Env;
@@ -15,7 +16,9 @@ type TEnv = Env;
 /**
  * The Treasury daily rundown for one price date: the closing par curve and
  * how it moved, that day's auction results with treasury's demand reading,
- * and the auctions scheduled for the week after. One loader for the public
+ * and the auctions scheduled for the week after. Beside the par curve, the
+ * zero and real (TIPS) curves at the same tenors, and the bill-fitted money
+ * market curve below a year. One loader for the public
  * page (/daily-rundown/treasury/:date) and the email, so the email can say
  * "the same as on the page" and mean it.
  *
@@ -27,7 +30,8 @@ type TEnv = Env;
  * Every figure comes from the readers the other surfaces use: par yields from
  * `parYieldSeries` (the curve and 2s10s/5s30s pages), auctions from
  * `auctionsBetween` published by `publishAuction` (the auctions page, REST
- * and MCP), demand from treasury's `auctionDemand` on the same date.
+ * and MCP), demand from treasury's `auctionDemand` on the same date, and the
+ * zero, real and money market curves from the readers the Rates page uses.
  */
 
 export const RUNDOWN_TENORS = [1, 2, 3, 5, 7, 10, 20, 30] as const;
@@ -36,7 +40,12 @@ const AHEAD_DAYS = 7;
 const BACK_DAYS = 10;
 
 const ZParRow = z
-	.object({ date: z.string(), tenor_years: z.number(), par_yield: z.number() })
+	.object({
+		date: z.string(),
+		tenor_years: z.number(),
+		par_yield: z.number(),
+		zero_rate: z.number().nullable().optional(),
+	})
 	.passthrough();
 
 export type TRundownTenor = {
@@ -45,6 +54,16 @@ export type TRundownTenor = {
 	parYield: number;
 	/** Basis points against the previous fitted day; null without one. */
 	changeBp: number | null;
+	/** Percent, continuously compounded. */
+	zeroRate: number | null;
+	/** Percent, continuously compounded; null where the TIPS curve has no tenor (1y). */
+	realRate: number | null;
+};
+
+export type TRundownMoneyMarket = {
+	rates: { label: string; rate: number; changeBp: number | null }[];
+	billCount: number;
+	convention: string;
 };
 
 export type TRundownSpread = {
@@ -87,10 +106,13 @@ const readCurve = async (env: TEnv, date: string) => {
 		}),
 	);
 	const byDate = new Map<string, Map<number, number>>();
+	const zeros = new Map<number, number>();
 	for (const r of rows) {
 		const day = byDate.get(r.date) ?? new Map<number, number>();
 		day.set(r.tenor_years, r.par_yield);
 		byDate.set(r.date, day);
+		if (r.date === date && typeof r.zero_rate === "number")
+			zeros.set(r.tenor_years, r.zero_rate);
 	}
 	const today = byDate.get(date);
 	if (!today) return null;
@@ -109,6 +131,8 @@ const readCurve = async (env: TEnv, date: string) => {
 				years,
 				parYield: y,
 				changeBp: p === undefined ? null : (y - p) * 100,
+				zeroRate: zeros.get(years) ?? null,
+				realRate: null as number | null,
 			},
 		];
 	});
@@ -144,17 +168,71 @@ const demandOf = (d: TAuctionDemand | undefined): TRundownDemand | null =>
 				daysSinceLast: d.daysSinceLast,
 			};
 
+/**
+ * A curve beside the par curve that failed to load costs its own rows, not
+ * the rundown: the email still goes, and the page and email say the curve is
+ * unavailable rather than leaving it out.
+ */
+const optional = async <T>(what: string, read: () => Promise<T | null>) => {
+	try {
+		return await read();
+	} catch (error) {
+		console.error(`[rundown] ${what} unavailable:`, error);
+		return null;
+	}
+};
+
+const readMoneyMarket = async (
+	env: TEnv,
+	date: string,
+	previousDate: string | null,
+): Promise<TRundownMoneyMarket | null> => {
+	const [today, before] = await Promise.all([
+		optional("money market", () => getCurvesOn({ env, date })),
+		previousDate
+			? optional("money market (previous day)", () =>
+					getCurvesOn({ env, date: previousDate }),
+				)
+			: null,
+	]);
+	const mm = today?.moneyMarket;
+	if (!mm?.hasConverged) return null;
+	const prior = before?.moneyMarket?.hasConverged
+		? new Map(before.moneyMarket.rates.map((r) => [r.label, r.rate]))
+		: null;
+	return {
+		rates: mm.rates.map((r) => {
+			const p = prior?.get(r.label);
+			return {
+				label: r.label,
+				rate: r.rate,
+				changeBp: p === undefined ? null : (r.rate - p) * 100,
+			};
+		}),
+		billCount: mm.billCount,
+		convention: mm.convention,
+	};
+};
+
 /** The rundown for `date`, or null when no curve was fitted on it. */
 export const loadRundown = async (env: TEnv, date: string) => {
-	const [curve, auctions, demand] = await Promise.all([
+	const [curve, auctions, demand, real] = await Promise.all([
 		readCurve(env, date),
 		readAuctionsBetween(env, {
 			from: date,
 			to: shiftDays(date, AHEAD_DAYS),
 		}),
 		readAuctionDemand(env, date),
+		optional("real curve", () => getRealCurveOn({ env, date })),
 	]);
 	if (curve === null) return null;
+	const realCurve = real?.hasConverged ? real : null;
+	const realBy = new Map(realCurve?.rates.map((r) => [r.tenorYears, r.rate]));
+	const tenors = curve.tenors.map((t) => ({
+		...t,
+		realRate: realBy.get(t.years) ?? null,
+	}));
+	const moneyMarket = await readMoneyMarket(env, date, curve.previousDate);
 	const analysed = analyseAuctions(auctions, date);
 	const results = analysed.latestByTerm
 		.filter((row) => row.auction.auctionDate === date)
@@ -176,8 +254,11 @@ export const loadRundown = async (env: TEnv, date: string) => {
 	return {
 		date,
 		previousDate: curve.previousDate,
-		tenors: curve.tenors,
+		tenors,
+		hasZero: tenors.some((t) => t.zeroRate !== null),
+		real: realCurve ? { tipsCount: realCurve.tipsCount } : null,
 		spreads: curve.spreads,
+		moneyMarket,
 		results,
 		ahead,
 		aheadDays: AHEAD_DAYS,
