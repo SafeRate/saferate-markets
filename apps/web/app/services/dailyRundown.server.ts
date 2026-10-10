@@ -22,7 +22,12 @@ type TEnv = Env;
  * page (/daily-rundown/treasury/:date) and the email, so the email can say
  * "the same as on the page" and mean it.
  *
- * THE DATE IS A PRICE DATE: the close the curve was fitted on. A day with no
+ * THE EDITION IS DATED BY THE MORNING IT GOES OUT, the next weekday after
+ * the close it covers (`editionOf`): Thursday's close is Friday's
+ * rundown, and its sections say "at the close, Thu, Oct 8". The page's URL
+ * carries the edition date; everything inside works on the price date.
+ *
+ * THE PRICE DATE is the close the curve was fitted on. A day with no
  * fitted curve (a weekend, a holiday, or a close not yet fetched, which is
  * the next business morning) has no rundown, and the loader says so with
  * null rather than rendering an empty one.
@@ -255,6 +260,44 @@ const readMoneyMarket = async (
 	};
 };
 
+/**
+ * The morning a close's rundown goes out: the next weekday. Not the next
+ * business day: treasury fetches a close the next morning whether or not it
+ * is a holiday (Friday 2026-10-09 is fetched on Columbus Day), so a holiday
+ * calendar would date Monday's email Tuesday.
+ */
+export const editionOf = (priceDate: string) => {
+	const d = new Date(`${priceDate}T00:00:00Z`);
+	do d.setUTCDate(d.getUTCDate() + 1);
+	while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
+	return d.toISOString().slice(0, 10);
+};
+
+/**
+ * The close an edition covers: the newest fitted day whose next business day
+ * is `edition`. Null when there is none (a weekend, a holiday, or a morning
+ * whose close is not fitted yet).
+ */
+export const priceDateFor = async (env: TEnv, edition: string) => {
+	const rows = z.array(ZParRow).parse(
+		await call(
+			env,
+			"parYieldSeries",
+		)({
+			tenors: [10],
+			from: shiftDays(edition, -BACK_DAYS),
+			to: shiftDays(edition, -1),
+		}),
+	);
+	return (
+		rows
+			.map((r) => r.date)
+			.filter((d) => editionOf(d) === edition)
+			.sort()
+			.at(-1) ?? null
+	);
+};
+
 /** The rundown for `date`, or null when no curve was fitted on it. */
 export const loadRundown = async (env: TEnv, date: string) => {
 	const [curve, auctions, demand, real] = await Promise.all([
@@ -298,6 +341,8 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		.map((a) => publishAuction(a, date));
 	return {
 		date,
+		edition: editionOf(date),
+		previousEdition: curve.previousDate ? editionOf(curve.previousDate) : null,
 		previousDate: curve.previousDate,
 		weekDate: curve.weekDate,
 		monthDate: curve.monthDate,

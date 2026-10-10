@@ -19,7 +19,12 @@ import {
 	sinceText,
 } from "@/lib/rundownText";
 import { getServerSession } from "@/services/auth.server";
-import { latestRundownDate, loadRundown } from "@/services/dailyRundown.server";
+import {
+	editionOf,
+	latestRundownDate,
+	loadRundown,
+	priceDateFor,
+} from "@/services/dailyRundown.server";
 import type { Route } from "./+types/daily-rundown.treasury.$date";
 
 /**
@@ -54,16 +59,19 @@ export const loader = async ({
 	request,
 }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	const date = params.date;
-	if (!ISO.test(date)) throw data("Not a date", { status: 404 });
-	const [rundown, latest, reader] = await Promise.all([
-		loadRundown(env, date),
+	// The URL carries the edition: the morning the rundown went out.
+	const edition = params.date;
+	if (!ISO.test(edition)) throw data("Not a date", { status: 404 });
+	const [date, latestClose, reader] = await Promise.all([
+		priceDateFor(env, edition),
 		latestRundownDate(env),
 		readerOf(request, env),
 	]);
+	const latest = latestClose ? editionOf(latestClose) : null;
+	const rundown = date === null ? null : await loadRundown(env, date);
 	if (rundown === null)
 		throw data(
-			{ date, latest },
+			{ date: edition, latest },
 			{
 				status: 404,
 				// A day not yet published may be published later; never cache it.
@@ -78,7 +86,7 @@ export const meta: Route.MetaFunction = ({ data: loaded, params }) => {
 	const { rundown } = loaded;
 	return [
 		{
-			title: `Treasury Daily Rundown, ${longDate(rundown.date)}: Yields and Auctions | ${PRODUCT_NAME}`,
+			title: `Treasury Daily Rundown, ${longDate(rundown.edition)}: Yields and Auctions | ${PRODUCT_NAME}`,
 		},
 		{ name: "description", content: rundownSummary(rundown) },
 		{
@@ -132,7 +140,7 @@ const Verdict = ({
 export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 	const { rundown: r, latest, reader } = loaderData;
 	const web = SITE_HOSTS.production.web;
-	const path = rundownPath(r.date);
+	const path = rundownPath(r.edition);
 	return (
 		<main className="mx-auto max-w-6xl px-6 py-16">
 			<JsonLd
@@ -141,9 +149,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					"@type": "Report",
 					"@id": `${web}${path}#report`,
 					url: `${web}${path}`,
-					name: `Treasury Daily Rundown, ${longDate(r.date)}`,
+					name: `Treasury Daily Rundown, ${longDate(r.edition)}`,
 					description: rundownSummary(r),
-					datePublished: r.date,
+					datePublished: r.edition,
 					publisher: ORGANIZATION_REF,
 				}}
 			/>
@@ -151,28 +159,28 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				data={breadcrumbJsonLd([
 					{ name: PRODUCT_NAME, path: "/" },
 					{ name: "Treasury Daily Rundown", path: RUNDOWN_PATH },
-					{ name: longDate(r.date), path },
+					{ name: longDate(r.edition), path },
 				])}
 			/>
 			<p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
 				Treasury daily rundown
 			</p>
 			<h1 className="mt-3 text-4xl font-semibold tracking-tight text-neutral-900">
-				{longDate(r.date)}
+				{longDate(r.edition)}
 			</h1>
 			<p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-700">
 				{rundownSummary(r)}
 			</p>
 			<nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-				{r.previousDate ? (
+				{r.previousEdition ? (
 					<Link
 						className="text-primary underline underline-offset-4"
-						to={rundownPath(r.previousDate)}
+						to={rundownPath(r.previousEdition)}
 					>
-						← {shortDate(r.previousDate)}
+						← {shortDate(r.previousEdition)}
 					</Link>
 				) : null}
-				{latest && latest !== r.date ? (
+				{latest && latest !== r.edition ? (
 					<Link
 						className="text-primary underline underline-offset-4"
 						to={rundownPath(latest)}
@@ -200,7 +208,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 
 			<section className="mt-12">
 				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					The curve at the close
+					The curve at the close, {shortDate(r.date)}
 				</h2>
 				<p className="mt-1 text-sm text-slate-500">
 					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent;{" "}
@@ -280,7 +288,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 
 			<section className="mt-12">
 				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Money market
+					Money market at the close, {shortDate(r.date)}
 				</h2>
 				{r.moneyMarket ? (
 					<>
@@ -332,7 +340,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 
 			<section className="mt-12">
 				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Auction results
+					Auction results, {shortDate(r.date)}
 				</h2>
 				{r.results.length === 0 ? (
 					<p className="mt-3 text-slate-600">
