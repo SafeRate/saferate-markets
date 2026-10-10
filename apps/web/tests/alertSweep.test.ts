@@ -122,7 +122,18 @@ const env = () =>
 			parYieldSeries: async ({ from, to }: { from: string; to: string }) =>
 				curveDates
 					.filter((d) => d >= from && d <= to)
-					.flatMap((d) => parRows(d, d === "2026-10-02" ? 5.2 : 5.25)),
+					.flatMap((d) =>
+						parRows(
+							d,
+							d === "2026-10-02"
+								? 5.2
+								: d === "2026-09-25"
+									? 5.1
+									: d === "2026-09-02"
+										? 4.9
+										: 5.25,
+						),
+					),
 		},
 	}) as never;
 
@@ -136,7 +147,8 @@ let unverified: string;
 beforeEach(async () => {
 	world = sqliteD1();
 	rows = [...ALL_ROWS];
-	curveDates = ["2026-09-30", "2026-10-01"];
+	// A month ago (09-02) and a week ago (09-25) are fitted closes too.
+	curveDates = ["2026-09-02", "2026-09-25", "2026-09-30", "2026-10-01"];
 	sent = [];
 	everyone = world.addUser("everyone@example.com");
 	tenYearFan = world.addUser("ten@example.com");
@@ -216,8 +228,12 @@ describe("the alert sweep", () => {
 		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-02");
 		// Zero and real beside par at 10 years, and the money market with its
 		// change against the previous fitted day.
-		expect(rundowns[0].text).toMatch(/10y\s+5\.200%.*5\.111%\s+2\.345%/);
-		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp/);
+		// Par; its change on the day, week (09-25, 5.10%) and month (09-02,
+		// 4.90%); then zero and real.
+		expect(rundowns[0].text).toMatch(
+			/10y\s+5\.200%\s+−5 bp\s+\+10 bp\s+\+30 bp\s+5\.111%\s+2\.345%/,
+		);
+		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp\s+−5 bp\s+−5 bp/);
 	});
 
 	test("every alert carries a one-click unsubscribe that verifies", async () => {

@@ -15,6 +15,7 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	sinceText,
 } from "./rundownText";
 
 /**
@@ -94,6 +95,27 @@ const button = (href: string, label: string) =>
 
 // ── The daily rundown ─────────────────────────────────────────────────────────
 
+/** Changes on the day, the week and the month. */
+const pastRowsHtml = (
+	cols: {
+		changeBp: number | null;
+		weekBp: number | null;
+		monthBp: number | null;
+	}[],
+) =>
+	(
+		[
+			["1 day", (c) => signedBp(c.changeBp)],
+			["1 week", (c) => signedBp(c.weekBp)],
+			["1 month", (c) => signedBp(c.monthBp)],
+		] as [string, (c: (typeof cols)[number]) => string][]
+	)
+		.map(
+			([label, show]) =>
+				`<tr><td style="${cell};color:#475569">${label}</td>${cols.map((c) => `<td style="${cell};text-align:right;color:#475569">${esc(show(c))}</td>`).join("")}</tr>`,
+		)
+		.join("");
+
 export const rundownEmail = (
 	r: TRundown,
 	links: TEmailLinks,
@@ -102,10 +124,10 @@ export const rundownEmail = (
 	const summary = rundownSummary(r);
 	const why =
 		"You're receiving the Treasury daily rundown because you have a Safe Rate Markets account or subscribed to it.";
-	const curve = `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${r.tenors.map((t) => `<th style="${head};text-align:right">${t.years}y</th>`).join("")}</tr><tr><td style="${cell}">Par yield</td>${r.tenors.map((t) => `<td style="${cell};text-align:right;font-weight:600">${pct(t.parYield)}</td>`).join("")}</tr><tr><td style="${cell}">Change</td>${r.tenors.map((t) => `<td style="${cell};text-align:right;color:#475569">${esc(signedBp(t.changeBp))}</td>`).join("")}</tr><tr><td style="${cell}">Zero</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.zeroRate)}</td>`).join("")}</tr><tr><td style="${cell}">Real (TIPS)</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.realRate)}</td>`).join("")}</tr></table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Zero and real rates are continuously compounded.${r.real ? "" : " The real curve is not available for this date."}</p>`;
+	const curve = `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${r.tenors.map((t) => `<th style="${head};text-align:right">${t.years}y</th>`).join("")}</tr><tr><td style="${cell}">Par yield</td>${r.tenors.map((t) => `<td style="${cell};text-align:right;font-weight:600">${pct(t.parYield)}</td>`).join("")}</tr>${pastRowsHtml(r.tenors)}<tr><td style="${cell}">Zero</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.zeroRate)}</td>`).join("")}</tr><tr><td style="${cell}">Real (TIPS)</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.realRate)}</td>`).join("")}</tr></table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">${esc(sinceText(r).replace(/^./, (c) => c.toUpperCase()))}. Zero and real rates are continuously compounded.${r.real ? "" : " The real curve is not available for this date."}</p>`;
 	const mm = r.moneyMarket;
 	const moneyMarket = mm
-		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${mm.rates.map((m) => `<th style="${head};text-align:right">${m.label}</th>`).join("")}</tr><tr><td style="${cell}">Yield</td>${mm.rates.map((m) => `<td style="${cell};text-align:right;font-weight:600">${pct(m.rate)}</td>`).join("")}</tr><tr><td style="${cell}">Change</td>${mm.rates.map((m) => `<td style="${cell};text-align:right;color:#475569">${esc(signedBp(m.changeBp))}</td>`).join("")}</tr></table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Fitted to ${mm.billCount} bills, ${esc(mm.convention)}.</p>`
+		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${mm.rates.map((m) => `<th style="${head};text-align:right">${m.label}</th>`).join("")}</tr><tr><td style="${cell}">Yield</td>${mm.rates.map((m) => `<td style="${cell};text-align:right;font-weight:600">${pct(m.rate)}</td>`).join("")}</tr>${pastRowsHtml(mm.rates)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Fitted to ${mm.billCount} bills, ${esc(mm.convention)}.</p>`
 		: `<p style="font-size:14px;color:#475569">The money market curve is not available for this date.</p>`;
 	const spreads = r.spreads
 		.map(
@@ -144,21 +166,23 @@ ${button(url, "View on the web")}`;
 		"",
 		summary,
 		"",
-		"THE CURVE AT THE CLOSE (par yield, change, zero, real)",
+		"THE CURVE AT THE CLOSE (par yield; change on the day, week, month; zero; real)",
 		...r.tenors.map(
 			(t) =>
-				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
+				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${signedBp(t.weekBp).padEnd(7)} ${signedBp(t.monthBp).padEnd(7)}  ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
 		),
+		`  ${sinceText(r)}.`,
 		"  Zero and real rates are continuously compounded.",
 		...r.spreads.map(
 			(s) =>
 				`  ${s.name} ${signedBp(s.bp).replace(/^\+/, "")} (${signedBp(s.changeBp)})`,
 		),
 		"",
-		"MONEY MARKET (yield, change)",
+		"MONEY MARKET (yield; change on the day, week, month)",
 		...(r.moneyMarket
 			? r.moneyMarket.rates.map(
-					(m) => `  ${m.label.padEnd(4)} ${pct(m.rate)}  ${signedBp(m.changeBp)}`,
+					(m) =>
+						`  ${m.label.padEnd(4)} ${pct(m.rate)}  ${signedBp(m.changeBp).padEnd(7)} ${signedBp(m.weekBp).padEnd(7)} ${signedBp(m.monthBp)}`,
 				)
 			: ["  Not available for this date."]),
 		"",

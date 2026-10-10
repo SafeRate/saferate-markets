@@ -38,6 +38,29 @@ export const RUNDOWN_TENORS = [1, 2, 3, 5, 7, 10, 20, 30] as const;
 const AHEAD_DAYS = 7;
 /** How far back to look for the previous fitted day: a long holiday weekend. */
 const BACK_DAYS = 10;
+/** Enough history for the month comparison plus a holiday before it. */
+const HISTORY_DAYS = 40;
+
+/** The same day a calendar month earlier ("2026-03-31" → "2026-02-28"). */
+const monthBefore = (date: string) => {
+	const d = new Date(`${date}T00:00:00Z`);
+	const day = d.getUTCDate();
+	d.setUTCDate(1);
+	d.setUTCMonth(d.getUTCMonth() - 1);
+	const last = new Date(
+		Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0),
+	).getUTCDate();
+	d.setUTCDate(Math.min(day, last));
+	return d.toISOString().slice(0, 10);
+};
+
+/** Basis points from `then` to `now`; null without a comparison close. */
+const bp = (now: number, then: number | undefined) =>
+	then === undefined ? null : (now - then) * 100;
+
+/** The newest fitted date on or before `limit`, the comparison close. */
+const closeOnOrBefore = (dates: string[], limit: string) =>
+	dates.filter((d) => d <= limit).at(-1) ?? null;
 
 const ZParRow = z
 	.object({
@@ -54,6 +77,10 @@ export type TRundownTenor = {
 	parYield: number;
 	/** Basis points against the previous fitted day; null without one. */
 	changeBp: number | null;
+	/** Basis points against the close a week earlier (on or before date − 7 days). */
+	weekBp: number | null;
+	/** Basis points against the close a calendar month earlier (on or before). */
+	monthBp: number | null;
 	/** Percent, continuously compounded. */
 	zeroRate: number | null;
 	/** Percent, continuously compounded; null where the TIPS curve has no tenor (1y). */
@@ -61,7 +88,13 @@ export type TRundownTenor = {
 };
 
 export type TRundownMoneyMarket = {
-	rates: { label: string; rate: number; changeBp: number | null }[];
+	rates: {
+		label: string;
+		rate: number;
+		changeBp: number | null;
+		weekBp: number | null;
+		monthBp: number | null;
+	}[];
 	billCount: number;
 	convention: string;
 };
@@ -101,7 +134,7 @@ const readCurve = async (env: TEnv, date: string) => {
 			"parYieldSeries",
 		)({
 			tenors: [...RUNDOWN_TENORS],
-			from: shiftDays(date, -BACK_DAYS),
+			from: shiftDays(date, -HISTORY_DAYS),
 			to: date,
 		}),
 	);
@@ -116,12 +149,15 @@ const readCurve = async (env: TEnv, date: string) => {
 	}
 	const today = byDate.get(date);
 	if (!today) return null;
+	const dates = [...byDate.keys()].sort();
 	const previousDate =
-		[...byDate.keys()]
-			.filter((d) => d < date)
-			.sort()
-			.at(-1) ?? null;
+		dates.filter((d) => d < date && d >= shiftDays(date, -BACK_DAYS)).at(-1) ??
+		null;
+	const weekDate = closeOnOrBefore(dates, shiftDays(date, -7));
+	const monthDate = closeOnOrBefore(dates, monthBefore(date));
 	const before = previousDate ? (byDate.get(previousDate) ?? null) : null;
+	const week = weekDate ? byDate.get(weekDate) : undefined;
+	const month = monthDate ? byDate.get(monthDate) : undefined;
 	const tenors: TRundownTenor[] = RUNDOWN_TENORS.flatMap((years) => {
 		const y = today.get(years);
 		if (y === undefined) return [];
@@ -131,6 +167,8 @@ const readCurve = async (env: TEnv, date: string) => {
 				years,
 				parYield: y,
 				changeBp: p === undefined ? null : (y - p) * 100,
+				weekBp: bp(y, week?.get(years)),
+				monthBp: bp(y, month?.get(years)),
 				zeroRate: zeros.get(years) ?? null,
 				realRate: null as number | null,
 			},
@@ -138,6 +176,8 @@ const readCurve = async (env: TEnv, date: string) => {
 	});
 	return {
 		previousDate,
+		weekDate,
+		monthDate,
 		tenors,
 		spreads: [
 			spreadOf("2s10s", 2, 10, today, before),
@@ -185,30 +225,31 @@ const optional = async <T>(what: string, read: () => Promise<T | null>) => {
 const readMoneyMarket = async (
 	env: TEnv,
 	date: string,
-	previousDate: string | null,
+	compare: (string | null)[],
 ): Promise<TRundownMoneyMarket | null> => {
-	const [today, before] = await Promise.all([
-		optional("money market", () => getCurvesOn({ env, date })),
-		previousDate
-			? optional("money market (previous day)", () =>
-					getCurvesOn({ env, date: previousDate }),
-				)
-			: null,
+	const ratesOn = async (on: string | null) => {
+		if (on === null) return null;
+		const day = await optional(`money market ${on}`, () =>
+			getCurvesOn({ env, date: on }),
+		);
+		return day?.moneyMarket?.hasConverged ? day.moneyMarket : null;
+	};
+	const [mm, ...priors] = await Promise.all([
+		ratesOn(date),
+		...compare.map(ratesOn),
 	]);
-	const mm = today?.moneyMarket;
-	if (!mm?.hasConverged) return null;
-	const prior = before?.moneyMarket?.hasConverged
-		? new Map(before.moneyMarket.rates.map((r) => [r.label, r.rate]))
-		: null;
+	if (!mm) return null;
+	const [day, week, month] = priors.map((p) =>
+		p ? new Map(p.rates.map((r) => [r.label, r.rate])) : null,
+	);
 	return {
-		rates: mm.rates.map((r) => {
-			const p = prior?.get(r.label);
-			return {
-				label: r.label,
-				rate: r.rate,
-				changeBp: p === undefined ? null : (r.rate - p) * 100,
-			};
-		}),
+		rates: mm.rates.map((r) => ({
+			label: r.label,
+			rate: r.rate,
+			changeBp: bp(r.rate, day?.get(r.label)),
+			weekBp: bp(r.rate, week?.get(r.label)),
+			monthBp: bp(r.rate, month?.get(r.label)),
+		})),
 		billCount: mm.billCount,
 		convention: mm.convention,
 	};
@@ -232,7 +273,11 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		...t,
 		realRate: realBy.get(t.years) ?? null,
 	}));
-	const moneyMarket = await readMoneyMarket(env, date, curve.previousDate);
+	const moneyMarket = await readMoneyMarket(env, date, [
+		curve.previousDate,
+		curve.weekDate,
+		curve.monthDate,
+	]);
 	const analysed = analyseAuctions(auctions, date);
 	const results = analysed.latestByTerm
 		.filter((row) => row.auction.auctionDate === date)
@@ -254,6 +299,8 @@ export const loadRundown = async (env: TEnv, date: string) => {
 	return {
 		date,
 		previousDate: curve.previousDate,
+		weekDate: curve.weekDate,
+		monthDate: curve.monthDate,
 		tenors,
 		hasZero: tenors.some((t) => t.zeroRate !== null),
 		real: realCurve ? { tipsCount: realCurve.tipsCount } : null,

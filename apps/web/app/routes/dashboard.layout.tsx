@@ -1,7 +1,6 @@
 import {
 	FREE_TIER,
 	isTrialActive,
-	TRIAL,
 	trialDaysLeft,
 	trialLastDay,
 } from "@markets/schema";
@@ -46,47 +45,17 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 			<div className="min-w-0 flex-1">
 				{loaderData.isDemo ? (
 					<div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-slate-700">
-						<span className="font-semibold text-primary">Demo.</span> You are touring
-						Safe Rate's sample portfolios, liabilities and plan, read-only. Every
-						Markets page is live.{" "}
-						{loaderData.trial ? (
-							<>
-								Your {TRIAL.days}-day Team trial is running (
-								{dayCount(loaderData.trial.daysLeft)} left):{" "}
-								<a
-									className="font-medium text-primary underline underline-offset-4"
-									href="/dashboard/portfolios#new"
-								>
-									start your own portfolio
-								</a>
-								, with no limits, and{" "}
-								<a
-									className="font-medium text-primary underline underline-offset-4"
-									href="/dashboard/keys"
-								>
-									create an API key
-								</a>{" "}
-								for the REST API and MCP.
-							</>
-						) : (
-							<>
-								<a
-									className="font-medium text-primary underline underline-offset-4"
-									href="/dashboard/portfolios#new"
-								>
-									Start your own portfolio
-								</a>
-								, free while your holdings are worth under $
-								{FREE_TIER.maxValueUsd.toLocaleString("en-US")}, or{" "}
-								<a
-									className="font-medium text-primary underline underline-offset-4"
-									href="/dashboard/billing"
-								>
-									subscribe
-								</a>
-								.
-							</>
-						)}
+						<span className="font-semibold text-primary">
+							You're on a free Safe Rate Markets account.
+						</span>{" "}
+						The portfolios here are demos, so you can preview what Markets does.{" "}
+						<a
+							className="font-medium text-primary underline underline-offset-4"
+							href="/dashboard/portfolios#new"
+						>
+							Start your own portfolio
+						</a>{" "}
+						when you're ready.
 					</div>
 				) : loaderData.trial ? (
 					<div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-slate-700">
