@@ -111,11 +111,20 @@ export type TRundownMoneyMarket = {
 	convention: string;
 };
 
+/**
+ * The curve's shape: how much more the long tenor yields than the short one.
+ * Insiders know them as 2s10s and 5s30s; the page and email lead with the
+ * plain name and keep the insider one beside it.
+ */
 export type TRundownSpread = {
 	name: "2s10s" | "5s30s";
 	path: string;
+	short: number;
+	long: number;
 	bp: number;
 	changeBp: number | null;
+	weekBp: number | null;
+	monthBp: number | null;
 };
 
 const spreadOf = (
@@ -123,19 +132,28 @@ const spreadOf = (
 	short: number,
 	long: number,
 	today: Map<number, number>,
-	before: Map<number, number> | null,
+	before: Map<number, number> | null | undefined,
+	week: Map<number, number> | undefined,
+	month: Map<number, number> | undefined,
 ): TRundownSpread | null => {
 	const s = today.get(short);
 	const l = today.get(long);
 	if (s === undefined || l === undefined) return null;
 	const bp = (l - s) * 100;
-	const ps = before?.get(short);
-	const pl = before?.get(long);
+	const against = (then: Map<number, number> | null | undefined) => {
+		const ps = then?.get(short);
+		const pl = then?.get(long);
+		return ps === undefined || pl === undefined ? null : bp - (pl - ps) * 100;
+	};
 	return {
 		name,
 		path: `/curve/${name}`,
+		short,
+		long,
 		bp,
-		changeBp: ps === undefined || pl === undefined ? null : bp - (pl - ps) * 100,
+		changeBp: against(before),
+		weekBp: against(week),
+		monthBp: against(month),
 	};
 };
 
@@ -192,8 +210,8 @@ const readCurve = async (env: TEnv, date: string) => {
 		monthDate,
 		tenors,
 		spreads: [
-			spreadOf("2s10s", 2, 10, today, before),
-			spreadOf("5s30s", 5, 30, today, before),
+			spreadOf("2s10s", 2, 10, today, before, week, month),
+			spreadOf("5s30s", 5, 30, today, before, week, month),
 		].filter((s): s is TRundownSpread => s !== null),
 	};
 };

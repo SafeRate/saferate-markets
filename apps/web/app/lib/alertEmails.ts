@@ -18,8 +18,11 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	SHAPE_NOTE,
 	signedPct,
 	sinceText,
+	spreadLabel,
+	spreadReads,
 } from "./rundownText";
 
 /**
@@ -144,12 +147,15 @@ export const rundownEmail = (
 	const moneyMarket = mm
 		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${mm.rates.map((m) => `<th style="${head};text-align:right">${m.label}</th>`).join("")}</tr><tr><td style="${cell}">Yield</td>${mm.rates.map((m) => `<td style="${cell};text-align:right;font-weight:600">${pct(m.rate)}</td>`).join("")}</tr>${pastRowsHtml(mm.rates)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Fitted to ${mm.billCount} bills, ${esc(mm.convention)}.</p>`
 		: `<p style="font-size:14px;color:#475569">The money market curve is not available for this date.</p>`;
-	const spreads = r.spreads
-		.map(
-			(s) =>
-				`<a href="${esc(links.site + s.path)}" style="color:#4f46e5;font-weight:600">${s.name}</a> ${esc(signedBp(s.bp).replace(/^\+/, ""))} (${esc(signedBp(s.changeBp))})`,
-		)
-		.join(" &nbsp;·&nbsp; ");
+	const shape =
+		r.spreads.length === 0
+			? ""
+			: `<p style="margin:0;font-size:13px;color:#64748b">${esc(SHAPE_NOTE)}</p><table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Gap</th><th style="${head};text-align:right">Now</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr>${r.spreads
+					.map(
+						(s) =>
+							`<tr><td style="${cell}">${esc(spreadLabel(s))} <a href="${esc(links.site + s.path)}" style="color:#4f46e5;font-size:11px">${s.name}</a></td><td style="${cell};text-align:right;font-weight:600">${esc(signedBp(s.bp).replace(/^\+/, ""))}</td><td style="${cell};text-align:right">${esc(signedBp(s.changeBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.weekBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.monthBp))}</td></tr><tr><td colspan="5" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(spreadReads(s))}</td></tr>`,
+					)
+					.join("")}</table>`;
 	const results =
 		r.results.length === 0
 			? `<p style="font-size:14px;color:#475569">No auction results on ${esc(shortDate(r.date))}.</p>`
@@ -198,7 +204,8 @@ ${h2(`Auctions today, ${shortDate(r.edition)}`)}${today}
 ${h2(laterHeading(r))}${later}
 ${h2(`Auction results, ${shortDate(r.date)}`)}${results}
 ${h2(`Recap: the close, ${shortDate(r.date)}`)}<p style="margin:0;font-size:13px;color:#64748b">${esc(RECAP_NOTE)}</p>
-${h3("The curve")}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
+${h3("The curve")}${curve}
+${shape ? `${h3("Curve shape")}${shape}` : ""}
 ${h3("Money market")}${moneyMarket}
 ${h3("Safe Rate Treasury indices")}${indices}
 ${button(url, "View on the web")}`;
@@ -243,10 +250,13 @@ ${button(url, "View on the web")}`;
 		),
 		`  ${sinceText(r)}.`,
 		"  Zero and real rates are continuously compounded.",
-		...r.spreads.map(
-			(s) =>
-				`  ${s.name} ${signedBp(s.bp).replace(/^\+/, "")} (${signedBp(s.changeBp)})`,
-		),
+		"",
+		"Curve shape (gap now; change on the day, week, month)",
+		`  ${SHAPE_NOTE}`,
+		...r.spreads.flatMap((s) => [
+			`  ${`${spreadLabel(s)} (${s.name})`.padEnd(28)} ${signedBp(s.bp).replace(/^\+/, "").padEnd(7)} ${signedBp(s.changeBp).padEnd(7)} ${signedBp(s.weekBp).padEnd(7)} ${signedBp(s.monthBp)}`,
+			`    ${spreadReads(s)}`,
+		]),
 		"",
 		"Money market (yield; change on the day, week, month)",
 		...(r.moneyMarket

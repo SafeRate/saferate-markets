@@ -115,12 +115,40 @@ export const resultsSentence = (r: TRundown) =>
 				)
 				.join("; ")}.`;
 
-/** The close in a sentence: the 10-year and 2s10s. */
+type TSpread = TRundown["spreads"][number];
+
+/** "2-year to 10-year". */
+export const spreadLabel = (s: TSpread) => `${s.short}-year to ${s.long}-year`;
+
+/** What the shape section says before its table, for the reader new to it. */
+export const SHAPE_NOTE =
+	"How much more long-term Treasuries yield than shorter ones. A wider gap is a steeper curve, a narrower one flatter; below zero, the curve is inverted.";
+
+/**
+ * The gap in plain words: "The 10-year yields 0.46% more than the 2-year;
+ * flatter on the day."
+ */
+export const spreadReads = (s: TSpread) => {
+	const gap = Math.abs(s.bp / 100).toFixed(2);
+	const level =
+		Math.round(s.bp) === 0
+			? `The ${s.long}-year yields the same as the ${s.short}-year`
+			: `The ${s.long}-year yields ${gap}% ${s.bp > 0 ? "more" : "less"} than the ${s.short}-year${s.bp < 0 ? " (inverted)" : ""}`;
+	const move =
+		s.changeBp === null
+			? ""
+			: Math.round(s.changeBp) === 0
+				? "; unchanged on the day"
+				: `; ${s.changeBp > 0 ? "steeper" : "flatter"} on the day`;
+	return `${level}${move}.`;
+};
+
+/** The close in a sentence: the 10-year and the 2-to-10-year gap. */
 export const closeSentence = (r: TRundown) => {
 	const ten = r.tenors.find((t) => t.years === 10);
 	const twos = r.spreads.find((s) => s.name === "2s10s");
 	if (!ten) return null;
-	return `The 10-year par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}${twos ? `, 2s10s at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}` : ""}.`;
+	return `The 10-year par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}${twos ? `; the 2-to-10-year gap at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}` : ""}.`;
 };
 
 /**

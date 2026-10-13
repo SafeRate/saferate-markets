@@ -327,6 +327,16 @@ describe("the alert sweep", () => {
 			/10y\s+5\.200%\s+−5 bp\s+\+10 bp\s+\+30 bp\s+5\.111%\s+2\.345%/,
 		);
 		expect(rundowns[0].text).toMatch(/3M\s+4\.200%\s+−5 bp\s+−5 bp\s+−5 bp/);
+		// The curve's shape in plain words, with the insider name beside it:
+		// 10y less 2y is 118 bp, against 123 the day before, 108 a week
+		// before and 88 a month before.
+		expect(text).toMatch(
+			/2-year to 10-year \(2s10s\)\s+118 bp\s+−5 bp\s+\+10 bp\s+\+30 bp/,
+		);
+		expect(text).toContain(
+			"The 10-year yields 1.18% more than the 2-year; flatter on the day.",
+		);
+		expect(text).toContain("the 2-to-10-year gap at 118 bp (−5 bp)");
 		// The broad index: level, then total return on the day (200), week
 		// (201) and month (198).
 		expect(rundowns[0].text).toContain(
