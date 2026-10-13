@@ -1,7 +1,7 @@
 import { getAlertPreferences } from "@markets/persistence";
 import { PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
 import { Fragment } from "react";
-import { data, Link } from "react-router";
+import { data, Link, redirect } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
 import { StrategyDisclaimer } from "@/components/StrategyDisclaimer";
 import { rankedAgainst, unrankedCaption } from "@/lib/demandCaption";
@@ -27,6 +27,7 @@ import {
 	editionOf,
 	latestRundownDate,
 	loadRundown,
+	movedEditionFor,
 	priceDateFor,
 } from "@/services/dailyRundown.server";
 import type { Route } from "./+types/daily-rundown.treasury.$date";
@@ -72,6 +73,11 @@ export const loader = async ({
 		readerOf(request, env),
 	]);
 	const latest = latestClose ? editionOf(latestClose) : null;
+	if (date === null) {
+		// An old holiday edition (/2026-10-12) moved to the next business day.
+		const moved = await movedEditionFor(env, edition);
+		if (moved && moved !== edition) throw redirect(rundownPath(moved), 301);
+	}
 	const rundown = date === null ? null : await loadRundown(env, date);
 	if (rundown === null)
 		throw data(

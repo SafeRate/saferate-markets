@@ -9,6 +9,7 @@ import {
 	shiftDays,
 	type TAuctionDemand,
 } from "@markets/mcp-tools";
+import { isBusinessDay, nextBusinessDay } from "@markets/portfolio";
 import { getCurvesOn, getRealCurveOn } from "@saferate/treasury-client/client";
 import {
 	INDEX_META,
@@ -28,8 +29,8 @@ type TEnv = Env;
  * page (/daily-rundown/treasury/:date) and the email, so the email can say
  * "the same as on the page" and mean it.
  *
- * THE EDITION IS DATED BY THE MORNING IT GOES OUT, the next weekday after
- * the close it covers (`editionOf`): Thursday's close is Friday's
+ * THE EDITION IS DATED BY THE MORNING IT GOES OUT, the next business day
+ * after the close it covers (`editionOf`): Thursday's close is Friday's
  * rundown, and its sections say "at the close, Thu, Oct 8". The page's URL
  * carries the edition date; everything inside works on the price date.
  *
@@ -329,17 +330,17 @@ const readIndices = async (
 };
 
 /**
- * The morning a close's rundown goes out: the next weekday. Not the next
- * business day: treasury fetches a close the next morning whether or not it
- * is a holiday (Friday 2026-10-09 is fetched on Columbus Day), so a holiday
- * calendar would date Monday's email Tuesday.
+ * The morning a close's rundown goes out: the next business day, federal
+ * holidays skipped (the calendar the portfolio code settles on). Treasury's
+ * prices for a close arrive the next business morning, so Friday
+ * 2026-10-09's went out Tuesday 10-13 at 12:16 UTC, after Columbus Day. Dated
+ * by the next weekday instead, as it first was, that email was headed
+ * "Monday, October 12" and arrived on Tuesday.
  */
-export const editionOf = (priceDate: string) => {
-	const d = new Date(`${priceDate}T00:00:00Z`);
-	do d.setUTCDate(d.getUTCDate() + 1);
-	while (d.getUTCDay() === 0 || d.getUTCDay() === 6);
-	return d.toISOString().slice(0, 10);
-};
+export const editionOf = (priceDate: string) =>
+	nextBusinessDay(new Date(`${priceDate}T00:00:00Z`))
+		.toISOString()
+		.slice(0, 10);
 
 /**
  * The close an edition covers: the newest fitted day whose next business day
@@ -374,6 +375,33 @@ export const priceDateFor = async (env: TEnv, edition: string) => {
 export const weekEndFor = (edition: string) => {
 	const day = new Date(`${edition}T00:00:00Z`).getUTCDay();
 	return shiftDays(edition, day === 5 ? 7 : 5 - day);
+};
+
+/**
+ * A holiday edition that existed before editions skipped holidays: before
+ * 2026-10-13 they were dated by the next weekday, so Friday 10-09's went out
+ * as /2026-10-12, Columbus Day. Its emails still link there. Returns the
+ * edition that close is dated now, or null when `edition` is not a holiday.
+ */
+export const movedEditionFor = async (env: TEnv, edition: string) => {
+	const day = new Date(`${edition}T00:00:00Z`);
+	const weekday = day.getUTCDay() !== 0 && day.getUTCDay() !== 6;
+	if (!weekday || isBusinessDay(day)) return null;
+	const rows = z.array(ZParRow).parse(
+		await call(
+			env,
+			"parYieldSeries",
+		)({
+			tenors: [10],
+			from: shiftDays(edition, -BACK_DAYS),
+			to: shiftDays(edition, -1),
+		}),
+	);
+	const close = rows
+		.map((r) => r.date)
+		.sort()
+		.at(-1);
+	return close ? editionOf(close) : null;
 };
 
 /** The rundown for `date`, or null when no curve was fitted on it. */
