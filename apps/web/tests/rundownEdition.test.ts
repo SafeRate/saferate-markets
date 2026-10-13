@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { editionOf, priceDateFor } from "../app/services/dailyRundown.server";
+import {
+	editionOf,
+	priceDateFor,
+	weekEndFor,
+} from "../app/services/dailyRundown.server";
 
 /** A rundown is dated by the morning it goes out; its page finds the close. */
 
@@ -24,5 +28,13 @@ describe("the rundown's edition date", () => {
 		expect(await priceDateFor(env, "2026-10-12")).toBe("2026-10-09");
 		expect(await priceDateFor(env, "2026-10-10")).toBeNull(); // Saturday
 		expect(await priceDateFor(env, "2026-10-14")).toBeNull(); // 10-13 not fitted
+	});
+});
+
+describe("the week a rundown looks ahead to", () => {
+	test("ends on this Friday, or next Friday in a Friday edition", () => {
+		expect(weekEndFor("2026-10-12")).toBe("2026-10-16"); // Mon
+		expect(weekEndFor("2026-10-15")).toBe("2026-10-16"); // Thu
+		expect(weekEndFor("2026-10-16")).toBe("2026-10-23"); // Fri → next week
 	});
 });

@@ -129,7 +129,38 @@ const env = () =>
 			auctionDemand: async () => [
 				{
 					auction: { cusip: "91282CRZ9", auctionDate: "2026-10-02" },
-					measures: [],
+					// Treasury's labels and ranks: two in the strongest third, one in
+					// the weakest.
+					measures: [
+						{
+							key: "bidToCover",
+							label: "Bid to cover",
+							percentile: 90,
+							sampleSize: 24,
+							value: 2.6,
+						},
+						{
+							key: "indirect",
+							label: "Indirect share",
+							percentile: 70,
+							sampleSize: 24,
+							value: 72,
+						},
+						{
+							key: "dealer",
+							label: "Dealer takedown",
+							percentile: 50,
+							sampleSize: 24,
+							value: 12,
+						},
+						{
+							key: "spread",
+							label: "High less median",
+							percentile: 20,
+							sampleSize: 24,
+							value: 4,
+						},
+					],
 					sampleSize: 24,
 					term: "Note|10-Year",
 					termLabel: "Note 10-Year",
@@ -250,6 +281,12 @@ describe("the alert sweep", () => {
 
 	test("the rundown goes to every verified account that has not turned it off", async () => {
 		await tick(T0);
+		// Friday's 10-year result, and a bill auctioning Monday, the morning
+		// the rundown goes out.
+		rows.push(
+			NEW_TEN_YEAR,
+			auctionRow({ cusip: "912797AB1", auction_date: "2026-10-05" }),
+		);
 		curveDates.push("2026-10-02");
 		await tick(T0 + 5 * MIN);
 		const rundowns = sent.filter((m) => m.subject.startsWith("Treasury rundown"));
@@ -261,7 +298,26 @@ describe("the alert sweep", () => {
 		// morning it goes out, with its sections naming the close.
 		expect(rundowns[0].subject).toMatch(/^Treasury rundown, Mon, Oct 5:/);
 		expect(rundowns[0].text).toContain("/daily-rundown/treasury/2026-10-05");
-		expect(rundowns[0].text).toContain("THE CURVE AT THE CLOSE, FRI, OCT 2");
+		// What is ahead first, then the results, then the close as a recap.
+		const text = rundowns[0].text;
+		const at = (heading: string) => text.indexOf(heading);
+		expect(at("AUCTIONS TODAY, MON, OCT 5")).toBeGreaterThan(0);
+		expect(at("LATER THIS WEEK, THROUGH FRI, OCT 9")).toBeGreaterThan(
+			at("AUCTIONS TODAY"),
+		);
+		expect(at("AUCTION RESULTS, FRI, OCT 2")).toBeGreaterThan(
+			at("LATER THIS WEEK"),
+		);
+		expect(at("RECAP: THE CLOSE, FRI, OCT 2")).toBeGreaterThan(
+			at("AUCTION RESULTS"),
+		);
+		expect(text.slice(at("AUCTIONS TODAY"), at("LATER THIS WEEK"))).toContain(
+			"912797AB1",
+		);
+		expect(text).toContain(
+			"Strong demand: bid to cover and indirect share in the strongest third; high less median in the weakest third of the last 24 months' 24 auctions of this term.",
+		);
+		expect(rundowns[0].subject).toMatch(/today; 10y closed 5\.20% \(−5 bp\)$/);
 		expect(rundowns[0].text).toContain("closed Friday at 5.20%");
 		// Zero and real beside par at 10 years, and the money market with its
 		// change against the previous fitted day.
@@ -274,7 +330,7 @@ describe("the alert sweep", () => {
 		// The broad index: level, then total return on the day (200), week
 		// (201) and month (198).
 		expect(rundowns[0].text).toContain(
-			"SAFE RATE TREASURY INDICES AT THE CLOSE, FRI, OCT 2",
+			"Safe Rate Treasury indices (level; total return",
 		);
 		expect(rundowns[0].text).toMatch(
 			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%/,

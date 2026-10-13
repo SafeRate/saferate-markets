@@ -47,7 +47,6 @@ type TEnv = Env;
  */
 
 export const RUNDOWN_TENORS = [1, 2, 3, 5, 7, 10, 20, 30] as const;
-const AHEAD_DAYS = 7;
 /** How far back to look for the previous fitted day: a long holiday weekend. */
 const BACK_DAYS = 10;
 /** Enough history for the month comparison plus a holiday before it. */
@@ -201,6 +200,7 @@ const readCurve = async (env: TEnv, date: string) => {
 export type TRundownDemand = Pick<
 	TAuctionDemand,
 	| "verdict"
+	| "measures"
 	| "unranked"
 	| "sampleSize"
 	| "minSample"
@@ -213,6 +213,7 @@ const demandOf = (d: TAuctionDemand | undefined): TRundownDemand | null =>
 		? null
 		: {
 				verdict: d.verdict,
+				measures: d.measures,
 				unranked: d.unranked,
 				sampleSize: d.sampleSize,
 				minSample: d.minSample,
@@ -365,13 +366,25 @@ export const priceDateFor = async (env: TEnv, edition: string) => {
 	);
 };
 
+/**
+ * The Friday that ends the edition's week, or the next one when the edition
+ * IS a Friday: "later this week" on a Friday would always be empty, so a
+ * Friday edition looks at next week instead.
+ */
+export const weekEndFor = (edition: string) => {
+	const day = new Date(`${edition}T00:00:00Z`).getUTCDay();
+	return shiftDays(edition, day === 5 ? 7 : 5 - day);
+};
+
 /** The rundown for `date`, or null when no curve was fitted on it. */
 export const loadRundown = async (env: TEnv, date: string) => {
+	const edition = editionOf(date);
+	const weekEnd = weekEndFor(edition);
 	const [curve, auctions, demand, real] = await Promise.all([
 		readCurve(env, date),
 		readAuctionsBetween(env, {
 			from: date,
-			to: shiftDays(date, AHEAD_DAYS),
+			to: weekEnd,
 		}),
 		readAuctionDemand(env, date),
 		optional("real curve", () => getRealCurveOn({ env, date })),
@@ -398,8 +411,9 @@ export const loadRundown = async (env: TEnv, date: string) => {
 				demand.get(demandKey(row.auction.cusip, row.auction.auctionDate)),
 			),
 		}));
-	const ahead = auctions
-		.filter((a) => a.auctionDate > date)
+	// Read as the morning of the edition, after the close it covers.
+	const upcoming = auctions
+		.filter((a) => a.auctionDate >= edition)
 		.sort(
 			(a, b) =>
 				a.auctionDate.localeCompare(b.auctionDate) ||
@@ -408,7 +422,7 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		.map((a) => publishAuction(a, date));
 	return {
 		date,
-		edition: editionOf(date),
+		edition,
 		previousEdition: curve.previousDate ? editionOf(curve.previousDate) : null,
 		previousDate: curve.previousDate,
 		weekDate: curve.weekDate,
@@ -420,8 +434,13 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		moneyMarket,
 		indices,
 		results,
-		ahead,
-		aheadDays: AHEAD_DAYS,
+		today: upcoming.filter((a) => a.auction_date === edition),
+		later: {
+			/** "this week", or "next week" in a Friday edition. */
+			week: weekEnd > shiftDays(edition, 4) ? "next week" : "this week",
+			through: weekEnd,
+			auctions: upcoming.filter((a) => a.auction_date > edition),
+		},
 	};
 };
 

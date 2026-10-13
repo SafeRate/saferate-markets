@@ -1,4 +1,5 @@
 import type { TRundown } from "@/services/dailyRundown.server";
+import { unrankedCaption } from "./demandCaption";
 
 /**
  * The words of the Treasury daily rundown, shared by its page and its email so
@@ -82,26 +83,93 @@ export const clearingText = (a: TResultAuction) => {
 export const billions = (dollars: number | null) =>
 	dollars === null ? "—" : `$${Math.round(dollars / 1e9)}B`;
 
-/** One sentence: the 10-year, 2s10s, and what the auctions did. */
-export const rundownSummary = (r: TRundown) => {
+/** "3-Year Note and 52-Week Bill", "4-Week, 8-Week and 17-Week Bill". */
+const listOf = (names: string[]) =>
+	names.length <= 1
+		? (names[0] ?? "")
+		: `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+
+const shortName = (a: { term: string; kind: string | null }) =>
+	`${a.term} ${a.kind ?? ""}`.trim();
+
+/** "No auctions later this week", "4 auctions next week". */
+const laterText = (r: TRundown) => {
+	const n = r.later.auctions.length;
+	return `${n === 0 ? "no" : n} ${n === 1 ? "auction" : "auctions"} ${n === 0 ? `announced for ${r.later.week}` : r.later.week === "this week" ? "later this week" : "next week"}`;
+};
+
+/** What the morning holds: today's auctions, then the rest of the week. */
+export const aheadSentence = (r: TRundown) =>
+	r.today.length === 0
+		? `No Treasury auctions today; ${laterText(r)}.`
+		: `Auctions today: ${listOf(r.today.map((a) => `${shortName(a)} (${billions(a.offering_amount)})`))}; ${laterText(r)}.`;
+
+/** "10-Year Note strong, 4-Week Bill average": the close's results. */
+export const resultsSentence = (r: TRundown) =>
+	r.results.length === 0
+		? null
+		: `${weekday(r.date)}'s results: ${r.results
+				.map(
+					({ auction, demand }) =>
+						`${shortName(auction)}${demand?.verdict ? `, ${demand.verdict} demand` : ""}`,
+				)
+				.join("; ")}.`;
+
+/** The close in a sentence: the 10-year and 2s10s. */
+export const closeSentence = (r: TRundown) => {
 	const ten = r.tenors.find((t) => t.years === 10);
 	const twos = r.spreads.find((s) => s.name === "2s10s");
-	const parts: string[] = [];
-	if (ten)
-		parts.push(
-			`The 10-year Treasury par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}`,
-		);
-	if (twos)
-		parts.push(
-			`2s10s at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}`,
-		);
-	const auctions =
-		r.results.length === 0
-			? "no auctions settled results"
-			: `${r.results.length} auction ${r.results.length === 1 ? "result" : "results"}: ${r.results
-					.map((x) => `${x.auction.term} ${x.auction.kind ?? ""}`.trim())
-					.join(", ")}`;
-	return `${parts.join(", ")}; ${auctions}. ${r.ahead.length} ${r.ahead.length === 1 ? "auction" : "auctions"} announced for the next ${r.aheadDays} days.`;
+	if (!ten) return null;
+	return `The 10-year par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}${twos ? `, 2s10s at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}` : ""}.`;
+};
+
+/**
+ * The opening paragraph, the page's meta description and the email's
+ * preview text: what is ahead first, then the results, then the close. The
+ * email lands the next morning after rates have moved, so the close comes
+ * last, as a recap.
+ */
+export const rundownSummary = (r: TRundown) =>
+	[aheadSentence(r), resultsSentence(r), closeSentence(r)]
+		.filter((x): x is string => x !== null)
+		.join(" ");
+
+/** The email's subject after its date: today's auctions, then the 10-year. */
+export const rundownHeadline = (r: TRundown) => {
+	const ten = r.tenors.find((t) => t.years === 10);
+	const today =
+		r.today.length === 0
+			? "no auctions today"
+			: `${listOf(r.today.map(shortName))} today`;
+	return `${today.replace(/^./, (c) => c.toUpperCase())}${ten ? `; 10y closed ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}` : ""}`;
+};
+
+/**
+ * Why an auction read strong or weak, from treasury's own ranks: the
+ * measures in the top and bottom thirds of the same term's window, the
+ * thirds the verdict counts (>= 67, <= 33, as treasury's verdictFrom). An unranked term says why instead.
+ */
+export const demandStory = (
+	d: TRundown["results"][number]["demand"],
+): string | null => {
+	if (d === null) return null;
+	const caption = unrankedCaption(d);
+	if (caption) return `${caption}.`;
+	if (d.verdict === null) return null;
+	const named = (ms: typeof d.measures) =>
+		listOf(ms.map((m) => m.label.replace(/^./, (c) => c.toLowerCase())));
+	const ranked = d.measures.filter((m) => m.percentile !== null);
+	const top = ranked.filter((m) => (m.percentile ?? 0) >= 67);
+	const bottom = ranked.filter((m) => (m.percentile ?? 100) <= 33);
+	const against = `the last ${d.windowMonths} months' ${d.sampleSize} auctions of this term`;
+	const parts = [
+		top.length > 0 ? `${named(top)} in the strongest third` : null,
+		bottom.length > 0 ? `${named(bottom)} in the weakest third` : null,
+	].filter((x): x is string => x !== null);
+	const verdict = `${d.verdict.replace(/^./, (c) => c.toUpperCase())} demand`;
+	return parts.length === 0
+		? `${verdict}: every measure in the middle third of ${against}.`
+		: `${verdict}: ${parts.join("; ")} of ${against}.`;
 };
 
 /** "changes since Oct 7 (day), Oct 1 (week) and Sep 8 (month)". */
