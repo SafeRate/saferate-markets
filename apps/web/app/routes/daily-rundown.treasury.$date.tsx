@@ -1,5 +1,6 @@
 import { getAlertPreferences } from "@markets/persistence";
 import { PRODUCT_NAME, SITE_HOSTS } from "@markets/schema";
+import { Fragment } from "react";
 import { data, Link } from "react-router";
 import { JsonLd } from "@/components/JsonLd";
 import { StrategyDisclaimer } from "@/components/StrategyDisclaimer";
@@ -9,6 +10,7 @@ import {
 	auctionName,
 	billions,
 	clearingText,
+	demandStory,
 	indexUrl,
 	longDate,
 	pct,
@@ -139,6 +141,46 @@ const Verdict = ({
 	);
 };
 
+type TUpcoming = Route.ComponentProps["loaderData"]["rundown"]["today"];
+
+/** Auctions still to come: today's, or the rest of the week's with dates. */
+const Upcoming = ({
+	auctions,
+	dated,
+	none,
+}: {
+	auctions: TUpcoming;
+	dated: boolean;
+	none: string;
+}) =>
+	auctions.length === 0 ? (
+		<p className="mt-3 text-slate-600">{none}</p>
+	) : (
+		<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+			<table className="w-full min-w-[32rem] text-sm">
+				<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+					<tr>
+						{dated ? <th className={th}>Date</th> : null}
+						<th className={th}>Auction</th>
+						<th className={`${th} text-right`}>Offering</th>
+					</tr>
+				</thead>
+				<tbody>
+					{auctions.map((a) => (
+						<tr className="border-t border-slate-100" key={a.cusip}>
+							{dated ? <td className={td}>{shortDate(a.auction_date)}</td> : null}
+							<td className={td}>
+								{auctionName(a)}
+								<span className="ml-2 text-xs text-slate-500">{a.cusip}</span>
+							</td>
+							<td className={`${td} text-right`}>{billions(a.offering_amount)}</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+
 export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 	const { rundown: r, latest, reader } = loaderData;
 	const web = SITE_HOSTS.production.web;
@@ -210,8 +252,106 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 
 			<section className="mt-12">
 				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					The curve at the close, {shortDate(r.date)}
+					Auctions today, {shortDate(r.edition)}
 				</h2>
+				<Upcoming
+					auctions={r.today}
+					dated={false}
+					none="No Treasury auctions today."
+				/>
+			</section>
+
+			<section className="mt-12">
+				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
+					{r.later.week === "this week" ? "Later this week" : "Next week"}, through{" "}
+					{shortDate(r.later.through)}
+				</h2>
+				<Upcoming
+					auctions={r.later.auctions}
+					dated
+					none={`None announced yet for ${r.later.week}.`}
+				/>
+			</section>
+
+			<section className="mt-12">
+				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
+					Auction results, {shortDate(r.date)}
+				</h2>
+				{r.results.length === 0 ? (
+					<p className="mt-3 text-slate-600">
+						No Treasury auction results on {shortDate(r.date)}.
+					</p>
+				) : (
+					<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+						<table className="w-full min-w-[48rem] text-sm">
+							<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+								<tr>
+									<th className={th}>Auction</th>
+									<th className={th}>Clearing rate</th>
+									<th className={`${th} text-right`}>Bid to cover</th>
+									<th className={`${th} text-right`}>Indirect</th>
+									<th className={`${th} text-right`}>Dealers</th>
+									<th className={th}>Demand</th>
+								</tr>
+							</thead>
+							<tbody>
+								{r.results.map(({ auction: a, demand }) => (
+									<Fragment key={a.cusip}>
+										<tr className="border-t border-slate-100">
+											<td className={td}>
+												<div className="font-medium text-neutral-900">{auctionName(a)}</div>
+												<div className="text-xs text-slate-500">
+													{a.cusip} · {billions(a.offering_amount)}
+												</div>
+											</td>
+											<td className={td}>{clearingText(a)}</td>
+											<td className={`${td} text-right`}>
+												{a.bid_to_cover_ratio?.toFixed(2) ?? "—"}
+											</td>
+											<td className={`${td} text-right`}>
+												{pct(a.bidders?.indirect_percent ?? null, 1)}
+											</td>
+											<td className={`${td} text-right`}>
+												{pct(a.bidders?.primary_dealer_percent ?? null, 1)}
+											</td>
+											<td className={td}>
+												<Verdict demand={demand} />
+											</td>
+										</tr>
+										{demandStory(demand) ? (
+											<tr>
+												<td className="px-3 pb-3 text-sm text-slate-600" colSpan={6}>
+													{demandStory(demand)}
+												</td>
+											</tr>
+										) : null}
+									</Fragment>
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+				<p className="mt-3 max-w-3xl text-xs text-slate-500">
+					Bidder shares are of the competitive award. Demand ranks bid-to-cover,
+					indirect share, dealer share and high-less-median against the same term's
+					auctions over the window shown, and counts how many sit in the top or
+					bottom third.
+				</p>
+			</section>
+
+			<section className="mt-12">
+				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
+					Recap: the close, {shortDate(r.date)}
+				</h2>
+				<p className="mt-1 text-sm text-slate-500">
+					Closing levels. Rates have traded since; these are where the day ended.
+				</p>
+			</section>
+
+			<section className="mt-8">
+				<h3 className="text-lg font-semibold tracking-tight text-neutral-900">
+					The curve
+				</h3>
 				<p className="mt-1 text-sm text-slate-500">
 					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent;{" "}
 					{sinceText(r)}. Zero and real (TIPS) rates are continuously compounded.
@@ -288,10 +428,10 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				</ul>
 			</section>
 
-			<section className="mt-12">
-				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Money market at the close, {shortDate(r.date)}
-				</h2>
+			<section className="mt-8">
+				<h3 className="text-lg font-semibold tracking-tight text-neutral-900">
+					Money market
+				</h3>
 				{r.moneyMarket ? (
 					<>
 						<p className="mt-1 text-sm text-slate-500">
@@ -340,10 +480,10 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				)}
 			</section>
 
-			<section className="mt-12">
-				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Safe Rate Treasury indices at the close, {shortDate(r.date)}
-				</h2>
+			<section className="mt-8">
+				<h3 className="text-lg font-semibold tracking-tight text-neutral-900">
+					Safe Rate Treasury indices
+				</h3>
 				{r.indices ? (
 					<>
 						<p className="mt-1 text-sm text-slate-500">
@@ -412,96 +552,6 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 						</Link>
 						.
 					</p>
-				)}
-			</section>
-
-			<section className="mt-12">
-				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Auction results, {shortDate(r.date)}
-				</h2>
-				{r.results.length === 0 ? (
-					<p className="mt-3 text-slate-600">
-						No Treasury auction results on {shortDate(r.date)}.
-					</p>
-				) : (
-					<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-						<table className="w-full min-w-[48rem] text-sm">
-							<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-								<tr>
-									<th className={th}>Auction</th>
-									<th className={th}>Clearing rate</th>
-									<th className={`${th} text-right`}>Bid to cover</th>
-									<th className={`${th} text-right`}>Indirect</th>
-									<th className={`${th} text-right`}>Dealers</th>
-									<th className={th}>Demand</th>
-								</tr>
-							</thead>
-							<tbody>
-								{r.results.map(({ auction: a, demand }) => (
-									<tr className="border-t border-slate-100" key={a.cusip}>
-										<td className={td}>
-											<div className="font-medium text-neutral-900">{auctionName(a)}</div>
-											<div className="text-xs text-slate-500">
-												{a.cusip} · {billions(a.offering_amount)}
-											</div>
-										</td>
-										<td className={td}>{clearingText(a)}</td>
-										<td className={`${td} text-right`}>
-											{a.bid_to_cover_ratio?.toFixed(2) ?? "—"}
-										</td>
-										<td className={`${td} text-right`}>
-											{pct(a.bidders?.indirect_percent ?? null, 1)}
-										</td>
-										<td className={`${td} text-right`}>
-											{pct(a.bidders?.primary_dealer_percent ?? null, 1)}
-										</td>
-										<td className={td}>
-											<Verdict demand={demand} />
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				)}
-				<p className="mt-3 max-w-3xl text-xs text-slate-500">
-					Bidder shares are of the competitive award. Demand ranks bid-to-cover,
-					indirect share, dealer share and high-less-median against the same term's
-					auctions over the window shown, and counts how many sit in the top or
-					bottom third.
-				</p>
-			</section>
-
-			<section className="mt-12">
-				<h2 className="text-xl font-semibold tracking-tight text-neutral-900">
-					Announced for the next {r.aheadDays} days
-				</h2>
-				{r.ahead.length === 0 ? (
-					<p className="mt-3 text-slate-600">None announced yet.</p>
-				) : (
-					<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
-						<table className="w-full min-w-[32rem] text-sm">
-							<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-								<tr>
-									<th className={th}>Date</th>
-									<th className={th}>Auction</th>
-									<th className={`${th} text-right`}>Offering</th>
-								</tr>
-							</thead>
-							<tbody>
-								{r.ahead.map((a) => (
-									<tr className="border-t border-slate-100" key={a.cusip}>
-										<td className={td}>{shortDate(a.auction_date)}</td>
-										<td className={td}>
-											{auctionName(a)}
-											<span className="ml-2 text-xs text-slate-500">{a.cusip}</span>
-										</td>
-										<td className={`${td} text-right`}>{billions(a.offering_amount)}</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
 				)}
 			</section>
 

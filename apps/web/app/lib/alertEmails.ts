@@ -9,9 +9,11 @@ import {
 	auctionName,
 	billions,
 	clearingText,
+	demandStory,
 	indexUrl,
 	longDate,
 	pct,
+	rundownHeadline,
 	rundownPath,
 	rundownSummary,
 	shortDate,
@@ -97,6 +99,17 @@ const button = (href: string, label: string) =>
 
 // ── The daily rundown ─────────────────────────────────────────────────────────
 
+/**
+ * The email lands the next morning, after rates have traded, so the close
+ * comes last and says what it is.
+ */
+const RECAP_NOTE =
+	"Closing levels. Rates have traded since; these are where the day ended.";
+
+/** "Later this week, through Fri, Oct 16" or "Next week, through Fri, Oct 23". */
+const laterHeading = (r: TRundown) =>
+	`${r.later.week === "this week" ? "Later this week" : "Next week"}, through ${shortDate(r.later.through)}`;
+
 /** Changes on the day, the week and the month. */
 const pastRowsHtml = (
 	cols: {
@@ -141,20 +154,30 @@ export const rundownEmail = (
 		r.results.length === 0
 			? `<p style="font-size:14px;color:#475569">No auction results on ${esc(shortDate(r.date))}.</p>`
 			: `<table role="presentation" style="border-collapse:collapse;width:100%"><tr><th style="${head}">Auction</th><th style="${head}">Clearing rate</th><th style="${head};text-align:right">Cover</th><th style="${head}">Demand</th></tr>${r.results
-					.map(
-						({ auction: a, demand }) =>
-							`<tr><td style="${cell}">${esc(auctionName(a))}<br><span style="color:#64748b;font-size:11px">${a.cusip}</span></td><td style="${cell}">${esc(clearingText(a))}</td><td style="${cell};text-align:right">${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}</td><td style="${cell}">${esc(demandText(demand))}</td></tr>`,
-					)
+					.map(({ auction: a, demand }) => {
+						const story = demandStory(demand);
+						return `<tr><td style="${cell}">${esc(auctionName(a))}<br><span style="color:#64748b;font-size:11px">${a.cusip}</span></td><td style="${cell}">${esc(clearingText(a))}</td><td style="${cell};text-align:right">${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}</td><td style="${cell}">${esc(demandText(demand))}</td></tr>${story ? `<tr><td colspan="4" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(story)}</td></tr>` : ""}`;
+					})
 					.join("")}</table>`;
-	const ahead =
-		r.ahead.length === 0
-			? `<p style="font-size:14px;color:#475569">None announced yet.</p>`
-			: `<table role="presentation" style="border-collapse:collapse;width:100%">${r.ahead
+	const upcoming = (
+		auctions: TRundown["today"],
+		none: string,
+		dated: boolean,
+	) =>
+		auctions.length === 0
+			? `<p style="font-size:14px;color:#475569">${esc(none)}</p>`
+			: `<table role="presentation" style="border-collapse:collapse;width:100%">${auctions
 					.map(
 						(a) =>
-							`<tr><td style="${cell}">${esc(shortDate(a.auction_date))}</td><td style="${cell}">${esc(auctionName(a))}</td><td style="${cell};text-align:right">${esc(billions(a.offering_amount))}</td></tr>`,
+							`<tr>${dated ? `<td style="${cell}">${esc(shortDate(a.auction_date))}</td>` : ""}<td style="${cell}">${esc(auctionName(a))}<br><span style="color:#64748b;font-size:11px">${a.cusip}</span></td><td style="${cell};text-align:right">${esc(billions(a.offering_amount))}</td></tr>`,
 					)
 					.join("")}</table>`;
+	const today = upcoming(r.today, "No Treasury auctions today.", false);
+	const later = upcoming(
+		r.later.auctions,
+		`None announced yet for ${r.later.week}.`,
+		true,
+	);
 	const ix = r.indices;
 	const indices = ix
 		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Index</th><th style="${head};text-align:right">Level</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr>${ix
@@ -168,19 +191,52 @@ export const rundownEmail = (
 		: `<p style="margin:8px 0 0;font-size:13px;color:#64748b">Index levels for this close are not published yet. <a href="${links.site}/indices">See the indices</a>.</p>`;
 	const h2 = (t: string) =>
 		`<h2 style="margin:24px 0 4px;font-size:16px">${esc(t)}</h2>`;
+	const h3 = (t: string) =>
+		`<h3 style="margin:18px 0 2px;font-size:14px;color:#334155">${esc(t)}</h3>`;
 	const body = `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155">${esc(summary)}</p>
-${h2(`The curve at the close, ${shortDate(r.date)}`)}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
-${h2(`Money market at the close, ${shortDate(r.date)}`)}${moneyMarket}
-${h2(`Safe Rate Treasury indices at the close, ${shortDate(r.date)}`)}${indices}
+${h2(`Auctions today, ${shortDate(r.edition)}`)}${today}
+${h2(laterHeading(r))}${later}
 ${h2(`Auction results, ${shortDate(r.date)}`)}${results}
-${h2(`Announced for the next ${r.aheadDays} days`)}${ahead}
+${h2(`Recap: the close, ${shortDate(r.date)}`)}<p style="margin:0;font-size:13px;color:#64748b">${esc(RECAP_NOTE)}</p>
+${h3("The curve")}${curve}<p style="margin:8px 0 0;font-size:13px">${spreads}</p>
+${h3("Money market")}${moneyMarket}
+${h3("Safe Rate Treasury indices")}${indices}
 ${button(url, "View on the web")}`;
 	const text = [
 		`Treasury daily rundown: ${longDate(r.edition)}`,
 		"",
 		summary,
 		"",
-		`THE CURVE AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (par yield; change on the day, week, month; zero; real)`,
+		`AUCTIONS TODAY, ${shortDate(r.edition).toUpperCase()}`,
+		...(r.today.length === 0
+			? ["  None."]
+			: r.today.map(
+					(a) => `  ${auctionName(a)}, ${billions(a.offering_amount)} (${a.cusip})`,
+				)),
+		"",
+		laterHeading(r).toUpperCase(),
+		...(r.later.auctions.length === 0
+			? ["  None announced yet."]
+			: r.later.auctions.map(
+					(a) =>
+						`  ${shortDate(a.auction_date)}: ${auctionName(a)}, ${billions(a.offering_amount)}`,
+				)),
+		"",
+		`AUCTION RESULTS, ${shortDate(r.date).toUpperCase()}`,
+		...(r.results.length === 0
+			? ["  None."]
+			: r.results.flatMap(({ auction: a, demand }) => {
+					const story = demandStory(demand);
+					return [
+						`  ${auctionName(a)}: ${clearingText(a)}, bid-to-cover ${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}, demand ${demandText(demand)}`,
+						...(story ? [`    ${story}`] : []),
+					];
+				})),
+		"",
+		`RECAP: THE CLOSE, ${shortDate(r.date).toUpperCase()}`,
+		`  ${RECAP_NOTE}`,
+		"",
+		"The curve (par yield; change on the day, week, month; zero; real)",
 		...r.tenors.map(
 			(t) =>
 				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${signedBp(t.weekBp).padEnd(7)} ${signedBp(t.monthBp).padEnd(7)}  ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
@@ -192,7 +248,7 @@ ${button(url, "View on the web")}`;
 				`  ${s.name} ${signedBp(s.bp).replace(/^\+/, "")} (${signedBp(s.changeBp)})`,
 		),
 		"",
-		`MONEY MARKET AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (yield; change on the day, week, month)`,
+		"Money market (yield; change on the day, week, month)",
 		...(r.moneyMarket
 			? r.moneyMarket.rates.map(
 					(m) =>
@@ -200,7 +256,7 @@ ${button(url, "View on the web")}`;
 				)
 			: ["  Not available for this date."]),
 		"",
-		`SAFE RATE TREASURY INDICES AT THE CLOSE, ${shortDate(r.date).toUpperCase()} (level; total return on the day, week, month)`,
+		"Safe Rate Treasury indices (level; total return on the day, week, month)",
 		...(ix
 			? [
 					...ix.map(
@@ -211,27 +267,11 @@ ${button(url, "View on the web")}`;
 				]
 			: ["  Not published yet for this close."]),
 		"",
-		`AUCTION RESULTS, ${shortDate(r.date).toUpperCase()}`,
-		...(r.results.length === 0
-			? ["  None."]
-			: r.results.map(
-					({ auction: a, demand }) =>
-						`  ${auctionName(a)}: ${clearingText(a)}, bid-to-cover ${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}, demand ${demandText(demand)}`,
-				)),
-		"",
-		`ANNOUNCED FOR THE NEXT ${r.aheadDays} DAYS`,
-		...(r.ahead.length === 0
-			? ["  None announced yet."]
-			: r.ahead.map(
-					(a) =>
-						`  ${shortDate(a.auction_date)}: ${auctionName(a)}, ${billions(a.offering_amount)}`,
-				)),
-		"",
 		`On the web: ${url}`,
 		footerText(why, links),
 	].join("\n");
 	return {
-		subject: `Treasury rundown, ${shortDate(r.edition)}: ${summary.split(";")[0]}`,
+		subject: `Treasury rundown, ${shortDate(r.edition)}: ${rundownHeadline(r)}`,
 		text,
 		html: layout({
 			eyebrow: "Treasury daily rundown",
