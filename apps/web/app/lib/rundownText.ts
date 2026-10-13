@@ -118,7 +118,7 @@ export const resultsSentence = (r: TRundown) =>
 type TSpread = TRundown["spreads"][number];
 
 /** "2-year to 10-year". */
-export const spreadLabel = (s: TSpread) => `${s.short}-year to ${s.long}-year`;
+export const spreadLabel = (s: TSpread) => `${s.short} to ${s.long}`;
 
 /** What the shape section says before its table, for the reader new to it. */
 export const SHAPE_NOTE =
@@ -132,8 +132,8 @@ export const spreadReads = (s: TSpread) => {
 	const gap = Math.abs(s.bp / 100).toFixed(2);
 	const level =
 		Math.round(s.bp) === 0
-			? `The ${s.long}-year yields the same as the ${s.short}-year`
-			: `The ${s.long}-year yields ${gap}% ${s.bp > 0 ? "more" : "less"} than the ${s.short}-year${s.bp < 0 ? " (inverted)" : ""}`;
+			? `The ${s.long} yields the same as the ${s.short}`
+			: `The ${s.long} yields ${gap}% ${s.bp > 0 ? "more" : "less"} than the ${s.short}${s.bp < 0 ? " (inverted)" : ""}`;
 	const move =
 		s.changeBp === null
 			? ""
@@ -141,6 +141,21 @@ export const spreadReads = (s: TSpread) => {
 				? "; unchanged on the day"
 				: `; ${s.changeBp > 0 ? "steeper" : "flatter"} on the day`;
 	return `${level}${move}.`;
+};
+
+/** What the breakeven line says before its numbers. */
+export const BREAKEVEN_NOTE =
+	"The 10-year nominal yield less the 10-year real (TIPS) yield: the inflation rate at which the two pay the same. It carries risk premiums too, so it is the market's price for inflation, not a forecast.";
+
+/** "The market prices 2.31% a year of inflation over 10 years; up 2 bp on the day." */
+export const breakevenReads = (b: NonNullable<TRundown["breakeven"]>) => {
+	const move =
+		b.changeBp === null
+			? ""
+			: Math.round(b.changeBp) === 0
+				? "; unchanged on the day"
+				: `; ${b.changeBp > 0 ? "up" : "down"} ${Math.abs(Math.round(b.changeBp))} bp on the day`;
+	return `The market prices ${b.rate.toFixed(2)}% a year of inflation over ${b.years} years${move}.`;
 };
 
 /** The close in a sentence: the 10-year and the 2-to-10-year gap. */

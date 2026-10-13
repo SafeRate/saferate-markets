@@ -10,7 +10,11 @@ import {
 	type TAuctionDemand,
 } from "@markets/mcp-tools";
 import { isBusinessDay, nextBusinessDay } from "@markets/portfolio";
-import { getCurvesOn, getRealCurveOn } from "@saferate/treasury-client/client";
+import {
+	getBreakevenOn,
+	getCurvesOn,
+	getRealCurveOn,
+} from "@saferate/treasury-client/client";
 import {
 	INDEX_META,
 	INDEX_SLUG,
@@ -117,10 +121,12 @@ export type TRundownMoneyMarket = {
  * plain name and keep the insider one beside it.
  */
 export type TRundownSpread = {
-	name: "2s10s" | "5s30s";
-	path: string;
-	short: number;
-	long: number;
+	name: "2s10s" | "3m10y" | "5s30s";
+	/** Its chart on Markets; null where there is none (3m10y). */
+	path: string | null;
+	/** "2-year", "3-month". */
+	short: string;
+	long: string;
 	bp: number;
 	changeBp: number | null;
 	weekBp: number | null;
@@ -148,8 +154,8 @@ const spreadOf = (
 	return {
 		name,
 		path: `/curve/${name}`,
-		short,
-		long,
+		short: `${short}-year`,
+		long: `${long}-year`,
 		bp,
 		changeBp: against(before),
 		weekBp: against(week),
@@ -348,6 +354,68 @@ const readIndices = async (
 };
 
 /**
+ * 3-month to 10-year, the gap the New York Fed's recession model reads: the
+ * money market curve's 3-month rate against the par 10-year, both bond
+ * equivalent. Its changes are the two rates' changes differenced, against the
+ * same comparison closes. Null without either rate.
+ */
+const threeMonthTen = (
+	tenors: TRundownTenor[],
+	mm: TRundownMoneyMarket | null,
+): TRundownSpread | null => {
+	const ten = tenors.find((t) => t.years === 10);
+	const three = mm?.rates.find((r) => r.label === "3M");
+	if (!ten || !three) return null;
+	const diff = (a: number | null, b: number | null) =>
+		a === null || b === null ? null : a - b;
+	return {
+		name: "3m10y",
+		path: null,
+		short: "3-month",
+		long: "10-year",
+		bp: (ten.parYield - three.rate) * 100,
+		changeBp: diff(ten.changeBp, three.changeBp),
+		weekBp: diff(ten.weekBp, three.weekBp),
+		monthBp: diff(ten.monthBp, three.monthBp),
+	};
+};
+
+export type TRundownBreakeven = {
+	years: number;
+	/** Percent: nominal less real, treasury's own breakeven. */
+	rate: number;
+	changeBp: number | null;
+	weekBp: number | null;
+	monthBp: number | null;
+};
+
+/** The 10-year breakeven at the close and against the comparison closes. */
+const readBreakeven = async (
+	env: TEnv,
+	date: string,
+	compare: (string | null)[],
+): Promise<TRundownBreakeven | null> => {
+	const YEARS = 10;
+	const on = async (d: string | null) => {
+		if (d === null) return undefined;
+		const day = await optional(`breakeven ${d}`, () =>
+			getBreakevenOn({ env, date: d }),
+		);
+		return day?.points.find((p) => p.tenorYears === YEARS)?.breakeven;
+	};
+	const [now, ...priors] = await Promise.all([on(date), ...compare.map(on)]);
+	if (now === undefined) return null;
+	const [day, week, month] = priors;
+	return {
+		years: YEARS,
+		rate: now,
+		changeBp: bp(now, day),
+		weekBp: bp(now, week),
+		monthBp: bp(now, month),
+	};
+};
+
+/**
  * The morning a close's rundown goes out: the next business day, federal
  * holidays skipped (the calendar the portfolio code settles on). Treasury's
  * prices for a close arrive the next business morning, so Friday
@@ -443,10 +511,18 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		realRate: realBy.get(t.years) ?? null,
 	}));
 	const compare = [curve.previousDate, curve.weekDate, curve.monthDate];
-	const [moneyMarket, indices] = await Promise.all([
+	const [moneyMarket, indices, breakeven] = await Promise.all([
 		readMoneyMarket(env, date, compare),
 		readIndices(env, date, compare),
+		readBreakeven(env, date, compare),
 	]);
+	const threeTen = threeMonthTen(tenors, moneyMarket);
+	// 2s10s first, the one most readers know; then 3m10y; then 5s30s.
+	const spreads = [
+		...curve.spreads.filter((s) => s.name === "2s10s"),
+		...(threeTen ? [threeTen] : []),
+		...curve.spreads.filter((s) => s.name === "5s30s"),
+	];
 	const analysed = analyseAuctions(auctions, date);
 	const results = analysed.latestByTerm
 		.filter((row) => row.auction.auctionDate === date)
@@ -476,7 +552,8 @@ export const loadRundown = async (env: TEnv, date: string) => {
 		tenors,
 		hasZero: tenors.some((t) => t.zeroRate !== null),
 		real: realCurve ? { tipsCount: realCurve.tipsCount } : null,
-		spreads: curve.spreads,
+		spreads,
+		breakeven,
 		moneyMarket,
 		indices,
 		results,

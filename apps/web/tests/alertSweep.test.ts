@@ -173,6 +173,27 @@ const env = () =>
 				},
 			],
 			realCurve: async ({ date }: { date: string }) => realRow(date),
+			// breakevenOn's day, as treasury sends it: the 10-year at 2.31% on
+			// 10-02, 2.29 the day before, 2.30 a week before, 2.20 a month before.
+			breakevenOn: async ({ date }: { date: string }) => {
+				const be = (
+					{
+						"2026-09-02": 2.2,
+						"2026-09-25": 2.3,
+						"2026-10-01": 2.29,
+						"2026-10-02": 2.31,
+					} as Record<string, number>
+				)[date];
+				return be === undefined
+					? null
+					: {
+							date,
+							missing: [],
+							points: [
+								{ breakeven: be, nominal: 4.6, real: 4.6 - be, tenorYears: 10 },
+							],
+						};
+			},
 			indexLevelsDailyOn: async ({ date }: { date: string }) => indexRows(date),
 			curvesOn: async (date: string) => ({
 				zero: [],
@@ -337,6 +358,16 @@ describe("the alert sweep", () => {
 			"The 10-year yields 1.18% more than the 2-year; flatter on the day.",
 		);
 		expect(text).toContain("the 2-to-10-year gap at 118 bp (−5 bp)");
+		// 3-month (money market, 4.20%) to 10-year par (5.20%): 100 bp; both
+		// fell 5 bp on the day, so 0; the week +10 against −5, the month +30
+		// against −5.
+		expect(text).toMatch(
+			/3-month to 10-year \(3m10y\)\s+100 bp\s+0 bp\s+\+15 bp\s+\+35 bp/,
+		);
+		expect(text).toMatch(/2\.31%\s+\+2 bp\s+\+1 bp\s+\+11 bp/);
+		expect(text).toContain(
+			"The market prices 2.31% a year of inflation over 10 years; up 2 bp on the day.",
+		);
 		// The broad index: level, then total return on the day (200), week
 		// (201) and month (198).
 		expect(rundowns[0].text).toContain(

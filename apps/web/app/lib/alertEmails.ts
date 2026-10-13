@@ -18,6 +18,8 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	BREAKEVEN_NOTE,
+	breakevenReads,
 	SHAPE_NOTE,
 	signedPct,
 	sinceText,
@@ -147,13 +149,19 @@ export const rundownEmail = (
 	const moneyMarket = mm
 		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${mm.rates.map((m) => `<th style="${head};text-align:right">${m.label}</th>`).join("")}</tr><tr><td style="${cell}">Yield</td>${mm.rates.map((m) => `<td style="${cell};text-align:right;font-weight:600">${pct(m.rate)}</td>`).join("")}</tr>${pastRowsHtml(mm.rates)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Fitted to ${mm.billCount} bills, ${esc(mm.convention)}.</p>`
 		: `<p style="font-size:14px;color:#475569">The money market curve is not available for this date.</p>`;
+	const b = r.breakeven;
+	const breakeven = `<p style="margin:0;font-size:13px;color:#64748b">${esc(BREAKEVEN_NOTE)}</p>${
+		b
+			? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Breakeven</th><th style="${head};text-align:right">Now</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr><tr><td style="${cell}">${b.years}-year</td><td style="${cell};text-align:right;font-weight:600">${pct(b.rate, 2)}</td><td style="${cell};text-align:right">${esc(signedBp(b.changeBp))}</td><td style="${cell};text-align:right">${esc(signedBp(b.weekBp))}</td><td style="${cell};text-align:right">${esc(signedBp(b.monthBp))}</td></tr><tr><td colspan="5" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(breakevenReads(b))}</td></tr></table>`
+			: `<p style="font-size:14px;color:#475569">The breakeven is not available for this date.</p>`
+	}`;
 	const shape =
 		r.spreads.length === 0
 			? ""
 			: `<p style="margin:0;font-size:13px;color:#64748b">${esc(SHAPE_NOTE)}</p><table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Gap</th><th style="${head};text-align:right">Now</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr>${r.spreads
 					.map(
 						(s) =>
-							`<tr><td style="${cell}">${esc(spreadLabel(s))} <a href="${esc(links.site + s.path)}" style="color:#4f46e5;font-size:11px">${s.name}</a></td><td style="${cell};text-align:right;font-weight:600">${esc(signedBp(s.bp).replace(/^\+/, ""))}</td><td style="${cell};text-align:right">${esc(signedBp(s.changeBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.weekBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.monthBp))}</td></tr><tr><td colspan="5" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(spreadReads(s))}</td></tr>`,
+							`<tr><td style="${cell}">${esc(spreadLabel(s))} ${s.path ? `<a href="${esc(links.site + s.path)}" style="color:#4f46e5;font-size:11px">${s.name}</a>` : `<span style="color:#64748b;font-size:11px">${s.name}</span>`}</td><td style="${cell};text-align:right;font-weight:600">${esc(signedBp(s.bp).replace(/^\+/, ""))}</td><td style="${cell};text-align:right">${esc(signedBp(s.changeBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.weekBp))}</td><td style="${cell};text-align:right">${esc(signedBp(s.monthBp))}</td></tr><tr><td colspan="5" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(spreadReads(s))}</td></tr>`,
 					)
 					.join("")}</table>`;
 	const results =
@@ -206,6 +214,7 @@ ${h2(`Auction results, ${shortDate(r.date)}`)}${results}
 ${h2(`Recap: the close, ${shortDate(r.date)}`)}<p style="margin:0;font-size:13px;color:#64748b">${esc(RECAP_NOTE)}</p>
 ${h3("The curve")}${curve}
 ${shape ? `${h3("Curve shape")}${shape}` : ""}
+${h3("Inflation the market expects")}${breakeven}
 ${h3("Money market")}${moneyMarket}
 ${h3("Safe Rate Treasury indices")}${indices}
 ${button(url, "View on the web")}`;
@@ -257,6 +266,14 @@ ${button(url, "View on the web")}`;
 			`  ${`${spreadLabel(s)} (${s.name})`.padEnd(28)} ${signedBp(s.bp).replace(/^\+/, "").padEnd(7)} ${signedBp(s.changeBp).padEnd(7)} ${signedBp(s.weekBp).padEnd(7)} ${signedBp(s.monthBp)}`,
 			`    ${spreadReads(s)}`,
 		]),
+		"",
+		"Inflation the market expects (10-year breakeven; change on the day, week, month)",
+		...(b
+			? [
+					`  ${pct(b.rate, 2).padEnd(7)} ${signedBp(b.changeBp).padEnd(7)} ${signedBp(b.weekBp).padEnd(7)} ${signedBp(b.monthBp)}`,
+					`    ${breakevenReads(b)}`,
+				]
+			: ["  Not available for this date."]),
 		"",
 		"Money market (yield; change on the day, week, month)",
 		...(r.moneyMarket
