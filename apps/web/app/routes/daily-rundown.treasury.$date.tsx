@@ -19,8 +19,13 @@ import {
 	rundownSummary,
 	shortDate,
 	signedBp,
+	BREAKEVEN_NOTE,
+	breakevenReads,
+	SHAPE_NOTE,
 	signedPct,
 	sinceText,
+	spreadLabel,
+	spreadReads,
 } from "@/lib/rundownText";
 import { getServerSession } from "@/services/auth.server";
 import {
@@ -418,20 +423,117 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 						: "The real (TIPS) curve is not available for this date."}
 					{r.hasZero ? "" : " The zero curve is not available for this date."}
 				</p>
-				<ul className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-					{r.spreads.map((s) => (
-						<li key={s.name}>
-							<Link
-								className="font-semibold text-primary underline underline-offset-4"
-								to={s.path}
-							>
-								{s.name}
-							</Link>{" "}
-							{signedBp(s.bp).replace(/^\+/, "")}{" "}
-							<span className="text-slate-500">({signedBp(s.changeBp)})</span>
-						</li>
-					))}
-				</ul>
+			</section>
+
+			{r.spreads.length > 0 ? (
+				<section className="mt-8">
+					<h3 className="text-lg font-semibold tracking-tight text-neutral-900">
+						Curve shape
+					</h3>
+					<p className="mt-1 text-sm text-slate-500">{SHAPE_NOTE}</p>
+					<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+						<table className="w-full min-w-[32rem] text-sm">
+							<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+								<tr>
+									<th className={th}>Gap</th>
+									<th className={`${th} text-right`}>Now</th>
+									<th className={`${th} text-right`}>1 day</th>
+									<th className={`${th} text-right`}>1 week</th>
+									<th className={`${th} text-right`}>1 month</th>
+								</tr>
+							</thead>
+							<tbody>
+								{r.spreads.map((s) => (
+									<tr className="border-t border-slate-100" key={s.name}>
+										<td className={td}>
+											<span className="font-medium text-neutral-900">
+												{spreadLabel(s)}
+											</span>{" "}
+											{s.path ? (
+												<Link
+													className="ml-1 text-xs text-primary underline underline-offset-4"
+													to={s.path}
+												>
+													{s.name}
+												</Link>
+											) : (
+												<span className="ml-1 text-xs text-slate-500">{s.name}</span>
+											)}
+										</td>
+										<td className={`${td} text-right font-medium`}>
+											{signedBp(s.bp).replace(/^\+/, "")}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(s.changeBp)}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(s.weekBp)}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(s.monthBp)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+					<ul className="mt-3 space-y-1 text-sm text-slate-600">
+						{r.spreads.map((s) => (
+							<li key={s.name}>{spreadReads(s)}</li>
+						))}
+					</ul>
+				</section>
+			) : null}
+
+			<section className="mt-8">
+				<h3 className="text-lg font-semibold tracking-tight text-neutral-900">
+					Inflation the market expects{" "}
+					<span className="text-sm font-normal text-slate-500">
+						10-year breakeven
+					</span>
+				</h3>
+				<p className="mt-1 text-sm text-slate-500">{BREAKEVEN_NOTE}</p>
+				{r.breakeven ? (
+					<>
+						<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+							<table className="w-full min-w-[32rem] text-sm">
+								<thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+									<tr>
+										<th className={th}>Breakeven</th>
+										<th className={`${th} text-right`}>Now</th>
+										<th className={`${th} text-right`}>1 day</th>
+										<th className={`${th} text-right`}>1 week</th>
+										<th className={`${th} text-right`}>1 month</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr className="border-t border-slate-100">
+										<td className={td}>{r.breakeven.years}-year</td>
+										<td className={`${td} text-right font-medium`}>
+											{pct(r.breakeven.rate, 2)}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(r.breakeven.changeBp)}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(r.breakeven.weekBp)}
+										</td>
+										<td className={`${td} text-right text-slate-600`}>
+											{signedBp(r.breakeven.monthBp)}
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<p className="mt-3 text-sm text-slate-600">
+							{breakevenReads(r.breakeven)}
+						</p>
+					</>
+				) : (
+					<p className="mt-3 text-slate-600">
+						The breakeven is not available for this date.
+					</p>
+				)}
 			</section>
 
 			<section className="mt-8">
