@@ -16,6 +16,7 @@ import {
 	pct,
 	RUNDOWN_PATH,
 	rundownPath,
+	rundownPoints,
 	rundownSummary,
 	shortDate,
 	signedBp,
@@ -223,9 +224,11 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 			<h1 className="mt-3 text-4xl font-semibold tracking-tight text-neutral-900">
 				{longDate(r.edition)}
 			</h1>
-			<p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-700">
-				{rundownSummary(r)}
-			</p>
+			<ul className="mt-5 max-w-3xl list-disc space-y-1 pl-6 text-lg leading-relaxed text-slate-700">
+				{rundownPoints(r).map((p) => (
+					<li key={p}>{p}</li>
+				))}
+			</ul>
 			<nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
 				{r.previousEdition ? (
 					<Link
@@ -355,7 +358,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					Recap: the close, {shortDate(r.date)}
 				</h2>
 				<p className="mt-1 text-sm text-slate-500">
-					Closing levels. Rates have traded since; these are where the day ended.
+					Closing levels. Rates have traded since, and these are where the day ended.
 				</p>
 			</section>
 
@@ -419,7 +422,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				</div>
 				<p className="mt-2 text-xs text-slate-500">
 					{r.real
-						? `Real rates fitted to ${r.real.tipsCount} TIPS; the TIPS curve starts at 2 years.`
+						? `Real rates fitted to ${r.real.tipsCount} TIPS. The TIPS curve starts at 2 years.`
 						: "The real (TIPS) curve is not available for this date."}
 					{r.hasZero ? "" : " The zero curve is not available for this date."}
 				</p>

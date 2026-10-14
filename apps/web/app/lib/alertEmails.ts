@@ -15,6 +15,7 @@ import {
 	pct,
 	rundownHeadline,
 	rundownPath,
+	rundownPoints,
 	rundownSummary,
 	shortDate,
 	signedBp,
@@ -109,7 +110,7 @@ const button = (href: string, label: string) =>
  * comes last and says what it is.
  */
 const RECAP_NOTE =
-	"Closing levels. Rates have traded since; these are where the day ended.";
+	"Closing levels. Rates have traded since, and these are where the day ended.";
 
 /** "Later this week, through Fri, Oct 16" or "Next week, through Fri, Oct 23". */
 const laterHeading = (r: TRundown) =>
@@ -142,6 +143,7 @@ export const rundownEmail = (
 ): TRenderedEmail => {
 	const url = `${links.site}${rundownPath(r.edition)}`;
 	const summary = rundownSummary(r);
+	const points = rundownPoints(r);
 	const why =
 		"You're receiving the Treasury daily rundown because you have a Safe Rate Markets account or subscribed to it.";
 	const curve = `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Tenor</th>${r.tenors.map((t) => `<th style="${head};text-align:right">${t.years}y</th>`).join("")}</tr><tr><td style="${cell}">Par yield</td>${r.tenors.map((t) => `<td style="${cell};text-align:right;font-weight:600">${pct(t.parYield)}</td>`).join("")}</tr>${pastRowsHtml(r.tenors)}<tr><td style="${cell}">Zero</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.zeroRate)}</td>`).join("")}</tr><tr><td style="${cell}">Real (TIPS)</td>${r.tenors.map((t) => `<td style="${cell};text-align:right">${pct(t.realRate)}</td>`).join("")}</tr></table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">${esc(sinceText(r).replace(/^./, (c) => c.toUpperCase()))}. Zero and real rates are continuously compounded.${r.real ? "" : " The real curve is not available for this date."}</p>`;
@@ -207,7 +209,7 @@ export const rundownEmail = (
 		`<h2 style="margin:24px 0 4px;font-size:16px">${esc(t)}</h2>`;
 	const h3 = (t: string) =>
 		`<h3 style="margin:18px 0 2px;font-size:14px;color:#334155">${esc(t)}</h3>`;
-	const body = `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155">${esc(summary)}</p>
+	const body = `<ul style="margin:0;padding-left:20px;font-size:15px;line-height:1.6;color:#334155">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>
 ${h2(`Auctions today, ${shortDate(r.edition)}`)}${today}
 ${h2(laterHeading(r))}${later}
 ${h2(`Auction results, ${shortDate(r.date)}`)}${results}
@@ -221,7 +223,7 @@ ${button(url, "View on the web")}`;
 	const text = [
 		`Treasury daily rundown: ${longDate(r.edition)}`,
 		"",
-		summary,
+		...points.map((p) => `- ${p}`),
 		"",
 		`AUCTIONS TODAY, ${shortDate(r.edition).toUpperCase()}`,
 		...(r.today.length === 0
@@ -252,7 +254,7 @@ ${button(url, "View on the web")}`;
 		`RECAP: THE CLOSE, ${shortDate(r.date).toUpperCase()}`,
 		`  ${RECAP_NOTE}`,
 		"",
-		"The curve (par yield; change on the day, week, month; zero; real)",
+		"The curve: par yield, change on the day, week and month, zero, real",
 		...r.tenors.map(
 			(t) =>
 				`  ${`${t.years}y`.padEnd(4)} ${pct(t.parYield)}  ${signedBp(t.changeBp).padEnd(7)} ${signedBp(t.weekBp).padEnd(7)} ${signedBp(t.monthBp).padEnd(7)}  ${pct(t.zeroRate)}  ${pct(t.realRate)}`,
@@ -260,14 +262,14 @@ ${button(url, "View on the web")}`;
 		`  ${sinceText(r)}.`,
 		"  Zero and real rates are continuously compounded.",
 		"",
-		"Curve shape (gap now; change on the day, week, month)",
+		"Curve shape: gap now, change on the day, week and month",
 		`  ${SHAPE_NOTE}`,
 		...r.spreads.flatMap((s) => [
 			`  ${`${spreadLabel(s)} (${s.name})`.padEnd(28)} ${signedBp(s.bp).replace(/^\+/, "").padEnd(7)} ${signedBp(s.changeBp).padEnd(7)} ${signedBp(s.weekBp).padEnd(7)} ${signedBp(s.monthBp)}`,
 			`    ${spreadReads(s)}`,
 		]),
 		"",
-		"Inflation the market expects (10-year breakeven; change on the day, week, month)",
+		"Inflation the market expects: 10-year breakeven, change on the day, week and month",
 		...(b
 			? [
 					`  ${pct(b.rate, 2).padEnd(7)} ${signedBp(b.changeBp).padEnd(7)} ${signedBp(b.weekBp).padEnd(7)} ${signedBp(b.monthBp)}`,
@@ -275,7 +277,7 @@ ${button(url, "View on the web")}`;
 				]
 			: ["  Not available for this date."]),
 		"",
-		"Money market (yield; change on the day, week, month)",
+		"Money market: yield, change on the day, week and month",
 		...(r.moneyMarket
 			? r.moneyMarket.rates.map(
 					(m) =>
@@ -283,7 +285,7 @@ ${button(url, "View on the web")}`;
 				)
 			: ["  Not available for this date."]),
 		"",
-		"Safe Rate Treasury indices (level; total return on the day, week, month)",
+		"Safe Rate Treasury indices: level, total return on the day, week and month",
 		...(ix
 			? [
 					...ix.map(
