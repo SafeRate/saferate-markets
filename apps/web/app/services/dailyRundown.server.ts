@@ -307,11 +307,32 @@ export type TRundownIndex = {
 	changePct: number | null;
 	weekPct: number | null;
 	monthPct: number | null;
+	/** Total return since the last close of the prior year. */
+	ytdPct: number | null;
 };
 
 /** Percent from `then` to `now`, from total-return levels. */
 const returnPct = (now: number, then: number | undefined) =>
 	then === undefined ? null : (now / then - 1) * 100;
+
+/**
+ * Every index's level at the prior year's last close: Dec 31, or the
+ * valuation day before it when the 31st has none (a weekend). Walked back a
+ * week at most. Null when none is published.
+ */
+const yearEndLevels = async (env: TEnv, date: string) => {
+	const day = new Date(`${Number(date.slice(0, 4)) - 1}-12-31T00:00:00Z`);
+	for (let i = 0; i < 7; i++) {
+		const iso = day.toISOString().slice(0, 10);
+		const rows = await optional(`index levels ${iso}`, () =>
+			readDailyLevelsOn(env, iso),
+		);
+		if (rows && rows.length > 0)
+			return new Map(rows.map((row) => [row.code, row.level]));
+		day.setUTCDate(day.getUTCDate() - 1);
+	}
+	return null;
+};
 
 /**
  * Every index's level at the close and its total return since the same
@@ -334,6 +355,7 @@ const readIndices = async (
 		...compare.map(levelsOn),
 	]);
 	if (!today || today.length === 0) return null;
+	const ytd = await yearEndLevels(env, date);
 	const [day, week, month] = priors.map((p) =>
 		p ? new Map(p.map((row) => [row.code, row.level])) : null,
 	);
@@ -349,6 +371,7 @@ const readIndices = async (
 			changePct: returnPct(row.level, day?.get(code)),
 			weekPct: returnPct(row.level, week?.get(code)),
 			monthPct: returnPct(row.level, month?.get(code)),
+			ytdPct: returnPct(row.level, ytd?.get(code)),
 		};
 	});
 };

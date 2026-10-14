@@ -614,7 +614,8 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				{r.indices ? (
 					<>
 						<p className="mt-1 text-sm text-slate-500">
-							Total return over the same closes as the curve.
+							Total return over the same closes as the curve, and year to date since
+							the last close of {Number(r.date.slice(0, 4)) - 1}.
 							{r.indices.some((i) => i.isProvisional)
 								? " This month's levels are provisional until it closes."
 								: ""}{" "}
@@ -635,6 +636,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 										<th className={`${th} text-right`}>1 day</th>
 										<th className={`${th} text-right`}>1 week</th>
 										<th className={`${th} text-right`}>1 month</th>
+										<th className={`${th} text-right`}>YTD</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -664,6 +666,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 											</td>
 											<td className={`${td} text-right text-slate-600`}>
 												{signedPct(i.monthPct)}
+											</td>
+											<td className={`${td} text-right text-slate-600`}>
+												{signedPct(i.ytdPct)}
 											</td>
 										</tr>
 									))}

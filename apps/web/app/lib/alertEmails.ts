@@ -196,14 +196,14 @@ export const rundownEmail = (
 	);
 	const ix = r.indices;
 	const indices = ix
-		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Index</th><th style="${head};text-align:right">Level</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th></tr>${ix
+		? `<table role="presentation" style="border-collapse:collapse;width:100%;margin-top:8px"><tr><th style="${head}">Index</th><th style="${head};text-align:right">Level</th><th style="${head};text-align:right">1 day</th><th style="${head};text-align:right">1 week</th><th style="${head};text-align:right">1 month</th><th style="${head};text-align:right">YTD</th></tr>${ix
 				.map(
 					(i) =>
-						`<tr><td style="${cell}"><a href="${indexUrl(i.slug)}" style="color:#0f172a">${esc(i.name)}</a><br><span style="font-family:monospace;font-size:11px;color:#64748b">${esc(i.ticker)}</span></td><td style="${cell};text-align:right;font-weight:600">${i.level.toFixed(2)}</td><td style="${cell};text-align:right">${signedPct(i.changePct)}</td><td style="${cell};text-align:right">${signedPct(i.weekPct)}</td><td style="${cell};text-align:right">${signedPct(i.monthPct)}</td></tr>`,
+						`<tr><td style="${cell}"><a href="${indexUrl(i.slug)}" style="color:#0f172a">${esc(i.name)}</a><br><span style="font-family:monospace;font-size:11px;color:#64748b">${esc(i.ticker)}</span></td><td style="${cell};text-align:right;font-weight:600">${i.level.toFixed(2)}</td><td style="${cell};text-align:right">${signedPct(i.changePct)}</td><td style="${cell};text-align:right">${signedPct(i.weekPct)}</td><td style="${cell};text-align:right">${signedPct(i.monthPct)}</td><td style="${cell};text-align:right">${signedPct(i.ytdPct)}</td></tr>`,
 				)
 				.join(
 					"",
-				)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Total return over the same closes as the curve.${ix.some((i) => i.isProvisional) ? " This month's levels are provisional until it closes." : ""} <a href="${links.site}/indices" style="color:#94a3b8">About the indices</a>.</p>`
+				)}</table><p style="margin:6px 0 0;font-size:11px;color:#94a3b8">Total return over the same closes as the curve, and year to date since the last close of ${Number(r.date.slice(0, 4)) - 1}.${ix.some((i) => i.isProvisional) ? " This month's levels are provisional until it closes." : ""} <a href="${links.site}/indices" style="color:#94a3b8">About the indices</a>.</p>`
 		: `<p style="margin:8px 0 0;font-size:13px;color:#64748b">Index levels for this close are not published yet. <a href="${links.site}/indices">See the indices</a>.</p>`;
 	const h2 = (t: string) =>
 		`<h2 style="margin:24px 0 4px;font-size:16px">${esc(t)}</h2>`;
@@ -287,12 +287,12 @@ ${button(url, "View on the web")}`;
 				)
 			: ["  Not available for this date."]),
 		"",
-		"Safe Rate Treasury indices: level, total return on the day, week and month",
+		"Safe Rate Treasury indices: level, total return on the day, week, month and year to date",
 		...(ix
 			? [
 					...ix.map(
 						(i) =>
-							`  ${i.name.padEnd(22)} ${i.level.toFixed(2).padStart(8)}  ${signedPct(i.changePct).padEnd(7)} ${signedPct(i.weekPct).padEnd(7)} ${signedPct(i.monthPct)}`,
+							`  ${i.name.padEnd(22)} ${i.level.toFixed(2).padStart(8)}  ${signedPct(i.changePct).padEnd(7)} ${signedPct(i.weekPct).padEnd(7)} ${signedPct(i.monthPct).padEnd(7)} ${signedPct(i.ytdPct)}`,
 					),
 					`  About the indices: ${links.site}/indices`,
 				]

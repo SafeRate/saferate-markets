@@ -76,6 +76,8 @@ const moneyMarketRow = (date: string) => ({
  * month before (09-02).
  */
 const BROAD: Record<string, number> = {
+	// The prior year's last close: Wed Dec 31 has none, so Tue Dec 30.
+	"2025-12-30": 180,
 	"2026-09-02": 198,
 	"2026-09-25": 201,
 	"2026-09-30": 199,
@@ -232,7 +234,7 @@ beforeEach(async () => {
 	// A month ago (09-02) and a week ago (09-25) are fitted closes too.
 	curveDates = ["2026-09-02", "2026-09-25", "2026-09-30", "2026-10-01"];
 	// Levels for every close, 10-02's included, unless a test says otherwise.
-	indexDates = [...curveDates, "2026-10-02"];
+	indexDates = [...curveDates, "2026-10-02", "2025-12-30"];
 	sent = [];
 	everyone = world.addUser("everyone@example.com");
 	tenYearFan = world.addUser("ten@example.com");
@@ -377,7 +379,7 @@ describe("the alert sweep", () => {
 			"Safe Rate Treasury indices: level, total return",
 		);
 		expect(rundowns[0].text).toMatch(
-			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%/,
+			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%\s+\+12\.22%/,
 		);
 		expect(rundowns[0].html).toContain(
 			"https://saferate.com/treasury/indices/nominal",
