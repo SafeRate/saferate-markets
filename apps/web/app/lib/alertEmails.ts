@@ -172,7 +172,7 @@ export const rundownEmail = (
 			: `<table role="presentation" style="border-collapse:collapse;width:100%"><tr><th style="${head}">Auction</th><th style="${head}">Clearing rate</th><th style="${head};text-align:right">Cover</th><th style="${head}">Demand</th></tr>${r.results
 					.map(({ auction: a, demand }) => {
 						const story = demandStory(demand);
-						return `<tr><td style="${cell}">${esc(auctionName(a))}<br><span style="color:#64748b;font-size:11px">${a.cusip}</span></td><td style="${cell}">${esc(clearingText(a))}</td><td style="${cell};text-align:right">${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}</td><td style="${cell}">${esc(demandText(demand))}</td></tr>${story ? `<tr><td colspan="4" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(story)}</td></tr>` : ""}`;
+						return `<tr><td style="${cell}">${esc(auctionName(a))}<br><span style="color:#64748b;font-size:11px">${a.cusip}</span></td><td style="${cell}">${esc(clearingText(a))}</td><td style="${cell};text-align:right">${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}</td><td style="${cell}">${esc(demandText(demand))}</td></tr>${story ? `<tr><td colspan="4" style="padding:0 8px 8px;font-size:13px;color:#475569">${esc(story.lead)}${story.points.length > 0 ? `<ul style="margin:2px 0 0;padding-left:20px">${story.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}</td></tr>` : ""}`;
 					})
 					.join("")}</table>`;
 	const upcoming = (
@@ -247,7 +247,9 @@ ${button(url, "View on the web")}`;
 					const story = demandStory(demand);
 					return [
 						`  ${auctionName(a)}: ${clearingText(a)}, bid-to-cover ${a.bid_to_cover_ratio?.toFixed(2) ?? "—"}, demand ${demandText(demand)}`,
-						...(story ? [`    ${story}`] : []),
+						...(story
+							? [`    ${story.lead}`, ...story.points.map((p) => `      - ${p}`)]
+							: []),
 					];
 				})),
 		"",

@@ -156,6 +156,21 @@ const Verdict = ({
 type TUpcoming = Route.ComponentProps["loaderData"]["rundown"]["today"];
 
 /** Auctions still to come: today's, or the rest of the week's with dates. */
+/** Why an auction read strong or weak: a lead line, then the ranked thirds. */
+const StoryLines = ({ story }: { story: ReturnType<typeof demandStory> }) =>
+	story ? (
+		<>
+			{story.lead}
+			{story.points.length > 0 ? (
+				<ul className="mt-1 list-disc pl-5">
+					{story.points.map((p) => (
+						<li key={p}>{p}</li>
+					))}
+				</ul>
+			) : null}
+		</>
+	) : null;
+
 const Upcoming = ({
 	auctions,
 	dated,
@@ -335,7 +350,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 										{demandStory(demand) ? (
 											<tr>
 												<td className="px-3 pb-3 text-sm text-slate-600" colSpan={6}>
-													{demandStory(demand)}
+													<StoryLines story={demandStory(demand)} />
 												</td>
 											</tr>
 										) : null}

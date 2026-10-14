@@ -204,10 +204,10 @@ export const rundownHeadline = (r: TRundown) => {
  */
 export const demandStory = (
 	d: TRundown["results"][number]["demand"],
-): string | null => {
+): { lead: string; points: string[] } | null => {
 	if (d === null) return null;
 	const caption = unrankedCaption(d);
-	if (caption) return `${caption}.`;
+	if (caption) return { lead: `${caption}.`, points: [] };
 	if (d.verdict === null) return null;
 	const named = (ms: typeof d.measures) =>
 		listOf(ms.map((m) => m.label.replace(/^./, (c) => c.toLowerCase())));
@@ -219,10 +219,10 @@ export const demandStory = (
 		top.length > 0 ? `Strongest third: ${named(top)}` : null,
 		bottom.length > 0 ? `Weakest third: ${named(bottom)}` : null,
 	].filter((x): x is string => x !== null);
-	const verdict = `${capital(d.verdict)} demand against ${against}.`;
-	return parts.length === 0
-		? `${verdict} Every measure in the middle third.`
-		: `${verdict} ${parts.join(". ")}.`;
+	return {
+		lead: `${capital(d.verdict)} demand, against ${against}:`,
+		points: parts.length === 0 ? ["Every measure in the middle third"] : parts,
+	};
 };
 
 /** "changes since Oct 7 (day), Oct 1 (week) and Sep 8 (month)". */

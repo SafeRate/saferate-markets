@@ -336,7 +336,7 @@ describe("the alert sweep", () => {
 			"912797AB1",
 		);
 		expect(text).toContain(
-			"Strong demand against the last 24 months' 24 auctions of this term. Strongest third: bid to cover and indirect share. Weakest third: high less median.",
+			"Strong demand, against the last 24 months' 24 auctions of this term:\n      - Strongest third: bid to cover and indirect share\n      - Weakest third: high less median",
 		);
 		expect(rundowns[0].subject).toMatch(/today, 10y closed 5\.20% \(−5 bp\)$/);
 		expect(rundowns[0].text).toContain("closed Friday at 5.20%");
