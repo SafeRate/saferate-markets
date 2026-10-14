@@ -60,9 +60,11 @@
 	"env": {
 		"staging": {
 			"name": "saferate-markets-web-staging",
-			// The email alerts sweep (workers/app.ts scheduled). Staging sends only
-			// to EMAIL_RECIPIENT_ALLOWLIST; everyone else is recorded as withheld.
-			"triggers": { "crons": ["*/5 * * * *"] },
+			// No alerts sweep on staging. It ran one against staging's own accounts,
+			// and the allowlist lets every @saferate.com test account through, so
+			// each production rundown came with four staging copies (2026-10-14).
+			// Empty, not omitted, so a deploy removes the schedule it had.
+			"triggers": { "crons": [] },
 			"routes": [{ "pattern": "staging.saferate.markets", "custom_domain": true }],
 			"d1_databases": [
 				{
