@@ -367,8 +367,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					The curve
 				</h3>
 				<p className="mt-1 text-sm text-slate-500">
-					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent;{" "}
-					{sinceText(r)}. Zero and real (TIPS) rates are continuously compounded.
+					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent.{" "}
+					{sinceText(r).replace(/^./, (c) => c.toUpperCase())}. Zero and real (TIPS)
+					rates are continuously compounded.
 				</p>
 				<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
 					<table className="w-full min-w-[32rem] text-sm">
