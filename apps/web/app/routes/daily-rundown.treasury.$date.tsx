@@ -16,6 +16,7 @@ import {
 	pct,
 	RUNDOWN_PATH,
 	rundownPath,
+	rundownPoints,
 	rundownSummary,
 	shortDate,
 	signedBp,
@@ -155,6 +156,21 @@ const Verdict = ({
 type TUpcoming = Route.ComponentProps["loaderData"]["rundown"]["today"];
 
 /** Auctions still to come: today's, or the rest of the week's with dates. */
+/** Why an auction read strong or weak: a lead line, then the ranked thirds. */
+const StoryLines = ({ story }: { story: ReturnType<typeof demandStory> }) =>
+	story ? (
+		<>
+			{story.lead}
+			{story.points.length > 0 ? (
+				<ul className="mt-1 list-disc pl-5">
+					{story.points.map((p) => (
+						<li key={p}>{p}</li>
+					))}
+				</ul>
+			) : null}
+		</>
+	) : null;
+
 const Upcoming = ({
 	auctions,
 	dated,
@@ -223,9 +239,11 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 			<h1 className="mt-3 text-4xl font-semibold tracking-tight text-neutral-900">
 				{longDate(r.edition)}
 			</h1>
-			<p className="mt-5 max-w-3xl text-lg leading-relaxed text-slate-700">
-				{rundownSummary(r)}
-			</p>
+			<ul className="mt-5 max-w-3xl list-disc space-y-1 pl-6 text-lg leading-relaxed text-slate-700">
+				{rundownPoints(r).map((p) => (
+					<li key={p}>{p}</li>
+				))}
+			</ul>
 			<nav className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
 				{r.previousEdition ? (
 					<Link
@@ -332,7 +350,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 										{demandStory(demand) ? (
 											<tr>
 												<td className="px-3 pb-3 text-sm text-slate-600" colSpan={6}>
-													{demandStory(demand)}
+													<StoryLines story={demandStory(demand)} />
 												</td>
 											</tr>
 										) : null}
@@ -355,7 +373,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					Recap: the close, {shortDate(r.date)}
 				</h2>
 				<p className="mt-1 text-sm text-slate-500">
-					Closing levels. Rates have traded since; these are where the day ended.
+					Closing levels. Rates have traded since, and these are where the day ended.
 				</p>
 			</section>
 
@@ -364,8 +382,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 					The curve
 				</h3>
 				<p className="mt-1 text-sm text-slate-500">
-					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent;{" "}
-					{sinceText(r)}. Zero and real (TIPS) rates are continuously compounded.
+					Safe Rate's fitted Treasury curves. Par yields are bond-equivalent.{" "}
+					{sinceText(r).replace(/^./, (c) => c.toUpperCase())}. Zero and real (TIPS)
+					rates are continuously compounded.
 				</p>
 				<div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
 					<table className="w-full min-w-[32rem] text-sm">
@@ -419,7 +438,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				</div>
 				<p className="mt-2 text-xs text-slate-500">
 					{r.real
-						? `Real rates fitted to ${r.real.tipsCount} TIPS; the TIPS curve starts at 2 years.`
+						? `Real rates fitted to ${r.real.tipsCount} TIPS. The TIPS curve starts at 2 years.`
 						: "The real (TIPS) curve is not available for this date."}
 					{r.hasZero ? "" : " The zero curve is not available for this date."}
 				</p>
@@ -595,7 +614,8 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 				{r.indices ? (
 					<>
 						<p className="mt-1 text-sm text-slate-500">
-							Total return over the same closes as the curve.
+							Total return over the same closes as the curve, and year to date since
+							the last close of {Number(r.date.slice(0, 4)) - 1}.
 							{r.indices.some((i) => i.isProvisional)
 								? " This month's levels are provisional until it closes."
 								: ""}{" "}
@@ -616,6 +636,7 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 										<th className={`${th} text-right`}>1 day</th>
 										<th className={`${th} text-right`}>1 week</th>
 										<th className={`${th} text-right`}>1 month</th>
+										<th className={`${th} text-right`}>YTD</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -645,6 +666,9 @@ export default function DailyRundown({ loaderData }: Route.ComponentProps) {
 											</td>
 											<td className={`${td} text-right text-slate-600`}>
 												{signedPct(i.monthPct)}
+											</td>
+											<td className={`${td} text-right text-slate-600`}>
+												{signedPct(i.ytdPct)}
 											</td>
 										</tr>
 									))}

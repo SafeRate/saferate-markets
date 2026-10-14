@@ -4,8 +4,9 @@ import { unrankedCaption } from "./demandCaption";
 /**
  * The words of the Treasury daily rundown, shared by its page and its email so
  * the two cannot drift: dates, signed basis points, how an auction is named
- * and how its clearing rate reads, and the one-sentence summary that opens
- * both (and is the page's meta description and the email's preview text).
+ * and how its clearing rate reads, and the bullet points that open both
+ * (joined, the page's meta description and the email's preview text). One
+ * point per line, no semicolons.
  */
 
 export const RUNDOWN_PATH = "/daily-rundown/treasury";
@@ -98,22 +99,22 @@ const laterText = (r: TRundown) => {
 	return `${n === 0 ? "no" : n} ${n === 1 ? "auction" : "auctions"} ${n === 0 ? `announced for ${r.later.week}` : r.later.week === "this week" ? "later this week" : "next week"}`;
 };
 
-/** What the morning holds: today's auctions, then the rest of the week. */
-export const aheadSentence = (r: TRundown) =>
-	r.today.length === 0
-		? `No Treasury auctions today; ${laterText(r)}.`
-		: `Auctions today: ${listOf(r.today.map((a) => `${shortName(a)} (${billions(a.offering_amount)})`))}; ${laterText(r)}.`;
+const capital = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
 
-/** "10-Year Note strong, 4-Week Bill average": the close's results. */
-export const resultsSentence = (r: TRundown) =>
-	r.results.length === 0
-		? null
-		: `${weekday(r.date)}'s results: ${r.results
-				.map(
-					({ auction, demand }) =>
-						`${shortName(auction)}${demand?.verdict ? `, ${demand.verdict} demand` : ""}`,
-				)
-				.join("; ")}.`;
+/** What the morning holds: today's auctions, then the rest of the week. */
+export const aheadPoints = (r: TRundown) => [
+	r.today.length === 0
+		? "No Treasury auctions today."
+		: `Auctions today: ${listOf(r.today.map((a) => `${shortName(a)} (${billions(a.offering_amount)})`))}.`,
+	`${capital(laterText(r))}.`,
+];
+
+/** "Friday's 10-Year Note auction: strong demand.", one per result. */
+export const resultPoints = (r: TRundown) =>
+	r.results.map(
+		({ auction, demand }) =>
+			`${weekday(r.date)}'s ${shortName(auction)} auction${demand?.verdict ? `: ${demand.verdict} demand` : " results are in"}.`,
+	);
 
 type TSpread = TRundown["spreads"][number];
 
@@ -122,11 +123,11 @@ export const spreadLabel = (s: TSpread) => `${s.short} to ${s.long}`;
 
 /** What the shape section says before its table, for the reader new to it. */
 export const SHAPE_NOTE =
-	"How much more long-term Treasuries yield than shorter ones. A wider gap is a steeper curve, a narrower one flatter; below zero, the curve is inverted.";
+	"How much more long-term Treasuries yield than shorter ones. A wider gap is a steeper curve, and a narrower one is flatter. Below zero, the curve is inverted.";
 
 /**
- * The gap in plain words: "The 10-year yields 0.46% more than the 2-year;
- * flatter on the day."
+ * The gap in plain words: "The 10-year yields 0.46% more than the 2-year.
+ * Flatter on the day."
  */
 export const spreadReads = (s: TSpread) => {
 	const gap = Math.abs(s.bp / 100).toFixed(2);
@@ -138,44 +139,53 @@ export const spreadReads = (s: TSpread) => {
 		s.changeBp === null
 			? ""
 			: Math.round(s.changeBp) === 0
-				? "; unchanged on the day"
-				: `; ${s.changeBp > 0 ? "steeper" : "flatter"} on the day`;
-	return `${level}${move}.`;
+				? " Unchanged on the day."
+				: ` ${s.changeBp > 0 ? "Steeper" : "Flatter"} on the day.`;
+	return `${level}.${move}`;
 };
 
 /** What the breakeven line says before its numbers. */
 export const BREAKEVEN_NOTE =
 	"The 10-year nominal yield less the 10-year real (TIPS) yield: the inflation rate at which the two pay the same. It carries risk premiums too, so it is the market's price for inflation, not a forecast.";
 
-/** "The market prices 2.31% a year of inflation over 10 years; up 2 bp on the day." */
+/** "The market prices 2.31% a year of inflation over 10 years. Up 2 bp on the day." */
 export const breakevenReads = (b: NonNullable<TRundown["breakeven"]>) => {
 	const move =
 		b.changeBp === null
 			? ""
 			: Math.round(b.changeBp) === 0
-				? "; unchanged on the day"
-				: `; ${b.changeBp > 0 ? "up" : "down"} ${Math.abs(Math.round(b.changeBp))} bp on the day`;
-	return `The market prices ${b.rate.toFixed(2)}% a year of inflation over ${b.years} years${move}.`;
+				? " Unchanged on the day."
+				: ` ${b.changeBp > 0 ? "Up" : "Down"} ${Math.abs(Math.round(b.changeBp))} bp on the day.`;
+	return `The market prices ${b.rate.toFixed(2)}% a year of inflation over ${b.years} years.${move}`;
 };
 
-/** The close in a sentence: the 10-year and the 2-to-10-year gap. */
-export const closeSentence = (r: TRundown) => {
+/** The close: the 10-year, then the 2-to-10-year gap. */
+export const closePoints = (r: TRundown) => {
 	const ten = r.tenors.find((t) => t.years === 10);
 	const twos = r.spreads.find((s) => s.name === "2s10s");
-	if (!ten) return null;
-	return `The 10-year par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}${twos ? `; the 2-to-10-year gap at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}` : ""}.`;
+	return [
+		ten
+			? `The 10-year par yield closed ${weekday(r.date)} at ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}.`
+			: null,
+		twos
+			? `The 2-to-10-year gap closed at ${signedBp(twos.bp).replace(/^\+/, "")}${twos.changeBp === null ? "" : ` (${signedBp(twos.changeBp)})`}.`
+			: null,
+	].filter((x): x is string => x !== null);
 };
 
 /**
- * The opening paragraph, the page's meta description and the email's
- * preview text: what is ahead first, then the results, then the close. The
- * email lands the next morning after rates have moved, so the close comes
- * last, as a recap.
+ * The bullet points that open the page and the email: what is ahead first,
+ * then the results, then the close. The email lands the next morning after
+ * rates have moved, so the close comes last, as a recap.
  */
-export const rundownSummary = (r: TRundown) =>
-	[aheadSentence(r), resultsSentence(r), closeSentence(r)]
-		.filter((x): x is string => x !== null)
-		.join(" ");
+export const rundownPoints = (r: TRundown) => [
+	...aheadPoints(r),
+	...resultPoints(r),
+	...closePoints(r),
+];
+
+/** The points as one line: the page's meta description, the email's preview text. */
+export const rundownSummary = (r: TRundown) => rundownPoints(r).join(" ");
 
 /** The email's subject after its date: today's auctions, then the 10-year. */
 export const rundownHeadline = (r: TRundown) => {
@@ -184,7 +194,7 @@ export const rundownHeadline = (r: TRundown) => {
 		r.today.length === 0
 			? "no auctions today"
 			: `${listOf(r.today.map(shortName))} today`;
-	return `${today.replace(/^./, (c) => c.toUpperCase())}${ten ? `; 10y closed ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}` : ""}`;
+	return `${capital(today)}${ten ? `, 10y closed ${pct(ten.parYield, 2)}${ten.changeBp === null ? "" : ` (${signedBp(ten.changeBp)})`}` : ""}`;
 };
 
 /**
@@ -194,10 +204,10 @@ export const rundownHeadline = (r: TRundown) => {
  */
 export const demandStory = (
 	d: TRundown["results"][number]["demand"],
-): string | null => {
+): { lead: string; points: string[] } | null => {
 	if (d === null) return null;
 	const caption = unrankedCaption(d);
-	if (caption) return `${caption}.`;
+	if (caption) return { lead: `${caption}.`, points: [] };
 	if (d.verdict === null) return null;
 	const named = (ms: typeof d.measures) =>
 		listOf(ms.map((m) => m.label.replace(/^./, (c) => c.toLowerCase())));
@@ -206,13 +216,13 @@ export const demandStory = (
 	const bottom = ranked.filter((m) => (m.percentile ?? 100) <= 33);
 	const against = `the last ${d.windowMonths} months' ${d.sampleSize} auctions of this term`;
 	const parts = [
-		top.length > 0 ? `${named(top)} in the strongest third` : null,
-		bottom.length > 0 ? `${named(bottom)} in the weakest third` : null,
+		top.length > 0 ? `Strongest third: ${named(top)}` : null,
+		bottom.length > 0 ? `Weakest third: ${named(bottom)}` : null,
 	].filter((x): x is string => x !== null);
-	const verdict = `${d.verdict.replace(/^./, (c) => c.toUpperCase())} demand`;
-	return parts.length === 0
-		? `${verdict}: every measure in the middle third of ${against}.`
-		: `${verdict}: ${parts.join("; ")} of ${against}.`;
+	return {
+		lead: `${capital(d.verdict)} demand, against ${against}:`,
+		points: parts.length === 0 ? ["Every measure in the middle third"] : parts,
+	};
 };
 
 /** "changes since Oct 7 (day), Oct 1 (week) and Sep 8 (month)". */

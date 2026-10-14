@@ -76,6 +76,8 @@ const moneyMarketRow = (date: string) => ({
  * month before (09-02).
  */
 const BROAD: Record<string, number> = {
+	// The prior year's last close: Wed Dec 31 has none, so Tue Dec 30.
+	"2025-12-30": 180,
 	"2026-09-02": 198,
 	"2026-09-25": 201,
 	"2026-09-30": 199,
@@ -232,7 +234,7 @@ beforeEach(async () => {
 	// A month ago (09-02) and a week ago (09-25) are fitted closes too.
 	curveDates = ["2026-09-02", "2026-09-25", "2026-09-30", "2026-10-01"];
 	// Levels for every close, 10-02's included, unless a test says otherwise.
-	indexDates = [...curveDates, "2026-10-02"];
+	indexDates = [...curveDates, "2026-10-02", "2025-12-30"];
 	sent = [];
 	everyone = world.addUser("everyone@example.com");
 	tenYearFan = world.addUser("ten@example.com");
@@ -336,9 +338,9 @@ describe("the alert sweep", () => {
 			"912797AB1",
 		);
 		expect(text).toContain(
-			"Strong demand: bid to cover and indirect share in the strongest third; high less median in the weakest third of the last 24 months' 24 auctions of this term.",
+			"Strong demand, against the last 24 months' 24 auctions of this term:\n      - Strongest third: bid to cover and indirect share\n      - Weakest third: high less median",
 		);
-		expect(rundowns[0].subject).toMatch(/today; 10y closed 5\.20% \(−5 bp\)$/);
+		expect(rundowns[0].subject).toMatch(/today, 10y closed 5\.20% \(−5 bp\)$/);
 		expect(rundowns[0].text).toContain("closed Friday at 5.20%");
 		// Zero and real beside par at 10 years, and the money market with its
 		// change against the previous fitted day.
@@ -355,9 +357,12 @@ describe("the alert sweep", () => {
 			/2-year to 10-year \(2s10s\)\s+118 bp\s+−5 bp\s+\+10 bp\s+\+30 bp/,
 		);
 		expect(text).toContain(
-			"The 10-year yields 1.18% more than the 2-year; flatter on the day.",
+			"The 10-year yields 1.18% more than the 2-year. Flatter on the day.",
 		);
-		expect(text).toContain("the 2-to-10-year gap at 118 bp (−5 bp)");
+		expect(text).toContain("- The 2-to-10-year gap closed at 118 bp (−5 bp).");
+		// The opening is bullet points, and no semicolon in the copy.
+		expect(text).toContain("- Auctions today: ");
+		expect(text.split("On the web:")[0]).not.toContain(";");
 		// 3-month (money market, 4.20%) to 10-year par (5.20%): 100 bp; both
 		// fell 5 bp on the day, so 0; the week +10 against −5, the month +30
 		// against −5.
@@ -366,15 +371,15 @@ describe("the alert sweep", () => {
 		);
 		expect(text).toMatch(/2\.31%\s+\+2 bp\s+\+1 bp\s+\+11 bp/);
 		expect(text).toContain(
-			"The market prices 2.31% a year of inflation over 10 years; up 2 bp on the day.",
+			"The market prices 2.31% a year of inflation over 10 years. Up 2 bp on the day.",
 		);
 		// The broad index: level, then total return on the day (200), week
 		// (201) and month (198).
 		expect(rundowns[0].text).toContain(
-			"Safe Rate Treasury indices (level; total return",
+			"Safe Rate Treasury indices: level, total return",
 		);
 		expect(rundowns[0].text).toMatch(
-			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%/,
+			/US Treasury\s+202\.00\s+\+1\.00%\s+\+0\.50%\s+\+2\.02%\s+\+12\.22%/,
 		);
 		expect(rundowns[0].html).toContain(
 			"https://saferate.com/treasury/indices/nominal",
