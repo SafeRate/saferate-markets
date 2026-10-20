@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Form, Link, redirectDocument } from "react-router";
 import { hashToken } from "@/services/alertSignup.server";
 import { getAuth } from "@/services/auth.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/alerts.confirm";
 
 /**
@@ -36,6 +37,12 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 	const idAlertSignup = await hashToken(token);
 	const signup = await confirmAlertSignup({ db: env.DB, idAlertSignup });
 	if (!signup) return { ok: false as const };
+	await trackEvent({
+		context,
+		name: "alert_signup_confirmed",
+		props: {},
+		request,
+	});
 
 	const auth = getAuth({ env, request });
 	const ctx = await auth.$context;

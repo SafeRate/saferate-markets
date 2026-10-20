@@ -9,6 +9,7 @@ import { money } from "@/lib/format";
 import { readLiabilityInput } from "@/lib/liabilityInput";
 import { WriteGate } from "@/components/WriteGate";
 import { requireDashboard } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/dashboard.liabilities";
 
 export const meta: Route.MetaFunction = () => [
@@ -44,6 +45,17 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 			amount: r.amount,
 			label: r.label,
 		})),
+	});
+	await trackEvent({
+		context,
+		name: "liability_stream_created",
+		props: {},
+		request,
+		who: {
+			idOrganization: org.idOrganizationOwn,
+			idUser: org.idUser,
+			impersonatedBy: org.impersonatedBy,
+		},
 	});
 	return redirect(`/dashboard/liabilities/${id}`);
 };

@@ -7,4 +7,5 @@ export * from "./liabilities";
 export * from "./backtests";
 export * from "./demo";
 export * from "./alerts";
+export * from "./events";
 export * from "./siteErrors";

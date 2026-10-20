@@ -6,6 +6,7 @@ import { LineChart } from "@/components/LineChart";
 import { money, percent, signClass } from "@/lib/format";
 import { BENCHMARK_OPTIONS } from "@/lib/portfolioOptions";
 import { requireOrganization } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import {
 	EARLIEST_START,
 	latestDate,
@@ -27,7 +28,7 @@ export const meta: Route.MetaFunction = () => [
  */
 export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const env = context.cloudflare.env;
-	await requireOrganization(request, env);
+	const org = await requireOrganization(request, env);
 	const latest = await latestDate(env);
 	const params = new URL(request.url).searchParams;
 	const fiveYearsBack = `${Number(latest.slice(0, 4)) - 5}${latest.slice(4)}`;
@@ -56,6 +57,23 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		parsed.request,
 		latest,
 	);
+	// The backtest cache has no user column, so this is the only record of who ran
+	// what: strategy, rebalancing and span, never the amounts entered.
+	const spanMs = Date.parse(form.end) - Date.parse(form.start);
+	await trackEvent({
+		context,
+		name: "backtest_run",
+		props: {
+			frequency: form.frequency.slice(0, 120),
+			strategies: ran.results.length,
+			strategy: form.strategy.slice(0, 120),
+			years: Number.isFinite(spanMs)
+				? Math.round((spanMs / 31_557_600_000) * 10) / 10
+				: null,
+		},
+		request,
+		who: org,
+	});
 	return {
 		form,
 		limits,

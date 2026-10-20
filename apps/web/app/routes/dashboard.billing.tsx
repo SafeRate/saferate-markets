@@ -20,6 +20,7 @@ import {
 } from "@/lib/session.server";
 import { getAuth } from "@/services/auth.server";
 import { cancelNow, switchPathFor } from "@/services/billing.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/dashboard.billing";
 
 export const meta: Route.MetaFunction = () => [
@@ -44,6 +45,18 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const entitled = isEntitled(subscription);
 	const current = entitled ? checkoutPlanById(subscription?.idPlan) : undefined;
 	const url = new URL(request.url);
+	// Back from Stripe Checkout. A cancelled checkout leaves nothing in Stripe's
+	// webhooks, so this is the only record of an abandoned purchase. A reload of
+	// the same URL records it again; analysis dedupes by user and minute.
+	const outcome = url.searchParams.get("checkout");
+	if (outcome === "done" || outcome === "cancelled")
+		await trackEvent({
+			context,
+			name: "checkout_returned",
+			props: { outcome },
+			request,
+			who: org,
+		});
 	return {
 		organizationName: org.nameOrganization,
 		plans: CHECKOUT_PLANS.map((p) => ({
@@ -123,6 +136,13 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 					message: "Stripe did not return a checkout page. Try again.",
 				};
 			}
+			await trackEvent({
+				context,
+				name: "checkout_started",
+				props: { plan: plan.id },
+				request,
+				who: org,
+			});
 			return redirect(url);
 		}
 

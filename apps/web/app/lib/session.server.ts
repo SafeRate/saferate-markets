@@ -3,11 +3,13 @@ import {
 	getOrganizationSubscription,
 	isEntitled,
 	listPortfolios,
+	recordEvent,
 } from "@markets/persistence";
 import { isTrialActive } from "@markets/schema";
 import { data, redirect } from "react-router";
 import { getServerSession } from "@/services/auth.server";
 import { ensureOrganization } from "@/services/organizations.server";
+import { visitorIdFrom } from "@/lib/visitor.server";
 
 /**
  * The session and the organization every dashboard route needs, or a redirect
@@ -21,13 +23,32 @@ export const requireOrganization = async (request: Request, env: Env) => {
 		idUser: session.user.id,
 		email: session.user.email,
 	});
+	const impersonatedBy =
+		(session.session as { impersonatedBy?: string | null }).impersonatedBy ??
+		null;
+	// The account's first visit to anything that needs an organization: the org
+	// and its Team trial were just created. A milestone, recorded once.
+	if ("isCreated" in organization && organization.isCreated && !impersonatedBy)
+		await recordEvent({
+			db: env.DB,
+			idOrganization: String(organization.idOrganization),
+			idUser: session.user.id,
+			idVisitor: visitorIdFrom(request),
+			name: "organization_created",
+			path: new URL(request.url).pathname,
+			props: {
+				trialEndsAt:
+					typeof organization.trialEndsAt === "number"
+						? organization.trialEndsAt
+						: null,
+			},
+			source: "web",
+		});
 	return {
 		idUser: session.user.id,
 		email: session.user.email,
 		/** The admin's user id when an admin is signed in as this account (/support). */
-		impersonatedBy:
-			(session.session as { impersonatedBy?: string | null }).impersonatedBy ??
-			null,
+		impersonatedBy,
 		idOrganization: String(organization.idOrganization),
 		nameOrganization: String(organization.nameOrganization),
 		/** When the Team trial ends (epoch ms), or null for no trial. */

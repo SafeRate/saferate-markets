@@ -3,6 +3,7 @@ import { data } from "react-router";
 import { describeSecurity } from "@/lib/format";
 import { orderLines } from "@/lib/orders";
 import { requireDashboard } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/dashboard.plans.$idPlan.orders.csv";
 
 /**
@@ -29,6 +30,17 @@ export const loader = async ({
 		idPlan: params.idPlan,
 	});
 	if (plan === null) throw data("No such plan.", { status: 404 });
+	await trackEvent({
+		context,
+		name: "plan_orders_exported",
+		props: {},
+		request,
+		who: {
+			idOrganization: org.idOrganizationOwn,
+			idUser: org.idUser,
+			impersonatedBy: org.impersonatedBy,
+		},
+	});
 	const header = [
 		"Action",
 		"CUSIP",

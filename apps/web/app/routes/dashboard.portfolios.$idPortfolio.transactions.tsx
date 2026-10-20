@@ -34,6 +34,7 @@ import {
 } from "@/lib/portfolioOptions";
 import { useIsDemo, WriteGate } from "@/components/WriteGate";
 import { requireDashboard } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import { loadSecurities, validateNewTrades } from "@/services/portfolio.server";
 import { freeValueLimitProblem } from "@/services/freeTier.server";
 import type { Route } from "./+types/dashboard.portfolios.$idPortfolio.transactions";
@@ -187,7 +188,7 @@ export const action = async ({
 			cleanPrice === null
 		)
 			return { intent, ok: false, errors };
-		return store(
+		const added = await store(
 			[
 				{
 					cusip,
@@ -202,6 +203,19 @@ export const action = async ({
 			],
 			"manual",
 		);
+		if (added.ok)
+			await trackEvent({
+				context,
+				name: "transaction_added",
+				props: {},
+				request,
+				who: {
+					idOrganization: org.idOrganizationOwn,
+					idUser: org.idUser,
+					impersonatedBy: org.impersonatedBy,
+				},
+			});
+		return added;
 	}
 
 	if (intent === "import") {
@@ -261,6 +275,17 @@ export const action = async ({
 			"csv",
 		);
 		if (!result.ok) return result;
+		await trackEvent({
+			context,
+			name: "transactions_imported",
+			props: { rows: parsed.trades.length },
+			request,
+			who: {
+				idOrganization: org.idOrganizationOwn,
+				idUser: org.idUser,
+				impersonatedBy: org.impersonatedBy,
+			},
+		});
 		const read = Object.entries(parsed.mapping)
 			.map(([field, header]) => `${field} ← "${header}"`)
 			.join(", ");
@@ -311,6 +336,17 @@ export const action = async ({
 				errors: ["Type the portfolio's name exactly to delete it."],
 			};
 		await deletePortfolio(scope);
+		await trackEvent({
+			context,
+			name: "portfolio_deleted",
+			props: {},
+			request,
+			who: {
+				idOrganization: org.idOrganizationOwn,
+				idUser: org.idUser,
+				impersonatedBy: org.impersonatedBy,
+			},
+		});
 		return redirect("/dashboard/portfolios");
 	}
 

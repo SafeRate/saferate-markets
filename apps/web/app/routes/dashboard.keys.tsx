@@ -11,6 +11,7 @@ import {
 	refuseWhileImpersonating,
 	requireOrganization,
 } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/dashboard.keys";
 
 export const meta: Route.MetaFunction = () => [
@@ -47,6 +48,13 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 			idUser: org.idUser,
 			nameApiKey,
 		});
+		await trackEvent({
+			context,
+			name: "api_key_created",
+			props: {},
+			request,
+			who: org,
+		});
 		// Returned to the page ONCE. Never persisted, never in a redirect URL —
 		// a key in a URL lands in browser history, the Referer header and any
 		// intermediate log.
@@ -69,6 +77,13 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 				message: "That key cannot be rotated. It may already be revoked.",
 			};
 		}
+		await trackEvent({
+			context,
+			name: "api_key_rotated",
+			props: {},
+			request,
+			who: org,
+		});
 		// Same contract as creation: shown once, never persisted, never in a
 		// redirect URL.
 		return {
@@ -87,6 +102,14 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 			idOrganization,
 			idApiKey,
 		});
+		if (didRevoke)
+			await trackEvent({
+				context,
+				name: "api_key_revoked",
+				props: {},
+				request,
+				who: org,
+			});
 		return didRevoke
 			? { status: "revoked" as const }
 			: { status: "error" as const, message: "That key was already revoked." };

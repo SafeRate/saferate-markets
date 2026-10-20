@@ -1,11 +1,15 @@
 import {
 	describeThrown,
+	recordEvent,
 	recordSiteError,
+	recordVisitor,
 	wasSiteErrorRecorded,
 } from "@markets/persistence";
+import { isbot } from "isbot";
 import { createRequestHandler } from "react-router";
 import { resolveMarketsEnv } from "@markets/schema";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
+import { isAnalyticsPermitted } from "@/lib/privacyChoices";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
 import {
 	C_RUNDOWN_OVERDUE_PATH,
@@ -13,6 +17,11 @@ import {
 	sweepAlerts,
 } from "@/services/alerts.server";
 import { getAuth } from "@/services/auth.server";
+import {
+	serializeVisitorCookie,
+	touchFrom,
+	visitorIdFrom,
+} from "@/lib/visitor.server";
 
 declare module "react-router" {
 	export interface AppLoadContext {
@@ -100,6 +109,48 @@ export default {
 					db: env.DB,
 					message: `HTTP ${response.status} from ${url.pathname}`,
 					request,
+				});
+			}
+			// First-party analytics (lib/visitor.server.ts): on a real page load by a
+			// person who has not opted out, mint the visitor id if this browser has
+			// none (recording its first touch), and record the page view with this
+			// request's own touch. Documents only — not the .txt twins, resource routes
+			// or redirects — and never a bot, which would be most of the rows.
+			const isDocument =
+				request.method === "GET" &&
+				(response.headers.get("Content-Type") ?? "").includes("text/html");
+			if (
+				isDocument &&
+				isAnalyticsPermitted(request) &&
+				!isbot(request.headers.get("User-Agent") ?? "")
+			) {
+				const touch = touchFrom(request);
+				let idVisitor = visitorIdFrom(request);
+				if (!idVisitor) {
+					idVisitor = crypto.randomUUID();
+					headers.append(
+						"Set-Cookie",
+						serializeVisitorCookie({
+							idVisitor,
+							isSecure: url.protocol === "https:",
+						}),
+					);
+					void recordVisitor({ ctx, db: env.DB, idVisitor, touch });
+				}
+				void recordEvent({
+					ctx,
+					db: env.DB,
+					idVisitor,
+					name: "page_view",
+					path: url.pathname,
+					props: {
+						referrerHost: touch.referrerHost,
+						status: response.status,
+						utmCampaign: touch.utmCampaign,
+						utmMedium: touch.utmMedium,
+						utmSource: touch.utmSource,
+					},
+					source: "web",
 				});
 			}
 			return new Response(response.body, {
