@@ -7,7 +7,10 @@ import {
 } from "@markets/persistence";
 import { PRODUCT_NAME, resolveMarketsEnv, SITE_HOSTS } from "@markets/schema";
 import { Form, useNavigation } from "react-router";
-import { requireOrganization } from "@/lib/session.server";
+import {
+	refuseWhileImpersonating,
+	requireOrganization,
+} from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.keys";
 
 export const meta: Route.MetaFunction = () => [
@@ -27,6 +30,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
 	const org = await requireOrganization(request, env);
+	refuseWhileImpersonating(org);
 	const { idOrganization } = org;
 
 	const formData = await request.formData();

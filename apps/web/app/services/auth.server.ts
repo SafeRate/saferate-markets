@@ -16,7 +16,7 @@ import {
 	SITE_HOSTS,
 } from "@markets/schema";
 import { betterAuth } from "better-auth";
-import { magicLink } from "better-auth/plugins";
+import { admin, magicLink } from "better-auth/plugins";
 import Stripe from "stripe";
 import { z } from "zod";
 import { resolveStripeKey } from "@/lib/stripeKey";
@@ -203,6 +203,14 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 			},
 		},
 		plugins: [
+			/*
+			 * Support access: /support lists accounts, and an admin (user.role
+			 * 'admin', migration 0009, set by hand) can sign in as one to see what
+			 * they see. The plugin keeps the admin's own session in a second
+			 * cookie and restores it on stop. An hour, then the impersonated
+			 * session expires on its own; admins cannot impersonate admins.
+			 */
+			admin({ impersonationSessionDuration: 60 * 60 }),
 			magicLink({
 				disableSignUp: false,
 				expiresIn: 900,

@@ -4,7 +4,7 @@ import {
 	trialDaysLeft,
 	trialLastDay,
 } from "@markets/schema";
-import { Outlet } from "react-router";
+import { Form, Outlet } from "react-router";
 import { DashboardNav } from "@/components/DashboardNav";
 import { requireDashboard } from "@/lib/session.server";
 import type { Route } from "./+types/dashboard.layout";
@@ -27,6 +27,8 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 				}
 			: null;
 	return {
+		/** The account's email while an admin is signed in as it (/support). */
+		impersonating: org.impersonatedBy ? org.email : null,
 		organizationName: org.nameOrganization,
 		isDemo: org.isDemo,
 		tier: org.tier,
@@ -43,6 +45,23 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 				<DashboardNav organizationName={loaderData.organizationName} />
 			</aside>
 			<div className="min-w-0 flex-1">
+				{loaderData.impersonating ? (
+					<div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+						<span>
+							<span className="font-semibold">Support access.</span> You are signed in
+							as {loaderData.impersonating}. Billing and API keys are locked.
+						</span>
+						<Form action="/support" method="post">
+							<input name="intent" type="hidden" value="stop-impersonating" />
+							<button
+								className="rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-amber-50"
+								type="submit"
+							>
+								Stop impersonating
+							</button>
+						</Form>
+					</div>
+				) : null}
 				{loaderData.isDemo ? (
 					<div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-slate-700">
 						<span className="font-semibold text-primary">

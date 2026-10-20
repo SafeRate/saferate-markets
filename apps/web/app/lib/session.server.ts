@@ -24,6 +24,10 @@ export const requireOrganization = async (request: Request, env: Env) => {
 	return {
 		idUser: session.user.id,
 		email: session.user.email,
+		/** The admin's user id when an admin is signed in as this account (/support). */
+		impersonatedBy:
+			(session.session as { impersonatedBy?: string | null }).impersonatedBy ??
+			null,
 		idOrganization: String(organization.idOrganization),
 		nameOrganization: String(organization.nameOrganization),
 		/** When the Team trial ends (epoch ms), or null for no trial. */
@@ -99,4 +103,19 @@ export const requireDashboard = async (
 		/** The free tier's limits apply: neither paid nor on a running trial. */
 		isLimited: !isPaid && !isTrial,
 	};
+};
+
+/**
+ * Refuse a write an admin must not make on a customer's behalf: billing, which
+ * spends or cancels their money, and API keys, whose secret would be shown to
+ * the admin. Everything else an impersonating admin may do, as support.
+ */
+export const refuseWhileImpersonating = (org: {
+	impersonatedBy: string | null;
+}) => {
+	if (org.impersonatedBy)
+		throw data(
+			"Support access can't change billing or API keys. Stop impersonating and ask the customer.",
+			{ status: 403 },
+		);
 };

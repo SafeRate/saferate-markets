@@ -26,6 +26,7 @@ User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 Disallow: /dashboard
+Disallow: /support
 Disallow: /api/auth/
 
 Sitemap: ${origin}/sitemap.xml

@@ -79,6 +79,7 @@ export default [
 		id: "twin:methodology/treasury-curve.txt",
 	}),
 	route("sign-out", "./routes/sign-out.tsx"),
+	route("support", "./routes/support.tsx"),
 	layout("./routes/dashboard.layout.tsx", [
 		route("dashboard", "./routes/dashboard.tsx"),
 		route("dashboard/billing", "./routes/dashboard.billing.tsx"),
