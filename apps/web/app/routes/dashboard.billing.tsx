@@ -5,6 +5,7 @@ import {
 	checkoutPlanById,
 	isTrialActive,
 	PRODUCT_NAME,
+	FREE_TIER,
 	TRIAL,
 	trialLastDay,
 } from "@markets/schema";
@@ -342,7 +343,27 @@ export default function Billing({
 							</p>
 						</section>
 					) : null}
-					<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+					<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{/* Free beside the paid plans, as /pricing shows it. Nothing to
+						    choose: it is where an account is without a subscription. */}
+						<div className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+							<h2 className="font-semibold text-neutral-900">{FREE_TIER.name}</h2>
+							<p className="mt-1 text-2xl font-semibold text-neutral-900">
+								$0
+								<span className="text-sm font-normal text-slate-500">/month</span>
+							</p>
+							<p className="mt-2 text-sm text-slate-600">{FREE_TIER.summary}</p>
+							<ul className="mt-3 flex-1 list-disc space-y-1 pl-5 text-sm text-slate-600 marker:text-primary">
+								{FREE_TIER.permits.map((line) => (
+									<li key={line}>{line}</li>
+								))}
+							</ul>
+							<p className="mt-5 text-sm font-medium text-slate-500">
+								{d.trialLastDay
+									? "Where the account goes when the trial ends. Nothing to do."
+									: "Your current plan."}
+							</p>
+						</div>
 						{d.plans.map((plan) => (
 							<div
 								className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
