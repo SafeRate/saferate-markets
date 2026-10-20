@@ -11,10 +11,11 @@ import type { Route } from "./+types/api.client-error";
  * path is the page the browser NAMED, cut at any `?` or `#` in case a caller
  * sends one; it lands in a text column and is never rendered unescaped.
  *
- * ⚠️ NO SERVER-SIDE RATE LIMIT. The defence is the client's own cap (5 reports
- * per page load, deduplicated), which stops a render loop and does not stop a
- * deliberate flood. Same trade as saferate-ai's consumer endpoint; add a limit
- * before treating this as abuse-resistant.
+ * RATE LIMITED per IP, twice. The client caps itself at 5 reports per page load,
+ * which stops a render loop; CLIENT_ERROR_LIMITER (20/minute, wrangler.jsonc)
+ * stops a deliberate flood of D1 writes. A refused report still answers 204 and
+ * simply is not written: the visitor sees nothing different, and a flooder
+ * learns nothing. Fails open: a limiter error must not cost a real report.
  *
  * 204 on anything but a malformed body: a visitor must never see a failed
  * request because telemetry could not be stored.
@@ -50,6 +51,9 @@ export const action = async ({ context, request }: Route.ActionArgs) => {
 	}
 	const parsed = ZClientErrorBody.safeParse(raw);
 	if (!parsed.success) return new Response("Malformed body", { status: 400 });
+	if (!(await isWithinClientErrorLimit(context.cloudflare.env, request))) {
+		return new Response(null, { status: 204 });
+	}
 
 	recordSiteError({
 		code: "web-client",
@@ -61,4 +65,21 @@ export const action = async ({ context, request }: Route.ActionArgs) => {
 		stack: parsed.data.stack,
 	});
 	return new Response(null, { status: 204 });
+};
+
+/**
+ * CF-Connecting-IP, not X-Forwarded-For: Cloudflare sets the former and
+ * overwrites any client copy. No IP (local dev) or no binding means no limit.
+ */
+const isWithinClientErrorLimit = async (env: Env, request: Request) => {
+	const ip = request.headers.get("CF-Connecting-IP");
+	if (!ip || !env.CLIENT_ERROR_LIMITER) return true;
+	try {
+		const { success } = await env.CLIENT_ERROR_LIMITER.limit({ key: ip });
+		if (!success) console.warn(`[rate-limit] refused client-error for ${ip}`);
+		return success;
+	} catch (error) {
+		console.error("[rate-limit] client-error limiter failed open:", error);
+		return true;
+	}
 };
