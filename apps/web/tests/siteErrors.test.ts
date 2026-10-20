@@ -105,6 +105,23 @@ describe("recordSiteError", () => {
 	});
 });
 
+test("a browser report with no page stores no path, not the beacon's own", async () => {
+	const { db, rows } = fakeDb();
+	const { ctx, settle } = fakeCtx();
+	recordSiteError({
+		code: "web-client",
+		ctx,
+		db,
+		message: "x",
+		path: null,
+		request: new Request("https://saferate.markets/api/client-error", {
+			method: "POST",
+		}),
+	});
+	await settle();
+	expect(rows[0]?.[2]).toBeNull();
+});
+
 describe("describeThrown", () => {
 	test("a plain object is serialised, not [object Object]", () => {
 		expect(describeThrown({ status: 405 }).message).toBe(

@@ -44,8 +44,15 @@ export const wasSiteErrorRecorded = (request: Request) =>
  * The path only: never the query string, which can carry an address, an email
  * or an API key, none of which belong in an error table.
  */
-const pathOf = (request: Request | null, override: string | null) => {
-	if (override !== null) return override.slice(0, C_MAX_PATH);
+const pathOf = (
+	request: Request | null,
+	override: string | null | undefined,
+) => {
+	// `null` is a deliberate "no path" (a browser report that named no page);
+	// only an ABSENT override falls back to the request. Treating null as absent
+	// filed every page-less browser report under the beacon endpoint's own path.
+	if (override === null) return null;
+	if (override !== undefined) return override.slice(0, C_MAX_PATH);
 	if (!request) return null;
 	try {
 		return new URL(request.url).pathname.slice(0, C_MAX_PATH);
@@ -118,8 +125,11 @@ const ZInputRecordSiteError = z.object({
 	/** Absent in a dev or test environment without the binding: nothing is written. */
 	db: z.custom<D1Database>().optional(),
 	message: z.string(),
-	/** Overrides the request's path, for a browser report naming its own page. */
-	path: z.string().nullable().default(null),
+	/**
+	 * Overrides the request's path, for a browser report naming its own page.
+	 * Omitted: the request's path. `null`: no path at all.
+	 */
+	path: z.string().nullable().optional(),
 	/** Null for the cron, which has no request. */
 	request: z.custom<Request>().nullable(),
 	stack: z.string().nullable().default(null),
