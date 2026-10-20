@@ -25,6 +25,8 @@ import {
 	type TEmailLinks,
 	type TRenderedEmail,
 } from "@/lib/alertEmails";
+import { isBusinessDay } from "@markets/portfolio";
+import { z } from "zod";
 import { latestRundownDate, loadRundown } from "./dailyRundown.server";
 
 /**
@@ -325,3 +327,68 @@ export const sweepAlerts = async (env: TSweepEnv, now = new Date()) => {
 
 	return `alerts: sent ${tally.sent}, withheld ${tally.withheld}, failed ${tally.failed}${budget <= 0 ? ", budget spent (the rest next tick)" : ""}${lines.length ? `; ${lines.join("; ")}` : ""}`;
 };
+
+// ── A missed rundown ─────────────────────────────────────────────────────────
+
+/**
+ * The hour (UTC) after which a business morning with no rundown sent counts as
+ * missed. A close's prices land around 12:00 UTC (Friday 2026-10-09's arrived
+ * Tuesday 10-13 at 12:16, see editionOf), the sweep then waits up to
+ * INDEX_WAIT_MS for the index levels, so by 18:00 a working pipeline has sent
+ * the edition with hours to spare.
+ */
+export const RUNDOWN_DUE_UTC_HOUR = 18;
+
+/**
+ * Why nobody got today's rundown, or null when nothing is wrong.
+ *
+ * The sweep never throws over a rundown that does not go out — it logs a line
+ * ("waiting for the index levels", "no curve after all") and tries again in five
+ * minutes — so a stalled edition left no record anywhere but a missing email.
+ * The scheduled handler records what this returns as one `web-cron` row a day,
+ * which the saferate-ai daily report puts on Markets' agenda.
+ *
+ * Null on a weekend or federal holiday (no edition is due), before the cut-off,
+ * when the rundown has no subscribers, once anything was sent today, and once
+ * today's row already exists.
+ */
+export const findOverdueRundown = async (_input: TInputFindOverdueRundown) => {
+	const input = ZInputFindOverdueRundown.parse(_input);
+	const today = input.now.toISOString().slice(0, 10);
+	if (!isBusinessDay(new Date(`${today}T00:00:00Z`))) return null;
+	if (input.now.getUTCHours() < RUNDOWN_DUE_UTC_HOUR) return null;
+	const dayStart = Date.parse(`${today}T00:00:00Z`);
+
+	const sent = await input.db
+		.prepare(
+			/* sql */ "select count(*) n from alertSends where kind = 'rundown' and status = 'sent' and createdAt >= ?",
+		)
+		.bind(dayStart)
+		.first<{ n: number }>();
+	if ((sent?.n ?? 0) > 0) return null;
+
+	const recipients = await listAlertRecipients({
+		db: input.db,
+		kind: "rundown",
+	});
+	if (recipients.length === 0) return null;
+
+	const already = await input.db
+		.prepare(
+			/* sql */ "select 1 found from siteErrors where path = ? and createdAt >= ? limit 1",
+		)
+		.bind(C_RUNDOWN_OVERDUE_PATH, dayStart)
+		.first<{ found: number }>();
+	if (already) return null;
+
+	return `no rundown sent by ${RUNDOWN_DUE_UTC_HOUR}:00 UTC on business day ${today} (${recipients.length} subscriber(s) waiting)`;
+};
+
+/** The `siteErrors.path` a missed rundown is filed under, and deduplicated on. */
+export const C_RUNDOWN_OVERDUE_PATH = "cron:rundown-overdue";
+
+const ZInputFindOverdueRundown = z.object({
+	db: z.custom<D1Database>((v) => v !== null && v !== undefined),
+	now: z.date(),
+});
+type TInputFindOverdueRundown = z.infer<typeof ZInputFindOverdueRundown>;

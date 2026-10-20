@@ -7,7 +7,11 @@ import { createRequestHandler } from "react-router";
 import { resolveMarketsEnv } from "@markets/schema";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
-import { sweepAlerts } from "@/services/alerts.server";
+import {
+	C_RUNDOWN_OVERDUE_PATH,
+	findOverdueRundown,
+	sweepAlerts,
+} from "@/services/alerts.server";
 import { getAuth } from "@/services/auth.server";
 
 declare module "react-router" {
@@ -141,7 +145,24 @@ export default {
 						request: null,
 						stack,
 					});
-				}),
+				})
+				// Then, whatever the sweep did: is today's rundown overdue? One row a
+				// day at most (findOverdueRundown dedupes on its own row), so a stalled
+				// edition is on record instead of being only a missing email.
+				.then(() => findOverdueRundown({ db: env.DB, now: new Date() }))
+				.then((overdue) => {
+					if (overdue === null) return;
+					console.error(`[alerts] ${overdue}`);
+					recordSiteError({
+						code: "web-cron",
+						ctx,
+						db: env.DB,
+						message: overdue,
+						path: C_RUNDOWN_OVERDUE_PATH,
+						request: null,
+					});
+				})
+				.catch((error) => console.error("[alerts] overdue check failed:", error)),
 		);
 	},
 } satisfies ExportedHandler<Env>;
