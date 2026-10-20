@@ -1,4 +1,8 @@
-import { getOrganizationSubscription, isEntitled } from "@markets/persistence";
+import {
+	getOrganizationSubscription,
+	isEntitled,
+	listPortfolios,
+} from "@markets/persistence";
 import {
 	BETA_PLANS,
 	CHECKOUT_PLANS,
@@ -68,6 +72,11 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 				: null,
 		checkout: url.searchParams.get("checkout"),
 		switched: url.searchParams.get("switched"),
+		// Unsubscribed and no portfolio of its own: the banner says start one.
+		needsPortfolio:
+			!entitled &&
+			(await listPortfolios({ db: env.DB, idOrganization: org.idOrganization }))
+				.length === 0,
 	};
 };
 
@@ -222,6 +231,19 @@ const button =
 const quiet =
 	"rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60";
 
+/** The banner's next step for an account with no portfolio of its own. */
+const StartPortfolio = () => (
+	<p className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-700">
+		<a
+			className="rounded-full bg-primary px-4 py-1.5 font-semibold text-white"
+			href="/dashboard/portfolios#new"
+		>
+			Start your portfolio
+		</a>
+		<span>Set up your own now. The dashboard shows demos until you do.</span>
+	</p>
+);
+
 export default function Billing({
 	loaderData,
 	actionData,
@@ -341,6 +363,17 @@ export default function Billing({
 								going. Without one, the account moves to the free plan when the trial
 								ends, and nothing is deleted.
 							</p>
+							{d.needsPortfolio ? <StartPortfolio /> : null}
+						</section>
+					) : d.needsPortfolio ? (
+						<section className="mt-8 rounded-xl border border-primary/30 bg-primary/5 p-6">
+							<h2 className="font-semibold text-neutral-900">Free plan</h2>
+							<p className="mt-2 text-sm text-slate-600">
+								Up to {FREE_TIER.maxPortfolios} portfolios worth $
+								{FREE_TIER.maxValueUsd.toLocaleString("en-US")} in total, in the
+								dashboard. You haven't set one up yet.
+							</p>
+							<StartPortfolio />
 						</section>
 					) : null}
 					<section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

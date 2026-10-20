@@ -63,18 +63,26 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 					</div>
 				) : null}
 				{loaderData.isDemo ? (
-					<div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-slate-700">
-						<span className="font-semibold text-primary">
-							You're on a free Safe Rate Markets account.
-						</span>{" "}
-						The portfolios here are demos, so you can preview what Markets does.{" "}
+					// No portfolio of its own yet, trial or free: the one thing to do
+					// next is start one, so the banner leads with it.
+					<div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-slate-700">
+						<span>
+							<span className="font-semibold text-primary">
+								{loaderData.trial
+									? `Team trial, ${dayCount(loaderData.trial.daysLeft)} left.`
+									: "You're on the free plan."}
+							</span>{" "}
+							The portfolios here are demos. Set up your own now
+							{loaderData.trial
+								? " to use the trial on your own Treasuries."
+								: `, free up to $${FREE_TIER.maxValueUsd.toLocaleString("en-US")}.`}
+						</span>
 						<a
-							className="font-medium text-primary underline underline-offset-4"
+							className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-white"
 							href="/dashboard/portfolios#new"
 						>
-							Start your own portfolio
-						</a>{" "}
-						when you're ready.
+							Start your portfolio
+						</a>
 					</div>
 				) : loaderData.trial ? (
 					<div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-slate-700">
