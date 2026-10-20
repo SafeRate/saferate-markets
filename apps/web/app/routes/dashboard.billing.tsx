@@ -9,7 +9,10 @@ import {
 	trialLastDay,
 } from "@markets/schema";
 import { Form, redirect, useNavigation } from "react-router";
-import { requireOrganization } from "@/lib/session.server";
+import {
+	refuseWhileImpersonating,
+	requireOrganization,
+} from "@/lib/session.server";
 import { getAuth } from "@/services/auth.server";
 import { cancelNow, switchPathFor } from "@/services/billing.server";
 import type { Route } from "./+types/dashboard.billing";
@@ -70,6 +73,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
 	const org = await requireOrganization(request, env);
+	refuseWhileImpersonating(org);
 	const form = await request.formData();
 	const intent = String(form.get("intent") ?? "");
 	const auth = getAuth({ env, request });
