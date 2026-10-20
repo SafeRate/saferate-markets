@@ -167,8 +167,11 @@ Verified on production: both injected on /, /pricing, /docs/indices; nothing on
 from the page. NOT browser-tested: the in-session stop when navigating from a
 public page into the dashboard (component logic, ported unchanged).
 
-**No privacy policy page exists on saferate.markets.** Disclosing GA and Clarity
-is a legal document, not written here. Owed before any real traffic.
+**The privacy policy is `/privacy`** (`routes/privacy.tsx`, last changed
+2026-10-05): its "Cookies and tracking" section is generated from
+`TRACKING_TOOLS`, so it names Google Analytics and Clarity from the same list
+the gate reads, and `/privacy-choices` is the opt-out. Checked live 2026-10-20.
+This line used to say no policy existed; it had been written before the page.
 
 ## Stripe — which account each config reaches (checked 2026-09-28)
 
