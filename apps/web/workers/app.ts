@@ -1,3 +1,8 @@
+import {
+	describeThrown,
+	recordSiteError,
+	wasSiteErrorRecorded,
+} from "@markets/persistence";
 import { createRequestHandler } from "react-router";
 import { resolveMarketsEnv } from "@markets/schema";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
@@ -81,6 +86,18 @@ export default {
 					"Link",
 					`<${url.origin}${twinPathOf(page)}>; rel="alternate"; type="text/markdown"`,
 				);
+			// A 5xx that handleError never saw: returned rather than thrown, or from
+			// a resource route. Status-only, because no stack exists to capture —
+			// but without this row the failure is invisible after 7 days.
+			if (response.status >= 500 && !wasSiteErrorRecorded(request)) {
+				recordSiteError({
+					code: "web-server",
+					ctx,
+					db: env.DB,
+					message: `HTTP ${response.status} from ${url.pathname}`,
+					request,
+				});
+			}
 			return new Response(response.body, {
 				status: response.status,
 				statusText: response.statusText,
@@ -88,6 +105,15 @@ export default {
 			});
 		} catch (error) {
 			console.error("[worker] unhandled", url.pathname, error);
+			const { message, stack } = describeThrown(error);
+			recordSiteError({
+				code: "web-server",
+				ctx,
+				db: env.DB,
+				message,
+				request,
+				stack,
+			});
 			return new Response("Internal Server Error", { status: 500 });
 		}
 	},
@@ -103,7 +129,19 @@ export default {
 		ctx.waitUntil(
 			sweepAlerts(env)
 				.then((line) => console.info(`[alerts] ${line}`))
-				.catch((error) => console.error("[alerts] sweep failed:", error)),
+				.catch((error) => {
+					console.error("[alerts] sweep failed:", error);
+					const { message, stack } = describeThrown(error);
+					recordSiteError({
+						code: "web-cron",
+						ctx,
+						db: env.DB,
+						message: `alerts sweep failed: ${message}`,
+						path: "cron:alerts",
+						request: null,
+						stack,
+					});
+				}),
 		);
 	},
 } satisfies ExportedHandler<Env>;
