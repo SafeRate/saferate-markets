@@ -1,3 +1,4 @@
+import { describeThrown, recordSiteError } from "@markets/persistence";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 import type { AppLoadContext, EntryContext } from "react-router";
@@ -15,13 +16,13 @@ import { isRouteErrorResponse, ServerRouter } from "react-router";
  * Cloudflare's Workers Logs and its 7-day retention window. The exception was
  * always available right here; nothing was listening.
  *
- * TODO(observability): route these into a durable D1 sink once the errors table
- * exists, so they outlive the log retention window. Console-only for now, in ONE
- * place, so there is a single call site to change.
+ * Each one becomes a `web-render` row in `siteErrors` (migration 0010), which
+ * outlives the 7-day log window and is what the daily report reads. The console
+ * line stays: it is what `wrangler tail` shows while debugging live.
  */
 export const handleError = (
 	error: unknown,
-	{ request }: { request: Request; context: AppLoadContext },
+	{ context, request }: { request: Request; context: AppLoadContext },
 ) => {
 	// A thrown Response is control flow: redirects, 404s, deliberate 503s.
 	// Recording them recreates exactly the noise an error sink exists to cut through.
@@ -39,6 +40,15 @@ export const handleError = (
 	if (request.signal.aborted) return;
 
 	console.error("[handleError]", new URL(request.url).pathname, error);
+	const { message, stack } = describeThrown(error);
+	recordSiteError({
+		code: "web-render",
+		ctx: context.cloudflare.ctx,
+		db: context.cloudflare.env.DB,
+		message,
+		request,
+		stack,
+	});
 };
 
 const ABORT_DELAY = 10_000;

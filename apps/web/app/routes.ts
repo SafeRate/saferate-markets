@@ -37,6 +37,8 @@ export default [
 	route("alerts/confirm", "./routes/alerts.confirm.tsx"),
 	route("alerts/confirmed", "./routes/alerts.confirmed.tsx"),
 	route("api/alerts/subscribe", "./routes/api.alerts.subscribe.ts"),
+	// Browser exceptions into siteErrors — see lib/clientErrors.client.ts.
+	route("api/client-error", "./routes/api.client-error.ts"),
 	route("robots.txt", "./routes/robots.ts"),
 	route(".well-known/security.txt", "./routes/security-txt.ts"),
 	route("sitemap.xml", "./routes/sitemap.ts"),

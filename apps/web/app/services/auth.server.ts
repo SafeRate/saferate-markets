@@ -2,6 +2,8 @@ import { stripe as stripePlugin } from "@better-auth/stripe";
 import { resolveEmailProvider } from "@markets/email";
 import {
 	endOrganizationSubscription,
+	linkVisitorToUser,
+	recordEvent,
 	setOrganizationSubscription,
 } from "@markets/persistence";
 import {
@@ -19,7 +21,9 @@ import { betterAuth } from "better-auth";
 import { admin, magicLink } from "better-auth/plugins";
 import Stripe from "stripe";
 import { z } from "zod";
+import { isAnalyticsPermitted } from "@/lib/privacyChoices";
 import { resolveStripeKey } from "@/lib/stripeKey";
+import { visitorIdFromHeaders } from "@/lib/visitor.server";
 import {
 	magicLinkEmail,
 	shouldNotifySignup,
@@ -90,6 +94,20 @@ export const project = async (
 	},
 ) => {
 	const { stripeSubscription: sub } = input;
+	// History, which organizationSubscriptions cannot keep: it is overwritten in
+	// place, so conversion and churn were unrecoverable. One row per change the
+	// webhooks deliver, whatever the projection below decides.
+	await recordEvent({
+		db,
+		idOrganization: input.idOrganization,
+		name: "subscription_changed",
+		props: {
+			cancelsAt: sub.cancel_at ? sub.cancel_at * 1000 : null,
+			plan: input.planName.slice(0, 120) || null,
+			status: sub.status,
+		},
+		source: "webhook",
+	});
 	try {
 		// The plan the subscription IS on, from the plugin, never assumed. This
 		// was hardcoded to the single plan until Team existed; left that way, a
@@ -127,6 +145,40 @@ export const project = async (
 			error,
 		);
 	}
+};
+
+/**
+ * The request headers a Better Auth hook was called with. The auth instance is
+ * built once and cached, so the request is only reachable through the endpoint
+ * context each hook receives.
+ */
+const headersOf = (context: unknown) => {
+	const c = context as { headers?: Headers; request?: Request } | undefined;
+	return c?.headers ?? c?.request?.headers;
+};
+
+/**
+ * A sign-in or sign-up: the moment an anonymous visitor becomes a known user, so
+ * the visitor is joined to the user here (lib/visitor.server.ts). Awaited, not
+ * waitUntil'd — a hook has no ExecutionContext — but recordEvent never throws.
+ */
+const recordAccountEvent = async (input: {
+	context: unknown;
+	db: D1Database;
+	idUser: string;
+	name: "login" | "sign_up";
+}) => {
+	const idVisitor = visitorIdFromHeaders(headersOf(input.context));
+	if (idVisitor)
+		await linkVisitorToUser({ db: input.db, idUser: input.idUser, idVisitor });
+	await recordEvent({
+		db: input.db,
+		idUser: input.idUser,
+		idVisitor,
+		name: input.name,
+		props: {},
+		source: "web",
+	});
 };
 
 const buildAuth = (env: TAuthEnv, baseURL: string) => {
@@ -173,7 +225,13 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 					// Tell the team when someone outside saferate.com signs up
 					// (production only). Never allowed to fail the sign-up: a send that
 					// fails or is withheld is logged, and the account stands.
-					after: async (user) => {
+					after: async (user, context) => {
+						await recordAccountEvent({
+							context,
+							db: env.DB,
+							idUser: user.id,
+							name: "sign_up",
+						});
 						if (!shouldNotifySignup({ email: user.email, environment })) return;
 						try {
 							const provider = resolveEmailProvider({
@@ -201,6 +259,22 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 					},
 				},
 			},
+			session: {
+				create: {
+					// Every sign-in, except support starting an impersonation: that
+					// session is ours, not the customer's.
+					after: async (session, context) => {
+						if ((session as { impersonatedBy?: string | null }).impersonatedBy)
+							return;
+						await recordAccountEvent({
+							context,
+							db: env.DB,
+							idUser: session.userId,
+							name: "login",
+						});
+					},
+				},
+			},
 		},
 		plugins: [
 			/*
@@ -214,7 +288,7 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 			magicLink({
 				disableSignUp: false,
 				expiresIn: 900,
-				async sendMagicLink({ email, url }) {
+				async sendMagicLink({ email, url }, context) {
 					// Always via resolveEmailProvider, never a raw send: it wraps the
 					// provider in the non-production allowlist, so no send path escapes
 					// the guard.
@@ -237,6 +311,17 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 							`[auth] magic link to ${email} not sent: ${result.status} — ${result.reason}`,
 						);
 					}
+					// The top of the sign-in funnel. Behavioural, so only when permitted;
+					// the address itself never reaches the events table.
+					const headers = headersOf(context);
+					if (headers && isAnalyticsPermitted(new Request(baseURL, { headers })))
+						await recordEvent({
+							db: env.DB,
+							idVisitor: visitorIdFromHeaders(headers),
+							name: "magic_link_requested",
+							props: { status: result.status },
+							source: "web",
+						});
 				},
 			}),
 			stripePlugin({

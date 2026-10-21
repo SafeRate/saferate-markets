@@ -112,12 +112,27 @@ const CATEGORIES: TCategory[] = [
 		tables: "apiUsageEvents · apiUsageMonthly",
 		items: [
 			"One record per request: REST or MCP, the route pattern or tool name, the response status and how long it took",
+			"For an MCP tool call, the name the AI client reports for itself (for example \"claude-code\") and how the tool ended if it refused or failed",
 			"Which API key made it",
 			"Monthly totals derived from those records",
 		],
 		why: "To show you your usage and to operate and protect the service.",
 		basis: "Performance of our contract with you",
 		kept: USAGE_RETENTION,
+	},
+	{
+		title: "Visits and product usage",
+		tables: "visitors · events",
+		items: [
+			"A random visitor identifier in a cookie, and how that browser first arrived: the landing page, the referring site's name (not the full address), campaign tags in the link, and the country of the request",
+			"Which pages were viewed, as page patterns: never a query string, and a security page as /dashboard/securities/:cusip, not which security",
+			"Steps taken in the product: signing up or in, creating or revoking an API key and its first use, creating a portfolio or importing trades, running a backtest or building a plan, starting a checkout, changing alert settings, and subscription changes",
+			"Once you sign in, which account a visitor identifier belongs to",
+		],
+		why: "To understand how people find and use the service, and to improve it: which pages lead to sign-ups, which features are used, and where people get stuck. Never your email address, the securities or dates you look at, or the amounts you enter.",
+		basis:
+			"Our legitimate interests. The visitor identifier, page views and other browsing steps are not recorded when you turn analytics off or your browser sends Global Privacy Control; account steps (such as creating a key or subscribing) are recorded either way, without the visitor identifier, because they mirror records we keep to run your account.",
+		kept: "For up to three years, then deleted.",
 	},
 	{
 		title: "Portfolio holdings, liabilities and plans",
@@ -166,6 +181,11 @@ export default function Privacy() {
 					<li>
 						Our usage records note which route or tool you called, not the securities
 						or dates you asked about.
+					</li>
+					<li>
+						We keep our own record of how the site and dashboard are used, so we can
+						improve them. It never holds your email address or what you look up, and
+						turning analytics off stops the browsing half of it.
 					</li>
 					<li>
 						Portfolios and trades you enter are yours: kept only to compute your
@@ -248,6 +268,14 @@ export default function Privacy() {
 					Two strictly necessary cookies: the session token that keeps you signed in,
 					and one that remembers if you turned analytics off. Neither does anything
 					else.
+				</p>
+				<p>
+					One first-party analytics cookie,{" "}
+					<code className="font-mono">markets_vid</code>: a random identifier, kept
+					for two years, that lets us connect your visits to each other and, once you
+					sign in, to your account (Visits and product usage, above). It is ours
+					alone and is never sent to a vendor. It is not set, and not read, while
+					analytics is off or Global Privacy Control is on.
 				</p>
 				<p>
 					On our public pages we also use the tools below. Refusing them changes

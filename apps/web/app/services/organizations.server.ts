@@ -100,6 +100,8 @@ export async function ensureOrganization(_input: TInputEnsureOrganization) {
 		slug,
 		idStripeCustomer: null,
 		trialEndsAt: now + TRIAL_MS,
+		// Only this path sets it: the caller records organization_created once.
+		isCreated: true,
 	};
 }
 

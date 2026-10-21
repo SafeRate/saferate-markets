@@ -2,6 +2,7 @@ import { resolveEmailProvider } from "@markets/email";
 import {
 	countAlertSignups,
 	createAlertSignup,
+	recordEvent,
 	deleteAlertSignup,
 } from "@markets/persistence";
 import { resolveMarketsEnv, SENDER_ADDRESS } from "@markets/schema";
@@ -220,6 +221,18 @@ export const handleAlertSignup = async (
 		await deleteAlertSignup({ db: env.DB, idAlertSignup });
 		return out(503, "unavailable");
 	}
+	// Called server-to-server by saferate.com, so there is no Markets visitor to
+	// attach: the signup's own `source` (the ref saferate.com passes) is its touch.
+	await recordEvent({
+		db: env.DB,
+		name: "alert_signup",
+		props: {
+			auctions: body.auctions,
+			rundown: body.daily,
+			source: body.ref?.slice(0, 120) ?? null,
+		},
+		source: "web",
+	});
 	// "withheld" is staging's allowlist doing its job; the request was accepted.
 	return out(202, "confirmation_sent");
 };

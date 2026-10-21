@@ -3,6 +3,7 @@ import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppEnv } from "../env";
 import { readClientIdentity } from "../lib/clientIdentity";
+import { toolErrorCode } from "../lib/toolOutcome";
 import { apiKeyAuth } from "../middleware/apiKey";
 import { meterUsage } from "../middleware/meter";
 import { rateLimit } from "../middleware/rateLimit";
@@ -83,6 +84,7 @@ export const registerMcpRoute = (app: OpenAPIHono<AppEnv>) => {
 			"operation",
 			[client.method ?? "unknown", tool].filter(Boolean).join(" "),
 		);
+		if (client.name) c.set("clientName", client.name);
 
 		// JSON-RPC reports a thrown tool as an error INSIDE a 200. Without this
 		// the meter would count a failed tool call as served.
@@ -90,9 +92,14 @@ export const registerMcpRoute = (app: OpenAPIHono<AppEnv>) => {
 			(_tool, run) =>
 			async (...args) => {
 				try {
-					return await run(...args);
+					const result = await run(...args);
+					// A refusal is a 200 too; the status alone counted it as served.
+					const code = toolErrorCode(result);
+					if (code) c.set("errorCode", code);
+					return result;
 				} catch (error) {
 					c.set("statusOverride", 500);
+					c.set("errorCode", error instanceof Error ? error.name.slice(0, 64) : "thrown");
 					throw error;
 				}
 			};
@@ -100,6 +107,20 @@ export const registerMcpRoute = (app: OpenAPIHono<AppEnv>) => {
 		const handler = createMcpHandler(() => buildServer(c.env, wrap), {
 			legacy: "stateless",
 		});
-		return handler.fetch(c.req.raw);
+		// ⚠️ READ THE BODY BEFORE RETURNING. The handler answers a tools/call as a
+		// stream (SSE) and runs the tool while it streams, so `handler.fetch`
+		// resolves BEFORE the tool has run, and the meter, which reads
+		// statusOverride / errorCode once this returns, saw neither: every thrown
+		// tool was recorded as a 200 until 2026-10-21. Stateless requests answer
+		// once and then close, so buffering costs nothing. Only POSTs: a GET may
+		// open a long-lived server-to-client stream, which must not be buffered.
+		const response = await handler.fetch(c.req.raw);
+		if (c.req.method !== "POST") return response;
+		const body = await response.arrayBuffer();
+		return new Response(body, {
+			headers: response.headers,
+			status: response.status,
+			statusText: response.statusText,
+		});
 	});
 };

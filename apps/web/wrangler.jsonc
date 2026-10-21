@@ -51,6 +51,16 @@
 			"remote": true
 		}
 	],
+	// Browser error reports (routes/api.client-error.ts), per IP. The page sends at
+	// most 5 per load, so 20/minute is four broken loads; past that it is a flood of
+	// D1 writes. One namespace per environment, like apps/api's limiters.
+	"ratelimits": [
+		{
+			"name": "CLIENT_ERROR_LIMITER",
+			"namespace_id": "7107",
+			"simple": { "limit": 20, "period": 60 }
+		}
+	],
 	"vars": {
 		"MARKETS_ENV": "development",
 		"GA_MEASUREMENT_ID": "",
@@ -81,6 +91,13 @@
 					"binding": "TREASURY",
 					"service": "treasury-api",
 					"entrypoint": "TreasuryService"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "CLIENT_ERROR_LIMITER",
+					"namespace_id": "7108",
+					"simple": { "limit": 20, "period": 60 }
 				}
 			],
 			"vars": {
@@ -120,6 +137,13 @@
 					"binding": "TREASURY",
 					"service": "treasury-api",
 					"entrypoint": "TreasuryService"
+				}
+			],
+			"ratelimits": [
+				{
+					"name": "CLIENT_ERROR_LIMITER",
+					"namespace_id": "7109",
+					"simple": { "limit": 20, "period": 60 }
 				}
 			],
 			"vars": {

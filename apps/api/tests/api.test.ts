@@ -213,6 +213,42 @@ describe("MCP over /mcp", () => {
 		expect(batches[0][0].args[3]).toBe("mcp");
 		// The tool is named from the body when no Mcp-Name header is sent.
 		expect(batches[0][0].args[4]).toBe("tools/call get_treasury_curve");
+		// A plain success records no error code and, with no _meta, no client name.
+		expect(batches[0][0].args.slice(8, 10)).toEqual([null, null]);
+	});
+
+	// JSON-RPC carries a thrown tool inside an HTTP 200, and the handler runs the
+	// tool while streaming, so until 2026-10-21 the meter read its outcome before
+	// the tool had run and recorded every throw as a served 200. The test binding
+	// has no auctions method, the same throw a Treasury deploy older than the tool
+	// produces.
+	test("a thrown tool is metered as a 500, with the exception's name", async () => {
+		const { call, key, batches } = await setup();
+		await call(
+			"/mcp",
+			rpc(key, "tools/call", {
+				name: "get_treasury_auctions",
+				arguments: { from: "2026-10-20", to: "2026-10-01" },
+			}),
+		);
+		expect(batches).toHaveLength(1);
+		expect(batches[0][0].args[5]).toBe(500);
+		expect(batches[0][0].args[9]).toBe("TreasuryMethodMissing");
+	});
+
+	test("the assistant's self-reported name is metered", async () => {
+		const { call, key, batches } = await setup();
+		await call(
+			"/mcp",
+			rpc(key, "tools/call", {
+				name: "get_treasury_curve",
+				arguments: {},
+				_meta: {
+					"io.modelcontextprotocol/clientInfo": { name: "claude-code", version: "3.1.0" },
+				},
+			}),
+		);
+		expect(batches[0][0].args[8]).toBe("claude-code");
 	});
 });
 

@@ -7,6 +7,7 @@ import {
 import { PRODUCT_NAME } from "@markets/schema";
 import { Form, Link, useNavigation } from "react-router";
 import { requireOrganization } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import { RUNDOWN_PATH } from "@/lib/rundownText";
 import type { Route } from "./+types/dashboard.alerts";
 
@@ -46,7 +47,8 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 
 export const action = async ({ request, context }: Route.ActionArgs) => {
 	const env = context.cloudflare.env;
-	const { idUser } = await requireOrganization(request, env);
+	const org = await requireOrganization(request, env);
+	const { idUser } = org;
 	const form = await request.formData();
 	const on = (name: string) => form.get(name) === "on";
 	// Every term starts ticked. Leaving all of them ticked saves "every term"
@@ -65,6 +67,19 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 		paused: on("paused"),
 	};
 	await putAlertPreferences({ db: env.DB, idUser, preferences });
+	await trackEvent({
+		context,
+		name: "alert_preferences_changed",
+		props: {
+			auctionAnnouncements: preferences.auctionAnnouncements,
+			auctionResults: preferences.auctionResults,
+			paused: preferences.paused,
+			rundown: preferences.rundown,
+			termCount: preferences.terms === null ? null : preferences.terms.length,
+		},
+		request,
+		who: org,
+	});
 	return {
 		saved: true as const,
 		note:

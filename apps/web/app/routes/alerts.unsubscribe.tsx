@@ -1,6 +1,7 @@
 import {
 	getAlertPreferences,
 	putAlertPreferences,
+	recordEvent,
 	type TAlertPreferences,
 } from "@markets/persistence";
 import { PRODUCT_NAME } from "@markets/schema";
@@ -84,6 +85,16 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 		db: env.DB,
 		idUser: link.idUser,
 		preferences: next,
+	});
+	// From a link in an alert email: the reader may not even be signed in here.
+	await recordEvent({
+		ctx: context.cloudflare.ctx,
+		db: env.DB,
+		idUser: link.idUser,
+		name: "alert_unsubscribed",
+		path: "/alerts/unsubscribe",
+		props: { scope: link.scope },
+		source: "email",
 	});
 	return { done: true as const, what: SCOPES[link.scope] };
 };

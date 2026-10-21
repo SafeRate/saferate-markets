@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { describeThrown, recordSiteError } from "@markets/persistence";
 import { PRODUCT_NAME, resolveMarketsEnv, SITE_HOSTS } from "@markets/schema";
 import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
@@ -169,7 +170,18 @@ app.notFound((c) =>
 );
 
 app.onError((error, c) => {
+	// The only place a stack for this request exists, so it is also recorded: a
+	// customer saw this 500, and the console line is gone in 7 days.
 	console.error("[api] unhandled", new URL(c.req.url).pathname, error);
+	const { message, stack } = describeThrown(error);
+	recordSiteError({
+		code: "api-server",
+		ctx: c.executionCtx,
+		db: c.env.DB,
+		message,
+		request: c.req.raw,
+		stack,
+	});
 	return c.json(
 		{ error: "internal" as const, message: "An unexpected error occurred." },
 		500,

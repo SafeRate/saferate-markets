@@ -21,6 +21,7 @@ import {
 } from "@/lib/format";
 import { WriteGate } from "@/components/WriteGate";
 import { requireDashboard } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import {
 	BUILDER_MODES,
 	LOT_PRESET_OPTIONS,
@@ -138,6 +139,24 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const inputs = readInputs(params);
 	if (!hasRun(params)) return { streams, inputs, result: null };
 	const { stream, market, built } = await plan(env, org.idOrganization, params);
+	// Every run, saved or not: until now only the plans someone kept left a trace.
+	await trackEvent({
+		context,
+		name: "plan_built",
+		props: {
+			method: inputs.mode,
+			status:
+				built.status === "planned" || built.status === "failed"
+					? built.status
+					: "empty",
+		},
+		request,
+		who: {
+			idOrganization: org.idOrganizationOwn,
+			idUser: org.idUser,
+			impersonatedBy: org.impersonatedBy,
+		},
+	});
 	return {
 		streams,
 		inputs,
@@ -196,6 +215,17 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 			maturityDate: p.security.maturityDate,
 			close: p.security.price,
 		})),
+	});
+	await trackEvent({
+		context,
+		name: "plan_saved",
+		props: { method: inputs.mode },
+		request,
+		who: {
+			idOrganization: org.idOrganizationOwn,
+			idUser: org.idUser,
+			impersonatedBy: org.impersonatedBy,
+		},
 	});
 	return redirect(`/dashboard/plans/${idPlan}`);
 };

@@ -13,6 +13,7 @@ import {
 import { useIsDemo } from "@/components/WriteGate";
 import { freePortfolioLimitProblem } from "@/services/freeTier.server";
 import { requireDashboard } from "@/lib/session.server";
+import { trackEvent } from "@/lib/visitor.server";
 import type { Route } from "./+types/dashboard.portfolios";
 
 export const meta: Route.MetaFunction = () => [
@@ -51,6 +52,17 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 		namePortfolio,
 		codeBenchmark: parseBenchmark(form.get("codeBenchmark")),
 		policyIncome: parsePolicy(form.get("policyIncome")),
+	});
+	await trackEvent({
+		context,
+		name: "portfolio_created",
+		props: {},
+		request,
+		who: {
+			idOrganization: org.idOrganizationOwn,
+			idUser: org.idUser,
+			impersonatedBy: org.impersonatedBy,
+		},
 	});
 	return redirect(`/dashboard/portfolios/${idPortfolio}/transactions`);
 };
