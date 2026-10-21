@@ -26,6 +26,10 @@ const ZInputRecordUsage = z.object({
 	operation: z.string().min(1).max(160),
 	statusCode: z.number().int(),
 	durationMs: z.number().int().nonnegative().nullable(),
+	/** MCP only: the client's self-reported name (v2 `_meta` clientInfo). */
+	clientName: z.string().min(1).max(64).nullable().default(null),
+	/** MCP tool calls only: the refusal code, "input_required", or a thrown error's name. */
+	errorCode: z.string().min(1).max(64).nullable().default(null),
 });
 
 /**
@@ -45,8 +49,8 @@ export async function recordUsage(_input: z.infer<typeof ZInputRecordUsage>) {
 					/* sql */ `
 					insert into apiUsageEvents
 						(idApiUsageEvent, idOrganization, idApiKey, surface, operation,
-						 statusCode, durationMs, createdAt)
-					values (?, ?, ?, ?, ?, ?, ?, ?)
+						 statusCode, durationMs, createdAt, clientName, errorCode)
+					values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				`,
 				)
 				.bind(
@@ -58,6 +62,8 @@ export async function recordUsage(_input: z.infer<typeof ZInputRecordUsage>) {
 					input.statusCode,
 					input.durationMs,
 					now,
+					input.clientName,
+					input.errorCode,
 				),
 			input.db
 				.prepare(
@@ -91,7 +97,14 @@ export async function recordUsage(_input: z.infer<typeof ZInputRecordUsage>) {
 	// record.
 	try {
 		input.analytics?.writeDataPoint({
-			blobs: [input.idOrganization, input.surface, input.operation],
+			// Appended, so every earlier blob keeps its position in saved queries.
+			blobs: [
+				input.idOrganization,
+				input.surface,
+				input.operation,
+				input.clientName ?? "",
+				input.errorCode ?? "",
+			],
 			doubles: [input.statusCode, input.durationMs ?? 0],
 			indexes: [input.idOrganization],
 		});

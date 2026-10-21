@@ -34,6 +34,8 @@ export const meterUsage = (surface: AppEnv["Variables"]["surface"]) =>
 				operation: c.get("operation") ?? c.req.routePath,
 				statusCode: c.get("statusOverride") ?? c.res.status,
 				durationMs: Math.max(0, Date.now() - c.get("startedAt")),
+				clientName: c.get("clientName") ?? null,
+				errorCode: c.get("errorCode") ?? null,
 			}),
 		);
 		// A key's first call ever — the activation moment for an API product.

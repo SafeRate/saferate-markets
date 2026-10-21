@@ -31,5 +31,9 @@ export type AppEnv = {
 		 * the error in the body; the meter would count it as served without this.
 		 */
 		statusOverride?: number;
+		/** MCP only, set by the route: the client's self-reported name. */
+		clientName?: string;
+		/** MCP tool calls only: how the tool refused, or what it threw. */
+		errorCode?: string;
 	};
 };

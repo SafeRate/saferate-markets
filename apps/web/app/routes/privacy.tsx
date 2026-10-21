@@ -112,6 +112,7 @@ const CATEGORIES: TCategory[] = [
 		tables: "apiUsageEvents · apiUsageMonthly",
 		items: [
 			"One record per request: REST or MCP, the route pattern or tool name, the response status and how long it took",
+			"For an MCP tool call, the name the AI client reports for itself (for example \"claude-code\") and how the tool ended if it refused or failed",
 			"Which API key made it",
 			"Monthly totals derived from those records",
 		],
