@@ -1,5 +1,6 @@
 import { createRequestHandler } from "react-router";
 import { resolveMarketsEnv } from "@markets/schema";
+import { isBodylessMethodWithBody } from "@/lib/bodylessMethod";
 import { canonicalHostRedirect } from "@/lib/canonicalHost";
 import { PUBLIC_TWIN_PATHS, twinPathOf } from "@/lib/publicPages";
 import { sweepAlerts } from "@/services/alerts.server";
@@ -25,6 +26,13 @@ export default {
 		// redirect-only host, or its single-use token is spent on the redirect.
 		const redirect = canonicalHostRedirect(request);
 		if (redirect) return redirect;
+
+		// A GET or HEAD with a body makes React Router's request rebuild throw,
+		// a 500 on whatever page it hit. Only scanners send one; see
+		// lib/bodylessMethod.ts.
+		if (isBodylessMethodWithBody(request)) {
+			return new Response("Bad Request", { status: 400 });
+		}
 
 		// Better Auth owns /api/auth/*: the magic-link callback, session reads,
 		// sign-out. Ahead of the router because it needs the raw Request and
