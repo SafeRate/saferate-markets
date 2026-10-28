@@ -12,6 +12,7 @@ import {
 	PRODUCT_NAME,
 	REDIRECT_HOSTS,
 	resolveMarketsEnv,
+	sender,
 	senderFor,
 	SITE_HOSTS,
 } from "@markets/schema";
@@ -188,7 +189,7 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 							});
 							const result = await provider.send({
 								to: CONTACT_ADDRESS,
-								from: senderFor(baseURL),
+								from: sender(senderFor(baseURL)),
 								...notice,
 							});
 							if (result.status !== "sent")
@@ -225,7 +226,7 @@ const buildAuth = (env: TAuthEnv, baseURL: string) => {
 					});
 					const result = await provider.send({
 						to: email,
-						from: senderFor(baseURL),
+						from: sender(senderFor(baseURL)),
 						subject: `Sign in to ${PRODUCT_NAME}`,
 						...magicLinkEmail(url),
 					});

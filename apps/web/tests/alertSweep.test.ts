@@ -105,6 +105,7 @@ let curveDates: string[];
 let indexDates: string[];
 let sent: {
 	to: string;
+	from: unknown;
 	subject: string;
 	text: string;
 	html: string;
@@ -418,6 +419,11 @@ describe("the alert sweep", () => {
 		curveDates.push("2026-10-02");
 		await tick(T0 + 5 * MIN);
 		const mail = sent.find((m) => m.to === "everyone@example.com");
+		// Named, so the inbox shows the product and not "noreply".
+		expect(mail?.from).toEqual({
+			name: "Safe Rate Markets",
+			email: "noreply@notifications.saferate.markets",
+		});
 		expect(mail?.headers?.["List-Unsubscribe-Post"]).toBe(
 			"List-Unsubscribe=One-Click",
 		);

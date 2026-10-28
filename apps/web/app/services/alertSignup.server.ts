@@ -4,7 +4,7 @@ import {
 	createAlertSignup,
 	deleteAlertSignup,
 } from "@markets/persistence";
-import { resolveMarketsEnv, SENDER_ADDRESS } from "@markets/schema";
+import { resolveMarketsEnv, SENDER_ADDRESS, sender } from "@markets/schema";
 import { z } from "zod";
 import { confirmSignupEmail } from "@/lib/alertEmails";
 import { siteFor } from "./alerts.server";
@@ -211,7 +211,7 @@ export const handleAlertSignup = async (
 	});
 	const sent = await resolveEmailProvider(env as never).send({
 		to: body.email,
-		from: SENDER_ADDRESS,
+		from: sender(SENDER_ADDRESS),
 		...email,
 	});
 	if (sent.status === "failed") {
