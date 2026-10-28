@@ -27,9 +27,9 @@
 		"wrangler": "^4.136.2"
 	},
 	"dependencies": {
-		"@better-auth/stripe": "1.7.1",
+		"@better-auth/stripe": "1.7.14",
 		"@react-router/cloudflare": "7.18.4",
-		"better-auth": "1.7.1",
+		"better-auth": "1.7.14",
 		"isbot": "^5.1.27",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",

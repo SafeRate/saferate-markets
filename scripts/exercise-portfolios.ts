@@ -224,8 +224,9 @@ const signIn = async () => {
 	d1(
 		`insert into verification (id, identifier, value, expiresAt, createdAt, updatedAt) values (${[
 			randomUUID(),
-			token,
-			JSON.stringify({ email: EMAIL }),
+			// Better Auth 1.7.7+'s magic-link row: prefixed identifier, typed value.
+			`magic-link:${token}`,
+			JSON.stringify({ type: "magic-link", email: EMAIL }),
 			expires.toISOString(),
 			now.toISOString(),
 			now.toISOString(),
