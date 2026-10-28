@@ -13,7 +13,7 @@ import { getAuth, getServerSession } from "../app/services/auth.server";
 
 const ORIGIN = "https://saferate.markets";
 let world: ReturnType<typeof sqliteD1>;
-let sent: { to: string; text: string }[];
+let sent: { to: string; from?: unknown; text: string }[];
 
 const env = () =>
 	({
@@ -21,7 +21,7 @@ const env = () =>
 		MARKETS_ENV: "production",
 		BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret",
 		EMAIL: {
-			send: async (m: { to: string; text: string }) => {
+			send: async (m: { to: string; from?: unknown; text: string }) => {
 				sent.push(m);
 			},
 		},
@@ -119,6 +119,13 @@ beforeAll(async () => {
 		.bind("dylan@saferate.com")
 		.run();
 	customer = await signIn("reader@example.com");
+});
+
+test("a sign-in link comes from Safe Rate Markets, not a bare noreply", () => {
+	expect(sent.find((m) => m.to === "reader@example.com")?.from).toEqual({
+		name: "Safe Rate Markets",
+		email: "noreply@notifications.saferate.markets",
+	});
 });
 
 describe("/support", () => {

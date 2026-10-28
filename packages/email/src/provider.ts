@@ -26,9 +26,16 @@ import { resolveEmailGuard, isRecipientAllowed } from "./guard";
  * spam: check the spam folder before debugging sign-in.
  */
 
+/** A sender as the binding takes it: shown as "name <email>". */
+export interface EmailSender {
+	name: string;
+	email: string;
+}
+
 export interface EmailMessage {
 	to: string;
-	from: string;
+	/** Always named: a bare address shows its local part, "noreply". */
+	from: EmailSender;
 	subject: string;
 	html: string;
 	text: string;
@@ -50,7 +57,7 @@ export interface EmailProvider {
 export interface CloudflareEmailBinding {
 	send(message: {
 		to: string;
-		from: string;
+		from: string | EmailSender;
 		subject: string;
 		html?: string;
 		text?: string;
