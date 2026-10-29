@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.14",
-		"@cloudflare/vite-plugin": "^1.57.2",
+		"@cloudflare/vite-plugin": "^1.66.0",
 		"@cloudflare/workers-types": "^4.20260702.1",
 		"@react-router/dev": "7.18.4",
 		"@tailwindcss/vite": "^4.1.4",
@@ -24,7 +24,7 @@
 		"typescript": "5.9.3",
 		"vite": "^6.4.3",
 		"vite-tsconfig-paths": "^5.1.4",
-		"wrangler": "^4.136.2"
+		"wrangler": "4.154.0"
 	},
 	"dependencies": {
 		"@better-auth/stripe": "1.7.14",
