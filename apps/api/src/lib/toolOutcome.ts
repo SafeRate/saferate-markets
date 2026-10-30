@@ -27,7 +27,9 @@ export const toolErrorCode = (result: unknown) => {
 	try {
 		const payload = JSON.parse(text) as { error?: unknown; ok?: unknown } | null;
 		if (payload?.ok !== false) return fallback;
-		return typeof payload.error === "string" ? payload.error.slice(0, 64) : "error";
+		return typeof payload.error === "string"
+			? payload.error.slice(0, 64)
+			: "error";
 	} catch {
 		return fallback;
 	}

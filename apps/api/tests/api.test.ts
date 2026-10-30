@@ -244,7 +244,10 @@ describe("MCP over /mcp", () => {
 				name: "get_treasury_curve",
 				arguments: {},
 				_meta: {
-					"io.modelcontextprotocol/clientInfo": { name: "claude-code", version: "3.1.0" },
+					"io.modelcontextprotocol/clientInfo": {
+						name: "claude-code",
+						version: "3.1.0",
+					},
 				},
 			}),
 		);

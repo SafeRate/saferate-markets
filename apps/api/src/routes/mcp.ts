@@ -99,7 +99,10 @@ export const registerMcpRoute = (app: OpenAPIHono<AppEnv>) => {
 					return result;
 				} catch (error) {
 					c.set("statusOverride", 500);
-					c.set("errorCode", error instanceof Error ? error.name.slice(0, 64) : "thrown");
+					c.set(
+						"errorCode",
+						error instanceof Error ? error.name.slice(0, 64) : "thrown",
+					);
 					throw error;
 				}
 			};
