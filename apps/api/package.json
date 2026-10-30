@@ -10,10 +10,10 @@
 		"@modelcontextprotocol/server": "2.3.1",
 		"@saferate/treasury-client": "workspace:*",
 		"@scalar/hono-api-reference": "0.11.16",
-		"hono": "^4.13.8",
-		"zod": "^4.6.5"
+		"hono": "^4.13.14",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
-		"bun-types": "^1.4.0"
+		"bun-types": "^1.4.4"
 	}
 }

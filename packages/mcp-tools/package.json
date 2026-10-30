@@ -8,6 +8,6 @@
 	"dependencies": {
 		"@modelcontextprotocol/server": "2.3.1",
 		"@saferate/treasury-client": "workspace:*",
-		"zod": "^4.6.5"
+		"zod": "^4.6.7"
 	}
 }
