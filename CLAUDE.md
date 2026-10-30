@@ -228,6 +228,14 @@ pinned commit, recorded in `packages/treasury-client/VENDORED`. saferate-treasur
 so the copy at commit X matches treasury-api at X. It says nothing about what is
 DEPLOYED; that is what the client's optional methods are for.
 
+**`bun update -r` edits the copy.** It raises every workspace's ranges to what the
+lockfile resolved, including this one (its `zod` floor went `^4.5.4` -> `^4.6.7`
+on 2026-10-30). Exclude it, and the other workspaces still update:
+
+```bash
+bun update -r --minimum-release-age=259200 --filter='!@saferate/treasury-client'
+```
+
 Vendored at `3b5efe4` (the `treasury-client` branch, saferate-treasury PR #2).
 **Re-sync from `main` once that PR merges.**
 
