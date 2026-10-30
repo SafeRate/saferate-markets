@@ -95,3 +95,10 @@ export const senderFor = (siteAddress: string) => {
 };
 export const CONTACT_ADDRESS = "team@saferate.com";
 export const PRODUCT_NAME = "Safe Rate Markets";
+
+/**
+ * The From line of every email: the product's name over the address, so an
+ * inbox shows "Safe Rate Markets", not "noreply" (Dylan, 2026-10-28). The
+ * email package's message type requires the name, so no send can drop it.
+ */
+export const sender = (email: string) => ({ name: PRODUCT_NAME, email });

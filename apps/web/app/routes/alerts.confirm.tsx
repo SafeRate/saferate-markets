@@ -47,9 +47,13 @@ export const action = async ({ request, context }: Route.ActionArgs) => {
 	const auth = getAuth({ env, request });
 	const ctx = await auth.$context;
 	const signIn = crypto.randomUUID().replace(/-/g, "");
+	// The row Better Auth's magic-link plugin writes, which its verify reads:
+	// since 1.7.7 the identifier carries a `magic-link:` prefix and the value a
+	// type, so an OAuth state row can never pass for one (GHSA-965c-763c-88jm).
+	// A row in the older shape redirects to INVALID_TOKEN with no session.
 	await ctx.internalAdapter.createVerificationValue({
-		identifier: signIn,
-		value: JSON.stringify({ email: signup.email }),
+		identifier: `magic-link:${signIn}`,
+		value: JSON.stringify({ type: "magic-link", email: signup.email }),
 		expiresAt: new Date(Date.now() + SIGN_IN_TTL_MS),
 	});
 	const callbackURL = `/alerts/confirmed?s=${idAlertSignup}`;

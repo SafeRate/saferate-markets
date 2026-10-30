@@ -13,7 +13,7 @@ import {
 
 const SECRET = "shared-secret";
 let world: ReturnType<typeof sqliteD1>;
-let sent: { to: string; text: string }[];
+let sent: { to: string; from?: unknown; text: string }[];
 let turnstilePasses: boolean;
 
 const env = (over: Record<string, unknown> = {}) =>
@@ -23,7 +23,7 @@ const env = (over: Record<string, unknown> = {}) =>
 		ALERTS_SUBSCRIBE_SECRET: SECRET,
 		TURNSTILE_SECRET_KEY: "turnstile-secret",
 		EMAIL: {
-			send: async (m: { to: string; text: string }) => {
+			send: async (m: { to: string; from?: unknown; text: string }) => {
 				sent.push(m);
 			},
 		},
@@ -75,6 +75,10 @@ describe("the sign-up endpoint", () => {
 			body: { status: "confirmation_sent" },
 		});
 		expect(sent.map((m) => m.to)).toEqual(["reader@example.com"]);
+		expect(sent[0].from).toEqual({
+			name: "Safe Rate Markets",
+			email: "noreply@notifications.saferate.markets",
+		});
 		const token = sent[0].text.match(/alerts\/confirm\?t=([\w-]+)/)?.[1] ?? "";
 		const signup = await confirmAlertSignup({
 			db: world.db,

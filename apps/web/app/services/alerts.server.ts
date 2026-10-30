@@ -17,7 +17,12 @@ import {
 	type TAlertKind,
 	type TAlertRecipient,
 } from "@markets/persistence";
-import { resolveMarketsEnv, SENDER_ADDRESS, SITE_HOSTS } from "@markets/schema";
+import {
+	resolveMarketsEnv,
+	SENDER_ADDRESS,
+	SITE_HOSTS,
+	sender,
+} from "@markets/schema";
 import {
 	auctionAnnouncementEmail,
 	auctionResultEmail,
@@ -152,7 +157,7 @@ const sendOne = async (
 		const email = input.render(links);
 		const result = await resolveEmailProvider(env as never).send({
 			to: recipient.email,
-			from: SENDER_ADDRESS,
+			from: sender(SENDER_ADDRESS),
 			subject: email.subject,
 			text: email.text,
 			html: email.html,
